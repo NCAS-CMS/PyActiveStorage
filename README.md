@@ -39,7 +39,7 @@ Slice Dataset[0:2] shape (2, 404, 802)
 Slice offset and size: 0 and 2592064
 
 
-Slice Dataset[4:7] shape (2, 404, 802)
+Slice Dataset[4:7] shape (3, 404, 802)
 Slice offset and size 1296032 and 7776192
 
 
