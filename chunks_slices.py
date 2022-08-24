@@ -103,6 +103,7 @@ def h5py_chunk_slice_info():
         print("Slice offset and size:", list(PCI)[0][0], "and",
               list(PCI)[0][1] * ds.dtype.itemsize)
         print("\n")
+        data_slice = ds[4:7]
         print(f"Slice Dataset[4:7] shape {data_slice.shape}")
         PCI = PartialChunkIterator((slice(4, 7, 1), ), ds.shape)
         print("Slice offset and size", list(PCI)[0][0], "and",
