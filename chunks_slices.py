@@ -109,6 +109,12 @@ def h5py_chunk_slice_info():
         print("Slice offset and size", list(PCI)[0][0], "and",
               list(PCI)[0][1] * ds.dtype.itemsize)
         print("\n")
+        data_slice = ds[0:60]  # the whole cake
+        print(f"Slice Dataset[0:60] shape {data_slice.shape}")
+        PCI = PartialChunkIterator((slice(0, 60, 1), ), ds.shape)
+        print("Slice offset and size", list(PCI)[0][0], "and",
+              list(PCI)[0][1] * ds.dtype.itemsize)
+        print("\n")
 
         # kerchunk it!
         ds = SingleHdf5ToZarr(buf).translate()
@@ -188,6 +194,12 @@ def zarr_chunk_slice_info():
     data_slice = ds[4:7]  # zarr data slice
     print(f"Slice Dataset[4:7] shape {data_slice.shape}")
     PCI = PartialChunkIterator((slice(4, 7, 1), ), ds.shape)
+    print("Slice offset and size", list(PCI)[0][0], "and",
+          list(PCI)[0][1] * ds.dtype.itemsize)
+    print("\n")
+    data_slice = ds[0:60]  # the whole cake
+    print(f"Slice Dataset[0:60] shape {data_slice.shape}")
+    PCI = PartialChunkIterator((slice(0, 60, 1), ), ds.shape)
     print("Slice offset and size", list(PCI)[0][0], "and",
           list(PCI)[0][1] * ds.dtype.itemsize)
     print("\n")
