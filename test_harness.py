@@ -4,6 +4,10 @@ import os
 from dummy_data import make_test_ncdata
 from netCDF4 import Dataset
 import numpy as np
+import zarr
+
+from zarr import core as zarrcore
+from PCI_wrapper import load_netcdf_zarr_generic
 
 
 class Active:
@@ -101,35 +105,44 @@ class TestActive(unittest.TestCase):
         """ 
         Shows what we expect an active example test to achieve and provides "the right answer" 
         """
-        active = Active(self.testfile)
-        active._version = 0
-        var = active['data']
-        d = var[0:2,4:6,7:9]
-        nda = np.ndarray.flatten(d.data)
-        mean_result = np.mean(nda)
-        active.close()
+        data_file = self.testfile
+        varname = "test_bizarre"
 
-        active = Active(self.testfile)
-        active._version = 2
-        active.method='mean'
-        result2 = var['data'][0:2,4:6,7:9]
-        assert mean_result == result2
+        # load without data payload and apply a selection
+        ds = load_netcdf_zarr_generic(data_file, varname)
+        selection = (slice(0, 2, 1), slice(4, 6, 1), slice(7, 9, 1))
+        data_selection, chunk_info = \
+            zarrcore.Array.get_orthogonal_selection(ds, selection,
+                                                    out=None, fields=None,
+                                                    compute_data=False)
+
+        # get slicing info
+        _, _, PCI = chunk_info[0]
+        PCI = list(PCI)
+        offsets = []
+        sizes = []
+        for offset, size, _ in PCI:
+            offsets.append(offset)
+            sizes.append(size)
+
+        # sanity checks
+        assert len(offsets) == 4
+        assert len(sizes) == len(offsets)
+        assert offsets == [47, 57, 147, 157]
+        assert sizes == [2, 2, 2, 2]
+
+        # compute a mean
+        nda = np.ndarray.flatten(ds[:][0])
+        mean_result = np.mean(nda)
+        assert np.isnan(mean_result)  # has to be; no data passed
+
+        # the other side of active
+        # active = Active(self.testfile)
+        # active._version = 2
+        # active.method='mean'
+        # result2 = var['data'][0:2,4:6,7:9]
+        # assert mean_result == result2
 
 
 if __name__=="__main__":
     unittest.main()
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
