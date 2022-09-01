@@ -956,7 +956,8 @@ class Array:
 
         return self._get_selection(indexer=indexer, out=out, fields=fields)
 
-    def get_orthogonal_selection(self, selection, out=None, fields=None):
+    def get_orthogonal_selection(self, selection, out=None,
+                                 fields=None, compute_data=False):
         """Retrieve data by making a selection for each dimension of the array. For
         example, if an array has 2 dimensions, allows selecting specific rows and/or
         columns. The selection for each dimension can be either an integer (indexing a
@@ -1065,7 +1066,8 @@ class Array:
         # setup indexer
         indexer = OrthogonalIndexer(selection, self)
 
-        return self._get_selection(indexer=indexer, out=out, fields=fields)
+        return self._get_selection(indexer=indexer, out=out,
+                                   fields=fields, compute_data=compute_data)
 
     def get_coordinate_selection(self, selection, out=None, fields=None):
         """Retrieve a selection of individual items, by providing the indices
@@ -1216,7 +1218,8 @@ class Array:
 
         return self._get_selection(indexer=indexer, out=out, fields=fields)
 
-    def _get_selection(self, indexer, out=None, fields=None):
+    def _get_selection(self, indexer, out=None,
+                       fields=None, compute_data=False):
 
         # We iterate over all chunks which overlap the selection and thus contain data
         # that needs to be extracted. Each chunk is processed in turn, extracting the
@@ -1246,7 +1249,8 @@ class Array:
 
                 # load chunk selection into output array
                 pci = self._chunk_getitem(chunk_coords, chunk_selection, out, out_selection,
-                                          drop_axes=indexer.drop_axes, fields=fields)
+                                          drop_axes=indexer.drop_axes, fields=fields,
+                                          compute_data=compute_data)
                 chunks_info.append(pci)
         else:
             # allow storage to get multiple items at once
@@ -1832,6 +1836,7 @@ class Array:
         fields,
         out_selection,
         partial_read_decode=False,
+        compute_data=False
     ):
         """Take binary data from storage and fill output array"""
         if (out_is_ndarray and
@@ -1856,7 +1861,7 @@ class Array:
                 # contiguous, so we can decompress directly from the chunk
                 # into the destination array
                 if self._compressor:
-                    if isinstance(cdata, PartialReadBuffer):
+                    if isinstance(cdata, PartialReadBuffer) and compute_data:
                         cdata = cdata.read_full()
                     self._compressor.decode(cdata, dest)
                 else:
@@ -1921,7 +1926,7 @@ class Array:
             return self.chunks, chunk_selection, index_selection
 
     def _chunk_getitem(self, chunk_coords, chunk_selection, out, out_selection,
-                       drop_axes=None, fields=None):
+                       drop_axes=None, fields=None, compute_data=False):
         """Obtain part or whole of a chunk.
 
         Parameters
@@ -1953,19 +1958,27 @@ class Array:
 
         try:
             # hijack module
-            cdata = self.chunk_store[ckey]
+            if compute_data:
+                cdata = self.chunk_store[ckey]
+            print(f"CKEY {ckey} in CHUNK_STORE {self.chunk_store}")
+            pci_info = self._process_chunk_V(chunk_selection)
+            return pci_info
         except KeyError:
             # chunk not initialized
+            print(f"CKEY {ckey} not in CHUNK_STORE {self.chunk_store}")
             if self._fill_value is not None:
                 if fields:
                     fill_value = self._fill_value[fields]
                 else:
                     fill_value = self._fill_value
                 out[out_selection] = fill_value
+            pci_info = self._process_chunk_V(chunk_selection)
+            return pci_info
 
         else:
             self._process_chunk(out, cdata, chunk_selection, drop_axes,
-                                out_is_ndarray, fields, out_selection)
+                                out_is_ndarray, fields, out_selection,
+                                compute_data)
             pci_info = self._process_chunk_V(chunk_selection)
             return pci_info
 
