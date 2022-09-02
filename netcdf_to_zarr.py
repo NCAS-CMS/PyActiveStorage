@@ -122,10 +122,21 @@ def slice_offset_size(fileloc, varname, selection):
     print(f"Slices offsets: {offsets}, \nslices sizes: {sizes}")
 
     chunks_dict = zarr_chunks_info(ds)
-    chunks_coords = chunks_dict.keys()
-    chunks_sizes = chunks_dict.values()
+    chunks_coords = list(chunks_dict.keys())
+    chunks_sizes = list(chunks_dict.values())
     print("Chunks keys (i, j, k):", chunks_coords)
     print("Chunks sizes:", chunks_sizes)
-    # print("Chunks offsets:", chunks_offsets)
+    
+    # select chunks in selection
+    selected_chunks = []
+    selected_chunk_sizes = []
+    for sl in selection:
+        chunk_idx = chunks_coords[sl]
+        selected_chunks.append(chunk_idx)
+        chunk_size = chunks_sizes[sl]
+        selected_chunk_sizes.append(chunk_size)
+
+    print("Chunks in selections:", selected_chunks)
+    print("Chunks sizes in selections:", selected_chunk_sizes)
 
     return ds, chunks, chunk_sel, offsets, sizes
