@@ -7,30 +7,6 @@ import fsspec
 from kerchunk.hdf import SingleHdf5ToZarr
 
 
-def extract_dict(strarg):
-    """Extract a dict from a string-formatted dict."""
-    # FIXME this is a bit silly
-    return_dict = dict()
-    if "shape" in strarg:
-        items = strarg.split('"shape"')
-        val = items[1].split(":")[1].strip()
-        val = val.split('"zarr_format"')[0].split(',')[0:3]
-        val = (int(val[0].lstrip('[').strip()),
-               int(val[1].strip()),
-               int(val[2].split("]")[0].strip()))
-        return_dict["shape"] = val
-    if "chunks" in strarg:
-        items = strarg.split('"compressor"')
-        val = items[0].split(":")[1].strip()
-        val = [v.strip() for v in val.split('\n')]
-        val = (int(val[1].split(',')[0]),
-               int(val[2].split(',')[0]),
-               int(val[3]))
-        return_dict["chunks"] = val
-
-    return return_dict
-
-
 def gen_json(file_url, fs, fs2, **so):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
     # set some name for the output json file
@@ -65,42 +41,24 @@ def open_zarr_group(out_json):
     mapper = fs.get_mapper("")
     zarr_group = zarr.open_group(mapper)
     print("Zarr group info:", zarr_group.info)
+    zarr_array = zarr_group.data
+    print("Zarr array info:",  zarr_array.info)
 
-    return zarr_group.data
+    return zarr_array
 
 
 def load_netcdf_zarr_generic(fileloc, varname, build_dummy=True):
     """Pass a netCDF4 file to be shaped as Zarr file by kerchunk."""
-    # really, what we should do is pass the Kerchunk reference dict
-    # straight to Zarr to get its info from there. and not create any
-    # dummy Zarr Array
+    so = dict(mode='rb', anon=True, default_fill_cache=False,
+              default_cache_type='first') # args to fs.open()
+    # default_fill_cache=False avoids caching data in between
+    # file chunks to lower memory usage
+    fs = fsspec.filesystem('')  # local, for S3: ('s3', anon=True)
+    fs2 = fsspec.filesystem('')  # local file system to save final jsons to
+    out_json = gen_json(fileloc, fs, fs2)
 
-    # for testing: use a dummy Zarr Array built ad-hoc
-    if build_dummy:
-        # invoke the Kerchunk Lorde
-        ds = SingleHdf5ToZarr(fileloc).translate()
-        varkey = varname + '/.zarray'
-        if not varkey in ds['refs']:
-            varkey = 'data/.zarray'
-            chunks = extract_dict(ds['refs'][varkey])["chunks"]
-        chunks = extract_dict(ds['refs'][varkey])["shape"]
-
-        store, chunk_store = dict(), dict()
-        ref_ds = zarr.create(chunks, chunks=chunks, compressor=None,
-                             dtype='f8', order='C',
-                             store=store, chunk_store=chunk_store)
-
-    else:
-        so = dict(mode='rb', anon=True, default_fill_cache=False,
-                  default_cache_type='first') # args to fs.open()
-        # default_fill_cache=False avoids caching data in between
-        # file chunks to lower memory usage
-        fs = fsspec.filesystem('')  # local, for S3: ('s3', anon=True)
-        fs2 = fsspec.filesystem('')  # local file system to save final jsons to
-        out_json = gen_json(fileloc, fs, fs2)
-
-        # open this monster
-        ref_ds = open_zarr_group(out_json)
+    # open this monster
+    ref_ds = open_zarr_group(out_json)
 
     return ref_ds
 
@@ -111,8 +69,8 @@ def slice_offset_size(fileloc, varname, selection):
     # this turns on and off the actual data payload loading into Zarr store
     compute_data = False
 
-    # load the Zarr image
-    ds = load_netcdf_zarr_generic(fileloc, varname, build_dummy=False)
+    # load the Zarr image into an actual Array
+    ds = load_netcdf_zarr_generic(fileloc, varname)
 
     data_selection, chunk_info = \
         zarr.core.Array.get_orthogonal_selection(ds, selection,
