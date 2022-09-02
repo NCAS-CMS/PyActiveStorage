@@ -105,6 +105,24 @@ class TestActive(unittest.TestCase):
         """ 
         Shows what we expect an active example test to achieve and provides "the right answer" 
         """
+        active = Active(self.testfile)
+        active._version = 0
+        var = active['data']
+        d = var[0:2,4:6,7:9]
+        nda = np.ndarray.flatten(d.data)
+        mean_result = np.mean(nda)
+        active.close()
+
+        active = Active(self.testfile)
+        active._version = 2
+        active.method='mean'
+        result2 = var['data'][0:2,4:6,7:9]
+        assert mean_result == result2
+
+    def test_zarr_hijack(self):
+        """ 
+        Test the hijacking of Zarr. 
+        """
         data_file = self.testfile
         varname = "test_bizarre"
 
@@ -135,13 +153,6 @@ class TestActive(unittest.TestCase):
         nda = np.ndarray.flatten(ds[:][0])
         mean_result = np.mean(nda)
         assert np.isnan(mean_result)  # has to be; no data passed
-
-        # the other side of active
-        # active = Active(self.testfile)
-        # active._version = 2
-        # active.method='mean'
-        # result2 = var['data'][0:2,4:6,7:9]
-        # assert mean_result == result2
 
 
 if __name__=="__main__":
