@@ -59,18 +59,17 @@ def slice_offset_size(fileloc, varname, selection):
                                                  out=None, fields=None,
                                                  compute_data=compute_data)
 
-    # integrate it in the Zarr mechanism
-
-    print("Running the PCI wrapper integrated in Zarr.Array:")
-    print(f"Data selection {selection}")
     chunks, chunk_sel, PCI = chunk_info[0]
-    print(f"Chunks {chunks}, chunk selection "
-          f"{chunk_sel}, PCI {list(PCI)}\n")
 
     offsets = []
     sizes = []
     for offset, size, _ in list(PCI):
         offsets.append(offset)
         sizes.append(size)
+
+    print(f"Requested data selection (slices): {selection}")
+    print(f"Master chunks: {chunks}, chunks selection: "
+          f"{chunk_sel}, \nZarr PCI: {list(PCI)}\n")
+    print(f"Slices offsets: {offsets}, \nslices sizes: {sizes}")
 
     return ds, chunks, chunk_sel, offsets, sizes
