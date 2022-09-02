@@ -135,6 +135,7 @@ class TestActive(unittest.TestCase):
         assert len(sizes) == len(offsets)
         assert offsets == [47, 57, 147, 157]
         assert sizes == [2, 2, 2, 2]
+        assert chunk_selection == selection
 
         # compute a mean
         nda = np.ndarray.flatten(ds[:][0])
