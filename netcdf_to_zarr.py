@@ -32,19 +32,41 @@ def extract_dict(strarg):
 
 
 def gen_json(file_url, fs, fs2, **so):
-    with fs.open(file_url, **so) as infile:
-        h5chunks = SingleHdf5ToZarr(infile, file_url, inline_threshold=300)
-        # inline threshold adjusts the Size below which binary blocks are
-        # included directly in the output
-        # a higher inline threshold can result in a larger json file but
-        # faster loading time
-        variable = file_url.split('/')[-1].split('.')[0]
-        fname = os.path.splitext(file_url)[0]
-        outf = f'{fname}_{variable}.json' # vanilla file name
-        with fs2.open(outf, 'wb') as f:
-            f.write(ujson.dumps(h5chunks.translate()).encode())
+    """Generate a json file that contains the kerchunk-ed data for Zarr."""
+    # set some name for the output json file
+    fname = os.path.splitext(file_url)[0]
+    variable = file_url.split('/')[-1].split('.')[0]
+    outf = f'{fname}_{variable}.json' # vanilla file name
+
+    # write it out if it's not there
+    if not os.path.isfile(outf):
+        with fs.open(file_url, **so) as infile:
+            h5chunks = SingleHdf5ToZarr(infile, file_url, inline_threshold=300)
+            # inline threshold adjusts the Size below which binary blocks are
+            # included directly in the output
+            # a higher inline threshold can result in a larger json file but
+            # faster loading time
+            fname = os.path.splitext(file_url)[0]
+            outf = f'{fname}_{variable}.json' # vanilla file name
+            with fs2.open(outf, 'wb') as f:
+                f.write(ujson.dumps(h5chunks.translate()).encode())
 
     return outf
+
+
+def open_zarr_group(out_json):
+    """
+    Do the magic opening
+
+    Open a reference filesystem json file into a Zarr Group
+    then extract the Zarr Array you need.
+    """
+    fs = fsspec.filesystem("reference", fo=out_json)
+    mapper = fs.get_mapper("")
+    zarr_group = zarr.open_group(mapper)
+    print("Zarr group info:", zarr_group.info)
+
+    return zarr_group.data
 
 
 def load_netcdf_zarr_generic(fileloc, varname, build_dummy=True):
@@ -78,10 +100,7 @@ def load_netcdf_zarr_generic(fileloc, varname, build_dummy=True):
         out_json = gen_json(fileloc, fs, fs2)
 
         # open this monster
-        fs = fsspec.filesystem("reference", fo=out_json)
-        m = fs.get_mapper("")
-        ref_ds = zarr.open_group(m)
-        print("XXX", ref_ds.info)
+        ref_ds = open_zarr_group(out_json)
 
     return ref_ds
 
