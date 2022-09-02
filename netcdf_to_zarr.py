@@ -1,4 +1,5 @@
 import os
+import itertools
 import zarr
 from pathlib import Path
 import ujson
@@ -63,6 +64,36 @@ def load_netcdf_zarr_generic(fileloc, varname, build_dummy=True):
     return ref_ds
 
 
+def zarr_chunks_info(ds):
+    """Get offset and sizes of Zarr chunks."""
+    # ds: Zarr dataset
+    # Zarr chunking information; inspired from
+    # zarr.convenience._copy(); convenience.py module l.964 (zarr=2.12.0)
+    # https://zarr.readthedocs.io/en/stable/api/convenience.html#zarr.convenience.copy
+    shape = ds.shape
+    chunks = ds.chunks
+    chunk_offsets = [range(0, s, c) for s, c in zip(shape, chunks)]
+    print("Chunks index offsets:", [tuple(k) for k in chunk_offsets])
+    print("Zarr Array total number of chunks:", len(list(itertools.product(*chunk_offsets))))
+    offsets = []  # chunks keys zarray/i.j.k
+    ch_sizes = []  # chunk sizes
+    for offset in itertools.product(*chunk_offsets):
+        offsets.append(offset)
+        sel = tuple(slice(o, min(s, o + c))
+                    for o, s, c in zip(offset, shape, chunks))
+        # remember that a slice returns a tuple now
+        # with data in slice: elem1, chunks selection: elem2, PCI: elem3
+        islice = ds[sel][0]
+        slice_size = islice.size * islice.dtype.itemsize
+        ch_sizes.append(slice_size)
+
+    chunks_dict = dict()
+    for offset, chunk_size in zip(offsets, ch_sizes):
+        chunks_dict[offset] = chunk_size
+
+    return chunks_dict
+
+
 def slice_offset_size(fileloc, varname, selection):
     """Return a Zarr Array slice offset and size via PartialChunkIterator."""
     # toggle compute_data
@@ -89,5 +120,12 @@ def slice_offset_size(fileloc, varname, selection):
     print(f"Master chunks: {chunks}, chunks selection: "
           f"{chunk_sel}, \nZarr PCI: {list(PCI)}\n")
     print(f"Slices offsets: {offsets}, \nslices sizes: {sizes}")
+
+    chunks_dict = zarr_chunks_info(ds)
+    chunks_coords = chunks_dict.keys()
+    chunks_sizes = chunks_dict.values()
+    print("Chunks keys (i, j, k):", chunks_coords)
+    print("Chunks sizes:", chunks_sizes)
+    # print("Chunks offsets:", chunks_offsets)
 
     return ds, chunks, chunk_sel, offsets, sizes
