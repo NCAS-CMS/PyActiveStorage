@@ -131,16 +131,17 @@ class TestActive(unittest.TestCase):
             nz.slice_offset_size(data_file, varname, selection)
 
         # sanity checks
-        assert len(offsets) == 4
+        assert master_chunks == (3, 3, 1)
+        assert len(offsets) == 2
         assert len(sizes) == len(offsets)
-        assert offsets == [47, 57, 147, 157]
-        assert sizes == [2, 2, 2, 2]
-        assert chunk_selection == selection
+        assert offsets == [1, 4]  # need to check the actual item size
+        assert sizes == [2, 2]
 
         # compute a mean
         nda = np.ndarray.flatten(ds[:][0])
         mean_result = np.mean(nda)
-        assert np.isnan(mean_result)  # has to be; no data passed
+        print("Mean result", mean_result)
+        assert mean_result > 1.e100  # has mental data 1e300
 
 
 if __name__=="__main__":
