@@ -6,8 +6,7 @@ from netCDF4 import Dataset
 import numpy as np
 import zarr
 
-from zarr import core as zarrcore
-from PCI_wrapper import load_netcdf_zarr_generic
+import netcdf_to_zarr as nz
 
 
 class Active:
@@ -125,23 +124,11 @@ class TestActive(unittest.TestCase):
         """
         data_file = self.testfile
         varname = "test_bizarre"
-
-        # load without data payload and apply a selection
-        ds = load_netcdf_zarr_generic(data_file, varname)
         selection = (slice(0, 2, 1), slice(4, 6, 1), slice(7, 9, 1))
-        data_selection, chunk_info = \
-            zarrcore.Array.get_orthogonal_selection(ds, selection,
-                                                    out=None, fields=None,
-                                                    compute_data=False)
 
         # get slicing info
-        _, _, PCI = chunk_info[0]
-        PCI = list(PCI)
-        offsets = []
-        sizes = []
-        for offset, size, _ in PCI:
-            offsets.append(offset)
-            sizes.append(size)
+        ds, master_chunks, chunk_selection, offsets, sizes = \
+            nz.slice_offset_size(data_file, varname, selection)
 
         # sanity checks
         assert len(offsets) == 4
