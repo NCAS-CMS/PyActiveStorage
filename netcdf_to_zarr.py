@@ -12,7 +12,7 @@ def gen_json(file_url, fs, fs2, **so):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
     # set some name for the output json file
     fname = os.path.splitext(file_url)[0]
-    variable = file_url.split('/')[-1].split('.')[0]
+    variable = file_url.split('/')[-1].split('.')[0]  # just as an example
     outf = f'{fname}_{variable}.json' # vanilla file name
 
     # write it out if it's not there
@@ -35,11 +35,12 @@ def open_zarr_group(out_json):
     """
     Do the magic opening
 
-    Open a reference filesystem json file into a Zarr Group
-    then extract the Zarr Array you need.
+    Open a json file read and saved by the reference file system
+    into a Zarr Group, then extract the Zarr Array you need.
+    That Array is in the 'data' attribute.
     """
     fs = fsspec.filesystem("reference", fo=out_json)
-    mapper = fs.get_mapper("")
+    mapper = fs.get_mapper("")  # local FS mapper
     zarr_group = zarr.open_group(mapper)
     print("Zarr group info:", zarr_group.info)
     zarr_array = zarr_group.data
@@ -55,7 +56,7 @@ def load_netcdf_zarr_generic(fileloc, varname, build_dummy=True):
     # default_fill_cache=False avoids caching data in between
     # file chunks to lower memory usage
     fs = fsspec.filesystem('')  # local, for S3: ('s3', anon=True)
-    fs2 = fsspec.filesystem('')  # local file system to save final jsons to
+    fs2 = fsspec.filesystem('')  # local file system to save final json to
     out_json = gen_json(fileloc, fs, fs2)
 
     # open this monster
@@ -87,20 +88,28 @@ def zarr_chunks_info(ds):
         slice_size = islice.size * islice.dtype.itemsize
         ch_sizes.append(slice_size)
 
+    # return a Chunks dict keyed by chunk coordinate indices (x.x.x)
+    # with values the size of that chunk
     chunks_dict = dict()
     for offset, chunk_size in zip(offsets, ch_sizes):
         chunks_dict[offset] = chunk_size
 
+    print(f"Chunks idx coordinate-size dictionary: {chunks_dict}")
     return chunks_dict
 
 
 def slice_offset_size(fileloc, varname, selection):
-    """Return a Zarr Array slice offset and size via PartialChunkIterator."""
+    """
+    Return a Zarr Array slice offset and size via PartialChunkIterator.
+
+    Also return the indices of the chunks where the slice sits in, and
+    those chunks' sizes."""
     # toggle compute_data
     # this turns on and off the actual data payload loading into Zarr store
     compute_data = False
 
-    # load the Zarr image into an actual Array
+    # load the netCDF file into an image of a Zarr array via
+    # kerchunk HDF5->Zarr translation and a reference file system
     ds = load_netcdf_zarr_generic(fileloc, varname)
 
     data_selection, chunk_info = \
@@ -124,19 +133,15 @@ def slice_offset_size(fileloc, varname, selection):
     chunks_dict = zarr_chunks_info(ds)
     chunks_coords = list(chunks_dict.keys())
     chunks_sizes = list(chunks_dict.values())
-    print("Chunks keys (i, j, k):", chunks_coords)
-    print("Chunks sizes:", chunks_sizes)
+    # print("Chunks keys (i, j, k):", chunks_coords)
+    # print("Chunks sizes:", chunks_sizes)
     
     # select chunks in selection
-    selected_chunks = []
-    selected_chunk_sizes = []
-    for sl in selection:
-        chunk_idx = chunks_coords[sl]
-        selected_chunks.append(chunk_idx)
-        chunk_size = chunks_sizes[sl]
-        selected_chunk_sizes.append(chunk_size)
+    selected_chunks = [chunks_coords[sl] for sl in selection]
+    selected_chunk_sizes = [chunks_sizes[sl] for sl in selection]
 
     print("Chunks in selections:", selected_chunks)
     print("Chunks sizes in selections:", selected_chunk_sizes)
 
-    return ds, chunks, chunk_sel, offsets, sizes
+    return (ds, chunks, chunk_sel, offsets, sizes,
+            selected_chunks, selected_chunk_sizes)
