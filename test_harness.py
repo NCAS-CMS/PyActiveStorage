@@ -127,7 +127,8 @@ class TestActive(unittest.TestCase):
         selection = (slice(0, 2, 1), slice(4, 6, 1), slice(7, 9, 1))
 
         # get slicing info
-        ds, master_chunks, chunk_selection, offsets, sizes = \
+        (ds, master_chunks, chunk_selection,
+         offsets, sizes, selected_chunks, selected_chunk_sizes) = \
             nz.slice_offset_size(data_file, varname, selection)
 
         # sanity checks
@@ -136,6 +137,11 @@ class TestActive(unittest.TestCase):
         assert len(sizes) == len(offsets)
         assert offsets == [1, 4]  # need to check the actual item size
         assert sizes == [2, 2]
+        assert selected_chunks == [[(0, 0, 0), (0, 0, 1)], 
+                                   [(0, 0, 4), (0, 0, 5)], 
+                                   [(0, 0, 7), (0, 0, 8)]]
+        assert selected_chunk_sizes == [[72, 72], [72, 72], [72, 72]]
+
 
         # compute a mean
         nda = np.ndarray.flatten(ds[:][0])
