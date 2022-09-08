@@ -1,14 +1,23 @@
 import h5py
 import numpy as np
+import os
 
 from kerchunk.hdf import SingleHdf5ToZarr
 
 
 # CMIP6 files
-cmip6_test_file = r"/home/valeriu/climate_data/CMIP6/CMIP/MPI-M/MPI-ESM1-2-HR/historical/r1i1p1f1/Omon/sos/gn/v20190710/sos_Omon_MPI-ESM1-2-HR_historical_r1i1p1f1_gn_198001-198412.nc"
+# cmip6_test_file = r"/home/valeriu/climate_data/CMIP6/CMIP/MPI-M/MPI-ESM1-2-HR/historical/r1i1p1f1/Omon/sos/gn/v20190710/sos_Omon_MPI-ESM1-2-HR_historical_r1i1p1f1_gn_198001-198412.nc"
+
+V = "/home/valeriu/climate_data/CMIP6/CMIP/MPI-M/MPI-ESM1-2-HR/historical/r1i1p1f1/Omon/sos/gn/v20190710/"
+BRYAN = "./"
+
+filename = 'sos_Omon_MPI-ESM1-2-HR_historical_r1i1p1f1_gn_198001-198412.nc'
+filename = 'tas_Amon_BCC-ESM1_historical_r1i1p1f1_gn_185001-201412.nc'
+cmip6_test_file = BRYAN + filename
 
 
-ds = SingleHdf5ToZarr(cmip6_test_file).translate()
+rfs = SingleHdf5ToZarr(cmip6_test_file)
+ds = rfs.translate()
 print("\nKerchunk-IT stuffs")
 print("======================")
 fileread = ds["templates"]["u"]
