@@ -4,6 +4,9 @@ import os
 from dummy_data import make_test_ncdata
 from netCDF4 import Dataset
 import numpy as np
+import zarr
+
+import netcdf_to_zarr as nz
 
 
 class Active:
@@ -115,21 +118,37 @@ class TestActive(unittest.TestCase):
         result2 = var['data'][0:2,4:6,7:9]
         assert mean_result == result2
 
+    def test_zarr_hijack(self):
+        """ 
+        Test the hijacking of Zarr. 
+        """
+        data_file = self.testfile
+        varname = "test_bizarre"
+        selection = (slice(0, 2, 1), slice(4, 6, 1), slice(7, 9, 1))
+
+        # get slicing info
+        (ds, master_chunks, chunk_selection,
+         offsets, sizes, selected_chunks, selected_chunk_sizes) = \
+            nz.slice_offset_size(data_file, varname, selection)
+
+        # sanity checks
+        assert master_chunks == (3, 3, 1)
+        assert len(offsets) == 2
+        assert len(sizes) == len(offsets)
+        assert offsets == [1, 4]  # need to check the actual item size
+        assert sizes == [2, 2]
+        assert selected_chunks == [[(0, 0, 0), (0, 0, 1)], 
+                                   [(0, 0, 4), (0, 0, 5)], 
+                                   [(0, 0, 7), (0, 0, 8)]]
+        assert selected_chunk_sizes == [[72, 72], [72, 72], [72, 72]]
+
+
+        # compute a mean
+        nda = np.ndarray.flatten(ds[:][0])
+        mean_result = np.mean(nda)
+        print("Mean result", mean_result)
+        assert mean_result > 1.e100  # has mental data 1e300
+
 
 if __name__=="__main__":
     unittest.main()
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-

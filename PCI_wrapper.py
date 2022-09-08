@@ -32,14 +32,23 @@ def load_zarr_native():
 def extract_dict(strarg):
     """Extract a dict from a string-formatted dict."""
     # FIXME this is a bit silly
-    items = strarg.split('"shape"')
     return_dict = dict()
-    val = items[1].split(":")[1].strip()
-    val = val.split('"zarr_format"')[0].split(',')[0:3]
-    val = (int(val[0].lstrip('[').strip()),
-           int(val[1].strip()),
-           int(val[2].split("]")[0].strip()))
-    return_dict["shape"] = val
+    if "shape" in strarg:
+        items = strarg.split('"shape"')
+        val = items[1].split(":")[1].strip()
+        val = val.split('"zarr_format"')[0].split(',')[0:3]
+        val = (int(val[0].lstrip('[').strip()),
+               int(val[1].strip()),
+               int(val[2].split("]")[0].strip()))
+        return_dict["shape"] = val
+    if "chunks" in strarg:
+        items = strarg.split('"compressor"')
+        val = items[0].split(":")[1].strip()
+        val = [v.strip() for v in val.split('\n')]
+        val = (int(val[1].split(',')[0]),
+               int(val[2].split(',')[0]),
+               int(val[3]))
+        return_dict["chunks"] = val
 
     return return_dict
 
@@ -48,6 +57,23 @@ def load_netcdf_zarr():
     """Pass a netCDF4 file to be shaped as Zarr file."""
     ds = SingleHdf5ToZarr(cmip6_test_file).translate()
     chunks = extract_dict(ds['refs']['sos/.zarray'])["shape"]
+
+    store, chunk_store = dict(), dict()
+    ref_ds = zarr.create(chunks, chunks=chunks, compressor=None,
+                         dtype='f8', order='C',
+                         store=store, chunk_store=chunk_store)
+
+    return ref_ds
+
+
+def load_netcdf_zarr_generic(fileloc, varname):
+    """Pass a netCDF4 file to be shaped as Zarr file."""
+    ds = SingleHdf5ToZarr(fileloc).translate()
+    varkey = varname + '/.zarray'
+    if not varkey in ds['refs']:
+        varkey = 'data/.zarray'
+        chunks = extract_dict(ds['refs'][varkey])["chunks"]
+    chunks = extract_dict(ds['refs'][varkey])["shape"]
 
     store, chunk_store = dict(), dict()
     ref_ds = zarr.create(chunks, chunks=chunks, compressor=None,
