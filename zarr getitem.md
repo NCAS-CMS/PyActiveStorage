@@ -40,6 +40,7 @@ Working from [this piece of code](https://github.com/zarr-developers/zarr-python
     ... determine output shape and setup output array if it isn't there already
     out_shape = indexer.shape
     out = np.empty(out_shape ...)
+    this is an array into which the chunks from disk will be loaded
 
 	# iterate over chunks, two versions, one which sequentially gets one at a time,
 	# one which allows storage to get multiple items at once. The first version:

@@ -1,4 +1,3 @@
-from ast import Not
 import unittest
 import os
 from dummy_data import make_test_ncdata
@@ -59,7 +58,6 @@ class Active:
         """
         raise NotImplementedError
 
-
     def close(self):
         self.file.close()
 
@@ -76,7 +74,7 @@ class TestActive(unittest.TestCase):
         if not os.path.exists(self.testfile):
             make_test_ncdata(filename=self.testfile)
         
-    def testRead0(self):
+    def NtestRead0(self):
         """ 
         Test a normal read slicing the data an interesting way, using version 0 (native interface)
         """
@@ -88,7 +86,7 @@ class TestActive(unittest.TestCase):
         assert np.array_equal(nda,np.array([740.,840.,750.,850.,741.,841.,751.,851.]))
         active.close()
 
-    def testRead1(self):
+    def NtestRead1(self):
         """ 
         Test a normal read slicing the data an interesting way, uing version 1 (replicating native interface in our code)
         """
@@ -100,7 +98,7 @@ class TestActive(unittest.TestCase):
         assert np.array_equal(nda,np.array([740.,840.,750.,850.,741.,841.,751.,851.]))
         active.close()
 
-    def testActive(self):
+    def NtestActive(self):
         """ 
         Shows what we expect an active example test to achieve and provides "the right answer" 
         """

@@ -1,6 +1,7 @@
 import os
 import itertools
 import zarr
+
 from pathlib import Path
 import ujson
 import fsspec
@@ -74,8 +75,9 @@ def zarr_chunks_info(ds):
     shape = ds.shape
     chunks = ds.chunks
     chunk_offsets = [range(0, s, c) for s, c in zip(shape, chunks)]
-    print("Chunks index offsets:", [tuple(k) for k in chunk_offsets])
-    print("Zarr Array total number of chunks:", len(list(itertools.product(*chunk_offsets))))
+    print("\nThis information describes how the file-chunks map onto the application data array")
+    print("File-chunks index offsets:", [tuple(k) for k in chunk_offsets])
+    print("Zarr Array total number of file-chunks:", len(list(itertools.product(*chunk_offsets))))
     offsets = []  # chunks keys zarray/i.j.k
     ch_sizes = []  # chunk sizes
     for offset in itertools.product(*chunk_offsets):
