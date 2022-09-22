@@ -26,5 +26,27 @@ procedure to return it, as a (2, 2, 2) array is:
     xyz = (0, 1, 7) and xyz = (0, 1, 8);
   - this is returned as `ChunkProjection(chunk_coords, chunk_selection, out_selection)`
 - then we switch modules and go to `zarr.core` in `zarr.core.Array.get_orthogonal_selection`
+  that takes that (iterator) of ChunkProjections straight to `_get_selection(indexer=indexer, out=out...)`
+- - the **key info** here is in the docstring of `_get_selection()` func:
+```python
+        # We iterate over all chunks which overlap the selection and thus contain data
+        # that needs to be extracted. Each chunk is processed in turn, extracting the
+        # necessary data and storing into the correct location in the output array.
+
+        # N.B., it is an important optimisation that we only visit chunks which overlap
+        # the selection. This minimises the number of iterations in the main for loop.
+```
+- then items from chunks are retrieved via `_chunk_getitem()` which:
+  - uses the chunk coordinates `chunk_coords` eg (0, 1, 7) to locate the chunk of interest;
+  - then uses the `chunk_selection` tuple eg `chunk_selection = (slice(0, 2, 1), slice(1, 3, 1), slice(0, 1, 1))` to locate the region in the chunk
+    where the data of the selection we need that the chunk overlaps lives;
+  - there in lies my Trojan `self._process_chunk_V(chunk_selection)` that performs the PCI computation;
+  - the PCI gets that very same `chunk_selection`, (and `self.chunks`), of the particular chunk with data;
+  - the PCI says it straight:
+```
+Iterator to retrieve the specific coordinates of requested data
+    from within a compressed chunk
+```
+
 
   
