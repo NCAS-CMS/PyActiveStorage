@@ -47,6 +47,19 @@ procedure to return it, as a (2, 2, 2) array is:
 Iterator to retrieve the specific coordinates of requested data
     from within a compressed chunk
 ```
+  - and what it returns is numbers of elements:
+```
+    start: int
+        elements offset in the chunk to read from
+    nitems: int
+        number of elements to read in the chunk from start
+```
+    but also the slices (positions) of data from the chunk in the new array:
+```
+    partial_out_selection: list of slices
+        indices of a temporary empty array of size `Array._chunks` to assign
+        the decompressed data to after the partial read.
+```
 
 
   
