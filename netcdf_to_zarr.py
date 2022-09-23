@@ -75,8 +75,8 @@ def zarr_chunks_info(ds):
     shape = ds.shape
     chunks = ds.chunks
     chunk_offsets = [range(0, s, c) for s, c in zip(shape, chunks)]
-    print("\nThis information describes how the file-chunks map onto the application data array")
-    print("File-chunks index offsets:", [tuple(k) for k in chunk_offsets])
+    # print("\nThis information describes how the file-chunks map onto the application data array")
+    # print("File-chunks index offsets:", [tuple(k) for k in chunk_offsets])
     print("Zarr Array total number of file-chunks:", len(list(itertools.product(*chunk_offsets))))
     offsets = []  # chunks keys zarray/i.j.k
     ch_sizes = []  # chunk sizes
@@ -96,7 +96,7 @@ def zarr_chunks_info(ds):
     for offset, chunk_size in zip(offsets, ch_sizes):
         chunks_dict[offset] = chunk_size
 
-    print(f"Chunks idx coordinate-size dictionary: {chunks_dict}")
+    # print(f"Chunks idx coordinate-size dictionary: {chunks_dict}")
     return chunks_dict
 
 
@@ -114,36 +114,48 @@ def slice_offset_size(fileloc, varname, selection):
     # kerchunk HDF5->Zarr translation and a reference file system
     ds = load_netcdf_zarr_generic(fileloc, varname)
 
-    data_selection, chunk_info = \
+    data_selection, chunk_info, chunk_coords = \
         zarr.core.Array.get_orthogonal_selection(ds, selection,
                                                  out=None, fields=None,
                                                  compute_data=compute_data)
-
     chunks, chunk_sel, PCI = chunk_info[0]
 
+    # get offsets and sizes from PCI
     offsets = []
     sizes = []
     for offset, size, _ in list(PCI):
         offsets.append(offset)
         sizes.append(size)
 
+    # get chunks info from chunk store
+    chunk_store = ds.chunk_store
+    # can look at it
+    # for k, v in chunk_store.items():
+    #     print(k)
+    #     print(v)
+
+    chunk_coords_formatted = []
+    for ch_coord in chunk_coords:
+        new_key = "data/" + ".".join([str(ch_coord[0]),
+                                      str(ch_coord[1]),
+                                      str(ch_coord[2])])
+        chunk_coords_formatted.append(new_key)
+
+    # decode bytes from chunks
+    chunks_with_data_sizes = [ds._decode_chunk(chunk_store[k]) for k in chunk_coords_formatted]
+    for j in chunks_with_data_sizes:
+        print(j)
+        print("shapey", j.shape)
+
+    print("Data selection shape as returned by Zarr (out array):", data_selection.shape)
     print(f"Requested data selection (slices): {selection}")
-    print(f"Master chunks: {chunks}, chunks selection: "
-          f"{chunk_sel}, \nZarr PCI: {list(PCI)}\n")
-    print(f"Slices offsets: {offsets}, \nslices sizes: {sizes}")
-
-    chunks_dict = zarr_chunks_info(ds)
-    chunks_coords = list(chunks_dict.keys())
-    chunks_sizes = list(chunks_dict.values())
-    # print("Chunks keys (i, j, k):", chunks_coords)
-    # print("Chunks sizes:", chunks_sizes)
-    
-    # select chunks in selection
-    selected_chunks = [chunks_coords[sl] for sl in selection]
-    selected_chunk_sizes = [chunks_sizes[sl] for sl in selection]
-
-    print("Chunks in selections:", selected_chunks)
-    print("Chunks sizes in selections:", selected_chunk_sizes)
+    print(f"Master chunks: {chunks}")
+    print(f"Data coordinates inside each chunk that overlaps selection: {chunk_sel}")
+    print(f"Zarr PCI: {list(PCI)}")
+    print(f"Chunks (containing selected data) coordinates: {chunk_coords}")
+    print(f"Number of offset elements per chunks: {offsets}")
+    print(f"Number of elements in data inside chunk per chunk: {sizes}")
+    print(f"Sizes (no. elements) per each chunk containing selected data: {chunks_with_data_sizes}")
 
     return (ds, chunks, chunk_sel, offsets, sizes,
-            selected_chunks, selected_chunk_sizes)
+            chunk_coords, chunks_with_data_sizes)
