@@ -1233,6 +1233,7 @@ class Array:
 
         # determine output shape
         out_shape = indexer.shape
+        # print("Out (dummy) shape", out_shape)
 
         # setup output array
         if out is None:
@@ -1241,17 +1242,22 @@ class Array:
             check_array_shape('out', out, out_shape)
 
         chunks_info = []
+        chunks_locs = []
+        # print("PPP", list(indexer))
         # iterate over chunks
         if not hasattr(self.chunk_store, "getitems") or \
            any(map(lambda x: x == 0, self.shape)):
             # sequentially get one key at a time from storage
             for chunk_coords, chunk_selection, out_selection in indexer:
-
+                #print("XXX: chunk coords", chunk_coords)
+                #print("YYY: chunk selection", chunk_selection)
+                #print("ZZZ: out selection", out_selection)
                 # load chunk selection into output array
                 pci = self._chunk_getitem(chunk_coords, chunk_selection, out, out_selection,
                                           drop_axes=indexer.drop_axes, fields=fields,
                                           compute_data=compute_data)
                 chunks_info.append(pci)
+                chunks_locs.append(chunk_coords)
         else:
             # allow storage to get multiple items at once
             lchunk_coords, lchunk_selection, lout_selection = zip(*indexer)
@@ -1259,9 +1265,9 @@ class Array:
                                  drop_axes=indexer.drop_axes, fields=fields)
 
         if out.shape:
-            return out, chunks_info
+            return out, chunks_info, chunks_locs
         else:
-            return out[()], chunks_info
+            return out[()], chunks_info, chunks_locs
 
     def __setitem__(self, selection, value):
         """Modify data for an item or region of the array.
@@ -1914,15 +1920,6 @@ class Array:
         """Run an instance of PCI inside the engine."""
         index_selection = PartialChunkIterator(chunk_selection, self.chunks)
         for start, nitems, partial_out_selection in index_selection:
-            expected_shape = [
-                len(
-                    range(*partial_out_selection[i].indices(self.chunks[0] + 1))
-                )
-                if i < len(partial_out_selection)
-                else dim
-                for i, dim in enumerate(self.chunks)
-            ]
-
             return self.chunks, chunk_selection, index_selection
 
     def _chunk_getitem(self, chunk_coords, chunk_selection, out, out_selection,
@@ -1960,12 +1957,13 @@ class Array:
             # hijack module
             if compute_data:
                 cdata = self.chunk_store[ckey]
-            print(f"CKEY {ckey} in CHUNK_STORE {self.chunk_store}")
+            # print(f"Chunk initialized: CKEY {ckey} in CHUNK_STORE {self.chunk_store}")
+            # print(f"Chunk information {self.chunk_store[ckey]}")
             pci_info = self._process_chunk_V(chunk_selection)
             return pci_info
         except KeyError:
             # chunk not initialized
-            print(f"CKEY {ckey} not in CHUNK_STORE {self.chunk_store}")
+            # print(f"Chunk NOT initialized: CKEY {ckey} not in CHUNK_STORE {self.chunk_store}")
             if self._fill_value is not None:
                 if fields:
                     fill_value = self._fill_value[fields]
@@ -1976,6 +1974,7 @@ class Array:
             return pci_info
 
         else:
+            # print("Processing chunk.")
             self._process_chunk(out, cdata, chunk_selection, drop_axes,
                                 out_is_ndarray, fields, out_selection,
                                 compute_data)
