@@ -133,11 +133,9 @@ class TestActive(unittest.TestCase):
         assert master_chunks == (3, 3, 1)
         assert len(offsets) == 2
         assert len(sizes) == len(offsets)
-        assert offsets == [1, 4]  # need to check the actual item size
-        assert sizes == [2, 2]
-        assert selected_chunks == [[(0, 0, 0), (0, 0, 1)], 
-                                   [(0, 0, 4), (0, 0, 5)], 
-                                   [(0, 0, 7), (0, 0, 8)]]
+        assert offsets == [1, 4]  # these are numbers of elements
+        assert sizes == [2, 2]  # these are numbers of elements
+        assert selected_chunks == [(0, 1, 7), (0, 1, 8)]  # chunks coords of the chunks containing selected data
         assert selected_chunk_sizes == [[72, 72], [72, 72], [72, 72]]
 
 
