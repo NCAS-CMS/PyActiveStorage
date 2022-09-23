@@ -36,7 +36,21 @@ obtaining the chunk coordinates `(x_i, y_i, z_i)` in Zarr chunk space of each ch
 slices of our desired selection overlap chunks: to do that, look at the call to [`get_orthogonal_selection`](https://github.com/valeriupredoi/hdf5_kerchunk_zarr/blob/107e80d2939e35a29ececcc17acc7468cbf1e0bf/netcdf_to_zarr.py#L85) function from Zarr. This slightly changed from the stock Zarr function since it returns a nit more than the stock function:
 
 - `data_selection`: an array-like object of the shape of our desired selection `S`, populated with crap (no real data, just its shape matters)
-- `chunk_info`: a tuple containing master chunks, chunks selection indices (not important), and **PartialChunksIterator** (see below);
-- `chunk_coords`: **chunks coordinates `(x_i, y_i, z_i)`**
+- `chunk_info`: a tuple containing master chunks, chunks selection indices (not important), and PCI=**PartialChunkIterator** (see below);
+- `chunk_coords`: **chunks coordinates `(x_i, y_i, z_i)`** so parameter A comes straight from Zarr (of course, with the [hacked core](https://github.com/valeriupredoi/hdf5_kerchunk_zarr/blob/main/core.py) );
+
+The set of parameters B can be extracted [from the PCI](https://github.com/valeriupredoi/hdf5_kerchunk_zarr/blob/107e80d2939e35a29ececcc17acc7468cbf1e0bf/netcdf_to_zarr.py#L93) - the PCI returns numbers of elements:
+```
+    start: int
+        elements offset in the chunk to read from
+    nitems: int
+        number of elements to read in the chunk from start
+```
+- these are applies to each chunk that contains data from the selection (note that Zarr is **only** looking ath the chunks that contain
+data from the selection, and discards all others uninteresting chunks); an application of the PCI=PCI(start, nitems) is done in the
+[iteration over relevant chunks](https://github.com/valeriupredoi/hdf5_kerchunk_zarr/blob/107e80d2939e35a29ececcc17acc7468cbf1e0bf/netcdf_to_zarr.py#L120)
+after we have decoded (with decompression) each of these relevant chunks to obtain the actual data sitting in there;
+
+Parameters C
 
 
