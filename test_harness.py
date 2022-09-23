@@ -126,7 +126,7 @@ class TestActive(unittest.TestCase):
 
         # get slicing info
         (ds, master_chunks, chunk_selection,
-         offsets, sizes, selected_chunks, selected_chunk_sizes) = \
+         offsets, sizes, selected_chunks, chunks_data_dict) = \
             nz.slice_offset_size(data_file, varname, selection)
 
         # sanity checks
@@ -134,16 +134,18 @@ class TestActive(unittest.TestCase):
         assert len(offsets) == 2
         assert len(sizes) == len(offsets)
         assert offsets == [1, 4]  # these are numbers of elements
+        # and are found in each chunk ie 1st and 4th element start data in each chunk
         assert sizes == [2, 2]  # these are numbers of elements
+        # and are found in each chunk ie 1st+2 and 4th+2 span selected data in each chunk
         assert selected_chunks == [(0, 1, 7), (0, 1, 8)]  # chunks coords of the chunks containing selected data
-        assert selected_chunk_sizes == [[72, 72], [72, 72], [72, 72]]
-
-
-        # compute a mean
-        nda = np.ndarray.flatten(ds[:][0])
-        mean_result = np.mean(nda)
-        print("Mean result", mean_result)
-        assert mean_result > 1.e100  # has mental data 1e300
+        assert selected_chunks == list(chunks_data_dict.keys())
+        expected_selection = np.sort([740.,840.,750.,850.,741.,841.,751.,851.])
+        selection = []
+        for _, v in chunks_data_dict.items():
+            selection.extend(v)
+        print(f"UNITTEST: expected data selection: {expected_selection}")
+        print(f"UNITTEST: obtained data selection: {np.array(selection)}")
+        assert np.array_equal(np.array(expected_selection), np.sort(selection))
 
 
 if __name__=="__main__":
