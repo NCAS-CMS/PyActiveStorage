@@ -2,6 +2,7 @@ import os
 import numpy as np
 import itertools
 import zarr
+from active_tools import make_an_array_instance_active
 
 from pathlib import Path
 import ujson
@@ -80,11 +81,12 @@ def slice_offset_size(fileloc, varname, selection):
     # load the netCDF file into an image of a Zarr array via
     # kerchunk HDF5->Zarr translation and a reference file system
     ds = load_netcdf_zarr_generic(fileloc, varname)
+    ds = make_an_array_instance_active(ds)
 
-    data_selection, chunk_info, chunk_coords = \
-        zarr.core.Array.get_orthogonal_selection(ds, selection,
+    data_selection, chunk_info, chunk_coords = ds.get_orthogonal_selection(selection,
                                                  out=None, fields=None,
                                                  compute_data=compute_data)
+
     chunks, chunk_sel, PCI = chunk_info[0]
 
     # get offsets and sizes from PCI
