@@ -1,7 +1,8 @@
 
 import numpy as np
 
-# we're subclassing this sucker
+# we're effectively subclassing this sucker, but not actually doing so, 
+# instead we're providing tools to hack instances of it
 from zarr.core import Array
 
 # import other zarr gubbins used in the methods we override
