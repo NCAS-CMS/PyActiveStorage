@@ -65,10 +65,10 @@ class Active:
         """ 
         The objective is to use kerchunk to read the slices ourselves. 
         """
+        print('#FIXME: Order of calls is hardcoded')
         if args == ('data',):
-            print('#FIXME: At the moment varname hardcoded to "data"')
             if self.zds is None:
-                ds = nz.load_netcdf_zarr_generic(self.uri)
+                ds = nz.load_netcdf_zarr_generic(self.uri, args[0])
                 self.zds = make_an_array_instance_active(ds)
             return self
         else:
