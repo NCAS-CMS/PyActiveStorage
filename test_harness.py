@@ -1,5 +1,6 @@
 import unittest
 import os
+from active_tools import make_an_array_instance_active
 from dummy_data import make_test_ncdata
 from netCDF4 import Dataset
 import numpy as np
@@ -24,7 +25,9 @@ class Active:
         # Assume NetCDF4 for now
         self.file = Dataset(uri)
         self._version = 1 
+        self.uri = uri
         self.method = None
+        self.zds = None
 
     def __getitem__(self, *args):
         """ 
@@ -38,7 +41,7 @@ class Active:
         if self._version == 0:
             return self.file.__getitem__(*args)
         elif self._version == 1:
-            raise NotImplementedError
+            return self._via_kerchunk(*args)
         elif self._version  == 2:
             raise NotImplementedError
         else:
@@ -58,6 +61,20 @@ class Active:
         """
         raise NotImplementedError
 
+    def _via_kerchunk(self, *args):
+        """ 
+        The objective is to use kerchunk to read the slices ourselves. 
+        """
+        if args == ('data',):
+            print('#FIXME: At the moment varname hardcoded to "data"')
+            if self.zds is None:
+                ds = nz.load_netcdf_zarr_generic(self.uri)
+                self.zds = make_an_array_instance_active(ds)
+            return self
+        else:
+            return self.zds.__getitem__(*args)
+
+
     def close(self):
         self.file.close()
 
@@ -74,7 +91,7 @@ class TestActive(unittest.TestCase):
         if not os.path.exists(self.testfile):
             make_test_ncdata(filename=self.testfile)
         
-    def NtestRead0(self):
+    def testRead0(self):
         """ 
         Test a normal read slicing the data an interesting way, using version 0 (native interface)
         """
@@ -86,15 +103,15 @@ class TestActive(unittest.TestCase):
         assert np.array_equal(nda,np.array([740.,840.,750.,850.,741.,841.,751.,851.]))
         active.close()
 
-    def NtestRead1(self):
+    def testRead1(self):
         """ 
-        Test a normal read slicing the data an interesting way, uing version 1 (replicating native interface in our code)
+        Test a normal read slicing the data an interesting way, using version 1 (replicating native interface in our code)
         """
         active = Active(self.testfile)
         active._version = 1
         var = active['data']
         d = var[0:2,4:6,7:9]
-        nda = np.ndarray.flatten(d.data)
+        nda = np.ndarray.flatten(d[0])
         assert np.array_equal(nda,np.array([740.,840.,750.,850.,741.,841.,751.,851.]))
         active.close()
 
@@ -106,7 +123,7 @@ class TestActive(unittest.TestCase):
         active._version = 0
         var = active['data']
         d = var[0:2,4:6,7:9]
-        nda = np.ndarray.flatten(d.data)
+        nda = np.ndarray.flatten(d[0])
         mean_result = np.mean(nda)
         active.close()
 
@@ -116,7 +133,7 @@ class TestActive(unittest.TestCase):
         result2 = var['data'][0:2,4:6,7:9]
         assert mean_result == result2
 
-    def test_zarr_hijack(self):
+    def Ntest_zarr_hijack(self):
         """ 
         Test the hijacking of Zarr. 
         """

@@ -52,7 +52,7 @@ def open_zarr_group(out_json):
     return zarr_array
 
 
-def load_netcdf_zarr_generic(fileloc, varname, build_dummy=True):
+def load_netcdf_zarr_generic(fileloc, varname=None, build_dummy=True):
     """Pass a netCDF4 file to be shaped as Zarr file by kerchunk."""
     so = dict(mode='rb', anon=True, default_fill_cache=False,
               default_cache_type='first') # args to fs.open()
