@@ -72,7 +72,77 @@ class Active:
                 self.zds = make_an_array_instance_active(ds)
             return self
         else:
-            return self.zds.__getitem__(*args)
+            #return self.__vanilla_zarr(*args)[0]
+            return self.__doing_it_ourselves(*args)
+
+    def __vanilla_zarr(self, *args):
+        return self.zds.__getitem__(*args)
+
+    def __doing_it_ourselves(self,*args):
+        data_selection, chunk_info, chunk_coords = self.zds.get_orthogonal_selection(*args,
+                                                 out=None, fields=None)
+
+        chunks, chunk_sel, PCI = chunk_info[0]
+        
+        # get offsets and sizes from PCI
+        offsets = []
+        sizes = []
+        for offset, size, _ in list(PCI):
+            offsets.append(offset)
+            sizes.append(size)
+
+        # get chunks info from chunk store
+        chunk_store = self.zds.chunk_store
+        chunk_coords_formatted = []
+        for ch_coord in chunk_coords:
+            new_key = "data/" + ".".join([str(ch_coord[0]),
+                                        str(ch_coord[1]),
+                                        str(ch_coord[2])])
+            chunk_coords_formatted.append(new_key)
+
+        # decode bytes from chunks
+        chunks_with_data = [self.zds._decode_chunk(chunk_store[k]) for k in chunk_coords_formatted]
+        flat_chunks_with_data = np.ndarray.flatten(np.array(chunks_with_data))
+
+
+        chunks, chunk_sel, PCI = chunk_info[0]
+
+        # get offsets and sizes from PCI
+        offsets = []
+        sizes = []
+        for offset, size, _ in list(PCI):
+            offsets.append(offset)
+            sizes.append(size)
+
+        # get chunks info from chunk store
+        chunk_store = self.zds.chunk_store
+        chunk_coords_formatted = []
+        for ch_coord in chunk_coords:
+            new_key = "data/" + ".".join([str(ch_coord[0]),
+                                        str(ch_coord[1]),
+                                        str(ch_coord[2])])
+            chunk_coords_formatted.append(new_key)
+
+        # decode bytes from chunks
+        chunks_with_data = [self.zds._decode_chunk(chunk_store[k]) for k in chunk_coords_formatted]
+        flat_chunks_with_data = np.ndarray.flatten(np.array(chunks_with_data))
+
+        chunks_dict = {}
+        for (i, k), f in zip(enumerate(chunk_coords_formatted), chunk_coords):
+            flat_decoded = np.ndarray.flatten(self.zds._decode_chunk(chunk_store[k]))
+            selection_in_chunk = []
+            # NB: very important to remember that each start in "offsets" is to be
+            # used for each chunk; it's not one start from "offsets" is per chunk
+            for j, k in zip(offsets, sizes):
+                partial_data = flat_decoded[j:j+k]
+                selection_in_chunk.extend(partial_data)
+            chunks_dict[f] = selection_in_chunk
+
+        selection = []
+        for _, v in chunks_dict.items():
+            selection.extend(v)
+
+        return np.array(selection)
 
 
     def close(self):
@@ -111,7 +181,7 @@ class TestActive(unittest.TestCase):
         active._version = 1
         var = active['data']
         d = var[0:2,4:6,7:9]
-        nda = np.ndarray.flatten(d[0])
+        nda = np.ndarray.flatten(d)
         assert np.array_equal(nda,np.array([740.,840.,750.,850.,741.,841.,751.,851.]))
         active.close()
 
