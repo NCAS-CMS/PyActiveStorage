@@ -43,7 +43,7 @@ def make_an_array_instance_active(instance):
 
 
 def as_get_orthogonal_selection(self, selection, out=None,
-                                 fields=None, compute_data=False):
+                                 fields=None):
     """
     Retrieve data by making a selection for each dimension of the array. For
     example, if an array has 2 dimensions, allows selecting specific rows and/or
@@ -60,8 +60,6 @@ def as_get_orthogonal_selection(self, selection, out=None,
     fields : str or sequence of str, optional
         For arrays with a structured dtype, one or more fields can be specified to
         extract data for.
-    compute_data: boolean, if True, we've got active storage, and things are a bit
-            different.
     Returns
     -------
     out : ndarray
@@ -144,11 +142,11 @@ def as_get_orthogonal_selection(self, selection, out=None,
     indexer = OrthogonalIndexer(selection, self)
 
     return self._get_selection(indexer=indexer, out=out,
-                                fields=fields, compute_data=compute_data)
+                                fields=fields)
 
 
 def as_get_selection(self, indexer, out=None,
-                    fields=None, compute_data=False):
+                    fields=None):
 
     # We iterate over all chunks which overlap the selection and thus contain data
     # that needs to be extracted. Each chunk is processed in turn, extracting the
@@ -183,8 +181,8 @@ def as_get_selection(self, indexer, out=None,
             #print("ZZZ: out selection", out_selection)
             # load chunk selection into output array
             pci = self._chunk_getitem(chunk_coords, chunk_selection, out, out_selection,
-                                        drop_axes=indexer.drop_axes, fields=fields,
-                                        compute_data=compute_data)
+                                        drop_axes=indexer.drop_axes, fields=fields)
+                                        
             chunks_info.append(pci)
             chunks_locs.append(chunk_coords)
     else:
@@ -199,7 +197,7 @@ def as_get_selection(self, indexer, out=None,
         return out[()], chunks_info, chunks_locs
 
 def as_chunk_getitem(self, chunk_coords, chunk_selection, out, out_selection,
-                    drop_axes=None, fields=None, compute_data=False):
+                    drop_axes=None, fields=None):
     """Obtain part or whole of a chunk.
     Parameters
     ----------
@@ -229,8 +227,6 @@ def as_chunk_getitem(self, chunk_coords, chunk_selection, out, out_selection,
 
     try:
         # hijack module
-        if compute_data:
-            cdata = self.chunk_store[ckey]
         # print(f"Chunk initialized: CKEY {ckey} in CHUNK_STORE {self.chunk_store}")
         # print(f"Chunk information {self.chunk_store[ckey]}")
         pci_info = self._process_chunk_V(chunk_selection)
@@ -250,8 +246,7 @@ def as_chunk_getitem(self, chunk_coords, chunk_selection, out, out_selection,
     else:
         # print("Processing chunk.")
         self._process_chunk(out, cdata, chunk_selection, drop_axes,
-                            out_is_ndarray, fields, out_selection,
-                            compute_data)
+                            out_is_ndarray, fields, out_selection)
         pci_info = self._process_chunk_V(chunk_selection)
         return pci_info
 
@@ -265,7 +260,6 @@ def as_process_chunk(
     fields,
     out_selection,
     partial_read_decode=False,
-    compute_data=False
 ):
     """Take binary data from storage and fill output array"""
     if (out_is_ndarray and
@@ -290,7 +284,7 @@ def as_process_chunk(
             # contiguous, so we can decompress directly from the chunk
             # into the destination array
             if self._compressor:
-                if isinstance(cdata, PartialReadBuffer) and compute_data:
+                if isinstance(cdata, PartialReadBuffer):
                     cdata = cdata.read_full()
                 self._compressor.decode(cdata, dest)
             else:

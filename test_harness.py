@@ -133,7 +133,7 @@ class TestActive(unittest.TestCase):
         result2 = var['data'][0:2,4:6,7:9]
         assert mean_result == result2
 
-    def Ntest_zarr_hijack(self):
+    def test_zarr_hijack(self):
         """ 
         Test the hijacking of Zarr. 
         """

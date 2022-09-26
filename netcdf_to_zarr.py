@@ -74,9 +74,7 @@ def slice_offset_size(fileloc, varname, selection):
 
     Also return the indices of the chunks where the slice sits in, and
     those chunks' sizes."""
-    # toggle compute_data
-    # this turns on and off the actual data payload loading into Zarr store
-    compute_data = False
+    
 
     # load the netCDF file into an image of a Zarr array via
     # kerchunk HDF5->Zarr translation and a reference file system
@@ -84,8 +82,7 @@ def slice_offset_size(fileloc, varname, selection):
     ds = make_an_array_instance_active(ds)
 
     data_selection, chunk_info, chunk_coords = ds.get_orthogonal_selection(selection,
-                                                 out=None, fields=None,
-                                                 compute_data=compute_data)
+                                                 out=None, fields=None)
 
     chunks, chunk_sel, PCI = chunk_info[0]
 
