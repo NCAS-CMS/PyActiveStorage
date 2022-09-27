@@ -21,11 +21,13 @@ def gen_json(file_url, fs, fs2, **so):
     # write it out if it's not there
     if not os.path.isfile(outf):
         with fs.open(file_url, **so) as infile:
-            h5chunks = SingleHdf5ToZarr(infile, file_url, inline_threshold=300)
+            h5chunks = SingleHdf5ToZarr(infile, file_url, inline_threshold=0)
             # inline threshold adjusts the Size below which binary blocks are
             # included directly in the output
             # a higher inline threshold can result in a larger json file but
             # faster loading time
+            # for active storage, we don't want anything inline
+
             fname = os.path.splitext(file_url)[0]
             outf = f'{fname}_{variable}.json' # vanilla file name
             with fs2.open(outf, 'wb') as f:
@@ -44,6 +46,7 @@ def open_zarr_group(out_json):
     """
     fs = fsspec.filesystem("reference", fo=out_json)
     mapper = fs.get_mapper("")  # local FS mapper
+    #mapper.fs.reference has the kerchunk mapping, how does this propagate into the Zarr array?
     zarr_group = zarr.open_group(mapper)
     #print("Zarr group info:", zarr_group.info)
     zarr_array = zarr_group.data
