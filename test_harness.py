@@ -82,49 +82,34 @@ class Active:
         data_selection, chunk_info, chunk_coords = self.zds.get_orthogonal_selection(*args,
                                                  out=None, fields=None)
 
-        chunks, chunk_sel, PCI = chunk_info[0]
+        chunks, chunk_sel, PCI= chunk_info[0]
+
+        # get offsets and sizes from PCI
+        offsets = []
+        sizes = []
+        for offset, size, _ in list(PCI):
+            offsets.append(offset)
+            sizes.append(size)
+
+        # get chunks info from chunk store
+        chunk_store = self.zds.chunk_store
+        chunk_coords_formatted = []
+        for ch_coord in chunk_coords:
+            new_key = "data/" + ".".join([str(ch_coord[0]),
+                                        str(ch_coord[1]),
+                                        str(ch_coord[2])])
+            chunk_coords_formatted.append(new_key)
+
+        # decode bytes from chunks
+        # this is vanilla zarr
+        chunks_with_data = [self.zds._decode_chunk(chunk_store[k]) for k in chunk_coords_formatted]
         
-        # get offsets and sizes from PCI
-        offsets = []
-        sizes = []
-        for offset, size, _ in list(PCI):
-            offsets.append(offset)
-            sizes.append(size)
 
-        # get chunks info from chunk store
-        chunk_store = self.zds.chunk_store
-        chunk_coords_formatted = []
-        for ch_coord in chunk_coords:
-            new_key = "data/" + ".".join([str(ch_coord[0]),
-                                        str(ch_coord[1]),
-                                        str(ch_coord[2])])
-            chunk_coords_formatted.append(new_key)
-
-        # decode bytes from chunks
-        chunks_with_data = [self.zds._decode_chunk(chunk_store[k]) for k in chunk_coords_formatted]
-        flat_chunks_with_data = np.ndarray.flatten(np.array(chunks_with_data))
+        # this is going to the file ourselves directly
+        chunks_with_data2 = [self.zds._as_decode_chunk(k) for k in chunk_coords_formatted]
+        # FIXME: we want to check these are the same before we replac them, but currently they wont be
 
 
-        chunks, chunk_sel, PCI = chunk_info[0]
-
-        # get offsets and sizes from PCI
-        offsets = []
-        sizes = []
-        for offset, size, _ in list(PCI):
-            offsets.append(offset)
-            sizes.append(size)
-
-        # get chunks info from chunk store
-        chunk_store = self.zds.chunk_store
-        chunk_coords_formatted = []
-        for ch_coord in chunk_coords:
-            new_key = "data/" + ".".join([str(ch_coord[0]),
-                                        str(ch_coord[1]),
-                                        str(ch_coord[2])])
-            chunk_coords_formatted.append(new_key)
-
-        # decode bytes from chunks
-        chunks_with_data = [self.zds._decode_chunk(chunk_store[k]) for k in chunk_coords_formatted]
         flat_chunks_with_data = np.ndarray.flatten(np.array(chunks_with_data))
 
         chunks_dict = {}

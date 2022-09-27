@@ -38,8 +38,41 @@ def make_an_array_instance_active(instance):
     instance._chunk_getitem = as_chunk_getitem.__get__(instance, Array)
     instance._process_chunk = as_process_chunk.__get__(instance, Array)
     instance._process_chunk_V = as_process_chunk_V.__get__(instance, Array)
+    instance._as_decode_chunk = as_decode_chunk.__get__(instance,Array)
 
     return instance
+
+def as_decode_chunk(self, key):
+    """
+    Mimic the functionality of vanilla decode chunk, but go to the file system ourselves.
+    In the fullness of time we will pass a method and a compression type via this interface 
+    """
+    if self._compressor:
+        raise ValueError("No active support for compression as yet")
+    if self._Filters:
+        raise ValueError("No active support for filters as yet")
+    # Just tell us what keys we want for now, and do nothing
+    print('as_decode wants',key)
+    return None # for now the rest of this code can't run coz we need to get the data
+    # now what we do is get the data and load it into chunk
+    
+    chunk = our_direct_read(key)  # this code doesn't yet exist
+
+    # and once we have it
+
+    # view as numpy array with correct dtype
+    chunk = ensure_ndarray(chunk)
+    if self._dtype != object:
+        chunk = chunk.view(self._dtype)
+    elif chunk.dtype != object:
+        # filter problem, for details see the standard _decode_chunk method
+        raise RuntimeError('cannot read object array without object codec')
+
+    # ensure correct chunk shape
+    chunk = chunk.reshape(-1, order='A')
+    chunk = chunk.reshape(expected_shape or self._chunks, order=self._order)
+
+    return chunk
 
 
 def as_get_orthogonal_selection(self, selection, out=None,
