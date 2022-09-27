@@ -1,15 +1,16 @@
-import chunk
 import unittest
 import os
 from active_tools import make_an_array_instance_active
 from dummy_data import make_test_ncdata
 from netCDF4 import Dataset
 import numpy as np
-import zarr
 from numcodecs.compat import ensure_ndarray
+from zarr.indexing import (
+    OrthogonalIndexer,
+    check_fields,
+)
 
 import netcdf_to_zarr as nz
-
 
 class Active:
     """ 
@@ -74,15 +75,26 @@ class Active:
                 self.zds = make_an_array_instance_active(ds)
             return self
         else:
-            #return self.__vanilla_zarr(*args)[0]
-            return self.__doing_it_ourselves(*args)
+            first = self.__vanilla_zarr(*args)[0]
+            second = self.__doing_it_ourselves2(*args)
+            return second
 
     def __vanilla_zarr(self, *args):
         return self.zds.__getitem__(*args)
 
     def __doing_it_ourselves(self,*args):
+
         data_selection, chunk_info, chunk_coords = self.zds.get_orthogonal_selection(*args,
                                                  out=None, fields=None)
+
+        # that currently returns V's PCI stuff ...  which is called from within
+        # chunk_getitem instead of _process_chunk. The latter would normally
+        # process the cdata and use out_selection to put all the bits in 
+        # the right place ininto the output array which would normally have 
+        # been setup by now.   
+        # Really what we want it to do is return the indexer, so we can
+        # put stuff in the right place directly ourselves.
+                                          
 
         chunks, chunk_sel, PCI= chunk_info[0]
 
@@ -106,14 +118,11 @@ class Active:
         # this is vanilla zarr
         chunks_with_data = [self.zds._decode_chunk(chunk_store[k]) for k in chunk_coords_formatted]
 
-
         # this is going to the file ourselves directly
         chunks_our_way = [self._decode_chunk(k) for k in chunk_coords_formatted]
 
         print('Zarr',chunks_with_data)
         print('Us',chunks_our_way)        
-        
-        flat_chunks_with_data = np.ndarray.flatten(np.array(chunks_with_data))
 
         chunks_dict = {}
         for (i, k), f in zip(enumerate(chunk_coords_formatted), chunk_coords):
@@ -132,20 +141,54 @@ class Active:
 
         return np.array(selection)
 
-    def _decode_chunk(self, key):
-        """ We do our own read of chunks and decoding etc """
+    def __doing_it_ourselves2(self, *args):
+
+        # conflating _get_orthogonal_selection
+        indexer = OrthogonalIndexer(*args, self.zds)
+
+        # withe the start of as_get_selection
+        out_dtype = self.zds._dtype
+        out_shape = indexer.shape
+        out = np.empty(out_shape, dtype=out_dtype, order=self.zds._order)
+
+        for chunk_coords, chunk_selection, out_selection in indexer:
+            self._process_chunk(chunk_coords,chunk_selection, out, out_selection,
+                                    drop_axes=indexer.drop_axes) 
+        
+        return out
+
+    def _process_chunk(self, chunk_coords, chunk_selection, out, out_selection,
+                       drop_axes=None):
+        """Obtain part or whole of a chunk by taking binary data from storage and filling output array"""
         if self.zds._compressor:
             raise ValueError("No active support for compression as yet")
         if self.zds._filters:
             raise ValueError("No active support for filters as yet")
+        
+        key = "data/" + ".".join([str(c) for c in chunk_coords])
+        chunk = self._decode_chunk(key)
+        tmp = chunk[chunk_selection]
+        if drop_axes:
+            tmp = np.squeeze(tmp, axis=drop_axes)
+
+        # store selected data in output
+        out[out_selection] = tmp
+
+    def _decode_chunk(self, key):
+        """ We do our own read of chunks and decoding etc """
+        
         # yes this next line is bordering on voodoo ... 
         myfsref = self.zds.chunk_store._mutable_mapping.fs.references
         rfile, offset, size = tuple(myfsref[key])
         #fIXME: for the moment, open the file every time ... we might want to do that, or not
         with open(rfile,'rb') as open_file:
+            # get the data
             chunk = self._read_block(open_file, offset, size)
+            # make it a numpy array of bytes
             chunk = ensure_ndarray(chunk)
+            # convert to the appropriate data type
             chunk = chunk.view(self.zds._dtype)
+            # sort out ordering and convert to the parent hyperslab dimensions
             chunk = chunk.reshape(-1, order='A')
             chunk = chunk.reshape(self.zds._chunks, order=self.zds._order)
         return chunk
@@ -216,7 +259,7 @@ class TestActive(unittest.TestCase):
         result2 = var['data'][0:2,4:6,7:9]
         assert mean_result == result2
 
-    def Ntest_zarr_hijack(self):
+    def test_zarr_hijack(self):
         """ 
         Test the hijacking of Zarr. 
         """
