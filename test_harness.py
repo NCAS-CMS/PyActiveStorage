@@ -75,40 +75,51 @@ class Active:
                 self.zds = ds
             return self
         else:
-            return self.__doing_it_ourselves2(*args)
+            return self.__get_selection(*args)
 
-    def __doing_it_ourselves2(self, *args):
 
-        # conflating _get_orthogonal_selection ...
-
-        # we probably want to get the results of needing ot use indexer and pass that down
-        # as I suspect this might not be something to push down into a real active layer.
+    def __get_selection(self, *args):
+        """ 
+        First we need to convert the selection into chunk coordinates,
+        steps etc, via the Zarr machinery, then we get everything else we can
+        from zarr and friends and use simple dictionaries and tupes, then
+        we can go to the storage layer with no zarr.
+        """
+        if self.zds._compressor:
+            raise ValueError("No active support for compression as yet")
+        if self.zds._filters:
+            raise ValueError("No active support for filters as yet")
+        
         indexer = OrthogonalIndexer(*args, self.zds)
-
-        # ... with the start of as_get_selection
-        out_dtype = self.zds._dtype
         out_shape = indexer.shape
+        out_dtype = self.zds._dtype
+        stripped_indexer = [(a, b, c) for a,b,c in indexer]
+        drop_axes = indexer.drop_axes  # not sure what this does and why, yet.
+
+        # yes this next line is bordering on voodoo ... 
+        fsref = self.zds.chunk_store._mutable_mapping.fs.references
+
+        return self.__from_storage(stripped_indexer, drop_axes, out_shape, out_dtype, fsref)
+
+    def __from_storage(self, stripped_indexer, drop_axes, out_shape, out_dtype, fsref):
+ 
         out = np.empty(out_shape, dtype=out_dtype, order=self.zds._order)
 
-        for chunk_coords, chunk_selection, out_selection in indexer:
-            self._process_chunk(chunk_coords,chunk_selection, out, out_selection,
-                                    drop_axes=indexer.drop_axes) 
+        for chunk_coords, chunk_selection, out_selection in stripped_indexer:
+            self._process_chunk(fsref, chunk_coords,chunk_selection, out, out_selection,
+                                    drop_axes=drop_axes) 
         
         if self.method is not None:
             return self.method(out)
         else:
             return out
 
-    def _process_chunk(self, chunk_coords, chunk_selection, out, out_selection,
+    def _process_chunk(self, fsref, chunk_coords, chunk_selection, out, out_selection,
                        drop_axes=None):
         """Obtain part or whole of a chunk by taking binary data from storage and filling output array"""
-        if self.zds._compressor:
-            raise ValueError("No active support for compression as yet")
-        if self.zds._filters:
-            raise ValueError("No active support for filters as yet")
-        
+      
         key = "data/" + ".".join([str(c) for c in chunk_coords])
-        chunk = self._decode_chunk(key)
+        chunk = self._decode_chunk(fsref, key)
         tmp = chunk[chunk_selection]
         if drop_axes:
             tmp = np.squeeze(tmp, axis=drop_axes)
@@ -116,12 +127,11 @@ class Active:
         # store selected data in output
         out[out_selection] = tmp
 
-    def _decode_chunk(self, key):
+    def _decode_chunk(self,fsref, key):
         """ We do our own read of chunks and decoding etc """
         
-        # yes this next line is bordering on voodoo ... 
-        myfsref = self.zds.chunk_store._mutable_mapping.fs.references
-        rfile, offset, size = tuple(myfsref[key])
+        
+        rfile, offset, size = tuple(fsref[key])
         #fIXME: for the moment, open the file every time ... we might want to do that, or not
         with open(rfile,'rb') as open_file:
             # get the data
