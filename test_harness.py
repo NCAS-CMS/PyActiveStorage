@@ -72,29 +72,24 @@ class Active:
         if args == ('data',):
             if self.zds is None:
                 ds = nz.load_netcdf_zarr_generic(self.uri, args[0])
-                self.zds = make_an_array_instance_active(ds)
+                # The following is a hangove from exploration
+                # and is needed if using the original doing it ourselves
+                # self.zds = make_an_array_instance_active(ds)
+                self.zds = ds
             return self
         else:
-            first = self.__vanilla_zarr(*args)[0]
-            second = self.__doing_it_ourselves2(*args)
-            return second
+            return self.__doing_it_ourselves2(*args)
 
     def __vanilla_zarr(self, *args):
         return self.zds.__getitem__(*args)
 
     def __doing_it_ourselves(self,*args):
+        """ This is the first version unpacking stuff ourselves directly.
+        Doesn't quite get things in the right order, whether we read the 
+        data or whether zarr does iet."""
 
         data_selection, chunk_info, chunk_coords = self.zds.get_orthogonal_selection(*args,
                                                  out=None, fields=None)
-
-        # that currently returns V's PCI stuff ...  which is called from within
-        # chunk_getitem instead of _process_chunk. The latter would normally
-        # process the cdata and use out_selection to put all the bits in 
-        # the right place ininto the output array which would normally have 
-        # been setup by now.   
-        # Really what we want it to do is return the indexer, so we can
-        # put stuff in the right place directly ourselves.
-                                          
 
         chunks, chunk_sel, PCI= chunk_info[0]
 
@@ -143,10 +138,10 @@ class Active:
 
     def __doing_it_ourselves2(self, *args):
 
-        # conflating _get_orthogonal_selection
+        # conflating _get_orthogonal_selection ...
         indexer = OrthogonalIndexer(*args, self.zds)
 
-        # withe the start of as_get_selection
+        # ... with the start of as_get_selection
         out_dtype = self.zds._dtype
         out_shape = indexer.shape
         out = np.empty(out_shape, dtype=out_dtype, order=self.zds._order)
