@@ -2,7 +2,7 @@ import os
 import numpy as np
 import itertools
 import zarr
-from active_tools import make_an_array_instance_active
+from activestorage.active_tools import make_an_array_instance_active
 
 from pathlib import Path
 import ujson
