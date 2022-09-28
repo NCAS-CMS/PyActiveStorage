@@ -9,6 +9,10 @@ from zarr.indexing import (
 )
 import netcdf_to_zarr as nz
 
+
+
+
+
 class Active:
     """ 
     Instantiates an interface to active storage which contains either zarr files
@@ -103,12 +107,15 @@ class Active:
 
     def __from_storage(self, stripped_indexer, drop_axes, out_shape, out_dtype, fsref):
  
-        out = np.empty(out_shape, dtype=out_dtype, order=self.zds._order)
+        if self.method is not None:
+            out = []
+        else:
+            out = np.empty(out_shape, dtype=out_dtype, order=self.zds._order)
 
         for chunk_coords, chunk_selection, out_selection in stripped_indexer:
             self._process_chunk(fsref, chunk_coords,chunk_selection, out, out_selection,
                                     drop_axes=drop_axes) 
-        
+
         if self.method is not None:
             return self.method(out)
         else:
@@ -119,19 +126,22 @@ class Active:
         """Obtain part or whole of a chunk by taking binary data from storage and filling output array"""
       
         key = "data/" + ".".join([str(c) for c in chunk_coords])
-        chunk = self._decode_chunk(fsref, key)
-        tmp = chunk[chunk_selection]
-        if drop_axes:
-            tmp = np.squeeze(tmp, axis=drop_axes)
-
-        # store selected data in output
-        out[out_selection] = tmp
-
-    def _decode_chunk(self,fsref, key):
-        """ We do our own read of chunks and decoding etc """
-        
-        
         rfile, offset, size = tuple(fsref[key])
+        tmp = self._decode_chunk( rfile, offset, size, chunk_selection, method=self.method)
+        
+        if self.method is not None:
+            out.append(tmp)
+        else:
+
+            if drop_axes:
+                tmp = np.squeeze(tmp, axis=drop_axes)
+
+            # store selected data in output
+            out[out_selection] = tmp
+
+    def _decode_chunk(self, rfile, offset, size, chunk_selection, method=None):
+        """ We do our own read of chunks and decoding etc """
+       
         #fIXME: for the moment, open the file every time ... we might want to do that, or not
         with open(rfile,'rb') as open_file:
             # get the data
@@ -143,7 +153,12 @@ class Active:
             # sort out ordering and convert to the parent hyperslab dimensions
             chunk = chunk.reshape(-1, order='A')
             chunk = chunk.reshape(self.zds._chunks, order=self.zds._order)
-        return chunk
+
+        tmp = chunk[chunk_selection]
+        if method:
+            return method(tmp)
+        else:
+            return tmp
 
     def _read_block(self, open_file, offset, size):
         """ Read <size> bytes from <open_file> at <offset>"""
