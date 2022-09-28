@@ -33,9 +33,7 @@ jobs:
       - shell: bash -l {0}
         run: python -V
       - shell: bash -l {0}
-        run: python test_harness-learning.py
-      - shell: bash -l {0}
-        run: python test_harness.py
+        run: pytest
 
   osx:
     runs-on: "macos-latest"
@@ -61,6 +59,4 @@ jobs:
       - shell: bash -l {0}
         run: python -V
       - shell: bash -l {0}
-        run: python test_harness-learning.py
-      - shell: bash -l {0}
-        run: python test_harness.py
+        run: pytest
