@@ -33,6 +33,8 @@ jobs:
       - shell: bash -l {0}
         run: python -V
       - shell: bash -l {0}
+        run: pip install -e .
+      - shell: bash -l {0}
         run: pytest
 
   osx:
@@ -58,5 +60,7 @@ jobs:
         run: conda --version
       - shell: bash -l {0}
         run: python -V
+      - shell: bash -l {0}
+        run: pip install -e .
       - shell: bash -l {0}
         run: pytest
