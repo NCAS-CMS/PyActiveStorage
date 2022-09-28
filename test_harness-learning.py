@@ -1,12 +1,16 @@
+
 import unittest
 import os
+from active_tools import make_an_array_instance_active
 from dummy_data import make_test_ncdata
 from netCDF4 import Dataset
 import numpy as np
 from numcodecs.compat import ensure_ndarray
 from zarr.indexing import (
     OrthogonalIndexer,
+    check_fields,
 )
+
 import netcdf_to_zarr as nz
 
 class Active:
@@ -76,6 +80,62 @@ class Active:
             return self
         else:
             return self.__doing_it_ourselves2(*args)
+
+    def __vanilla_zarr(self, *args):
+        return self.zds.__getitem__(*args)
+
+    def __doing_it_ourselves(self,*args):
+        """ This is the first version unpacking stuff ourselves directly.
+        Doesn't quite get things in the right order, whether we read the 
+        data or whether zarr does iet."""
+
+        data_selection, chunk_info, chunk_coords = self.zds.get_orthogonal_selection(*args,
+                                                 out=None, fields=None)
+
+        chunks, chunk_sel, PCI= chunk_info[0]
+
+        # get offsets and sizes from PCI
+        offsets = []
+        sizes = []
+        for offset, size, _ in list(PCI):
+            offsets.append(offset)
+            sizes.append(size)
+
+        # get chunks info from chunk store
+        chunk_store = self.zds.chunk_store
+        chunk_coords_formatted = []
+        for ch_coord in chunk_coords:
+            new_key = "data/" + ".".join([str(ch_coord[0]),
+                                        str(ch_coord[1]),
+                                        str(ch_coord[2])])
+            chunk_coords_formatted.append(new_key)
+
+        # decode bytes from chunks
+        # this is vanilla zarr
+        chunks_with_data = [self.zds._decode_chunk(chunk_store[k]) for k in chunk_coords_formatted]
+
+        # this is going to the file ourselves directly
+        chunks_our_way = [self._decode_chunk(k) for k in chunk_coords_formatted]
+
+        print('Zarr',chunks_with_data)
+        print('Us',chunks_our_way)        
+
+        chunks_dict = {}
+        for (i, k), f in zip(enumerate(chunk_coords_formatted), chunk_coords):
+            flat_decoded = np.ndarray.flatten(self.zds._decode_chunk(chunk_store[k]))
+            selection_in_chunk = []
+            # NB: very important to remember that each start in "offsets" is to be
+            # used for each chunk; it's not one start from "offsets" is per chunk
+            for j, k in zip(offsets, sizes):
+                partial_data = flat_decoded[j:j+k]
+                selection_in_chunk.extend(partial_data)
+            chunks_dict[f] = selection_in_chunk
+
+        selection = []
+        for _, v in chunks_dict.items():
+            selection.extend(v)
+
+        return np.array(selection)
 
     def __doing_it_ourselves2(self, *args):
 
@@ -200,6 +260,39 @@ class TestActive(unittest.TestCase):
         var = active['data']
         result2 = var[0:2,4:6,7:9]
         self.assertEqual(mean_result, result2)
+       
+
+    def test_zarr_hijack(self):
+        """ 
+        Test the hijacking of Zarr. 
+        """
+        data_file = self.testfile
+        varname = "test_bizarre"
+        selection = (slice(0, 2, 1), slice(4, 6, 1), slice(7, 9, 1))
+
+        # get slicing info
+        (ds, master_chunks, chunk_selection,
+         offsets, sizes, selected_chunks, chunks_data_dict) = \
+            nz.slice_offset_size(data_file, varname, selection)
+
+        # sanity checks
+        assert master_chunks == (3, 3, 1)
+        assert len(offsets) == 2
+        assert len(sizes) == len(offsets)
+        assert offsets == [1, 4]  # these are numbers of elements
+        # and are found in each chunk ie 1st and 4th element start data in each chunk
+        assert sizes == [2, 2]  # these are numbers of elements
+        # and are found in each chunk ie 1st+2 and 4th+2 span selected data in each chunk
+        assert selected_chunks == [(0, 1, 7), (0, 1, 8)]  # chunks coords of the chunks containing selected data
+        assert selected_chunks == list(chunks_data_dict.keys())
+        expected_selection = np.sort([740.,840.,750.,850.,741.,841.,751.,851.])
+        selection = []
+        for _, v in chunks_data_dict.items():
+            selection.extend(v)
+        print(f"UNITTEST: expected data selection: {expected_selection}")
+        print(f"UNITTEST: obtained data selection: {np.array(selection)}")
+        assert np.array_equal(np.array(expected_selection), np.sort(selection))
+
 
 if __name__=="__main__":
     unittest.main()
