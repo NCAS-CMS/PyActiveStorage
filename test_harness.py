@@ -1,3 +1,4 @@
+
 import unittest
 import os
 from active_tools import make_an_array_instance_active
@@ -46,7 +47,7 @@ class Active:
         elif self._version == 1:
             return self._via_kerchunk(*args)
         elif self._version  == 2:
-            raise NotImplementedError
+            return self._via_kerchunk(*args)
         else:
             raise ValueError(f'Version {self._version} not supported')
 
@@ -139,6 +140,9 @@ class Active:
     def __doing_it_ourselves2(self, *args):
 
         # conflating _get_orthogonal_selection ...
+
+        # we probably want to get the results of needing ot use indexer and pass that down
+        # as I suspect this might not be something to push down into a real active layer.
         indexer = OrthogonalIndexer(*args, self.zds)
 
         # ... with the start of as_get_selection
@@ -150,7 +154,10 @@ class Active:
             self._process_chunk(chunk_coords,chunk_selection, out, out_selection,
                                     drop_axes=indexer.drop_axes) 
         
-        return out
+        if self.method is not None:
+            return self.method(out)
+        else:
+            return out
 
     def _process_chunk(self, chunk_coords, chunk_selection, out, out_selection,
                        drop_axes=None):
@@ -236,7 +243,7 @@ class TestActive(unittest.TestCase):
         assert np.array_equal(nda,np.array([740.,840.,750.,850.,741.,841.,751.,851.]))
         active.close()
 
-    def NtestActive(self):
+    def testActive(self):
         """ 
         Shows what we expect an active example test to achieve and provides "the right answer" 
         """
@@ -244,15 +251,16 @@ class TestActive(unittest.TestCase):
         active._version = 0
         var = active['data']
         d = var[0:2,4:6,7:9]
-        nda = np.ndarray.flatten(d[0])
-        mean_result = np.mean(nda)
+        mean_result = np.mean(d)
         active.close()
 
         active = Active(self.testfile)
         active._version = 2
-        active.method='mean'
-        result2 = var['data'][0:2,4:6,7:9]
-        assert mean_result == result2
+        active.method=np.mean
+        var = active['data']
+        result2 = var[0:2,4:6,7:9]
+        self.assertEqual(mean_result, result2)
+       
 
     def test_zarr_hijack(self):
         """ 
