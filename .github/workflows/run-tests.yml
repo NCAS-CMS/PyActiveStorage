@@ -1,0 +1,65 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 */1 * * *'  # nightly
+
+jobs:
+  linux:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10"]
+      fail-fast: false
+    name: Linux Python ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: activestorage
+          environment-file: environment.yml
+          python-version: ${{ matrix.python-version }}
+          miniforge-version: "latest"
+          miniforge-variant: Mambaforge
+          use-mamba: true
+      - shell: bash -l {0}
+        run: conda --version
+      - shell: bash -l {0}
+        run: python -V
+      - shell: bash -l {0}
+        run: python test_harness-learning.py
+      - shell: bash -l {0}
+        run: python test_harness.py
+
+  osx:
+    runs-on: "macos-latest"
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10"]
+      fail-fast: false
+    name: OSX Python ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: activestorage
+          environment-file: environment.yml
+          python-version: ${{ matrix.python-version }}
+          miniforge-version: "latest"
+          miniforge-variant: Mambaforge
+          use-mamba: true
+      - shell: bash -l {0}
+        run: conda --version
+      - shell: bash -l {0}
+        run: python -V
+      - shell: bash -l {0}
+        run: python test_harness-learning.py
+      - shell: bash -l {0}
+        run: python test_harness.py
