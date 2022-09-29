@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - use_pytest
   schedule:
     - cron: '0 */1 * * *'  # nightly
 
