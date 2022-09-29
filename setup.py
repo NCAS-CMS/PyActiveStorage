@@ -19,7 +19,6 @@ REQUIREMENTS = {
     # Use with pip install . to install from source
     'install': [
         'dask',
-        'h5py',
         'kerchunk',
         'netcdf4',
         'pytest',
