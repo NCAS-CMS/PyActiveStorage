@@ -8,8 +8,7 @@ from zarr.indexing import (
     OrthogonalIndexer,
 )
 from activestorage import netcdf_to_zarr as nz
-
-from storage import decode_chunk
+from activestorage.storage import decode_chunk
 
 class Active:
     """ 
