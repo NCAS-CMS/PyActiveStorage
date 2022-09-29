@@ -5,6 +5,7 @@ channels:
 
 dependencies:
   - dask
+  - h5py  # needed by Kerchunk
   - kerchunk
   - netcdf4
   - pytest
