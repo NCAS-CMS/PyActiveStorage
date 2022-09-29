@@ -1,8 +1,10 @@
+"""
+Module to hold Zarr lift-up code.
 
+We're effectively subclassing zarr.core.Array, but not actually doing so, 
+instead we're providing tools to hack instances of it
+"""
 import numpy as np
-
-# we're effectively subclassing this sucker, but not actually doing so, 
-# instead we're providing tools to hack instances of it
 from zarr.core import Array
 
 # import other zarr gubbins used in the methods we override
@@ -159,7 +161,6 @@ def as_get_selection(self, indexer, out=None,
 
     # determine output shape
     out_shape = indexer.shape
-    # print("Out (dummy) shape", out_shape)
 
     # setup output array
     if out is None:
@@ -169,15 +170,13 @@ def as_get_selection(self, indexer, out=None,
 
     chunks_info = []
     chunks_locs = []
-    # print("PPP", list(indexer))
+
     # iterate over chunks
     if not hasattr(self.chunk_store, "getitems") or \
         any(map(lambda x: x == 0, self.shape)):
         # sequentially get one key at a time from storage
         for chunk_coords, chunk_selection, out_selection in indexer:
-            #print("XXX: chunk coords", chunk_coords)
-            #print("YYY: chunk selection", chunk_selection)
-            #print("ZZZ: out selection", out_selection)
+
             # load chunk selection into output array
             pci = self._chunk_getitem(chunk_coords, chunk_selection, out, out_selection,
                                         drop_axes=indexer.drop_axes, fields=fields)
@@ -221,18 +220,10 @@ def as_chunk_getitem(self, chunk_coords, chunk_selection, out, out_selection,
 
     assert len(chunk_coords) == len(self._cdata_shape)
 
-    # obtain key for chunk
-    ckey = self._chunk_key(chunk_coords)
-
     try:
-        # hijack module
-        # print(f"Chunk initialized: CKEY {ckey} in CHUNK_STORE {self.chunk_store}")
-        # print(f"Chunk information {self.chunk_store[ckey]}")
         pci_info = self._process_chunk_V(chunk_selection)
-        return pci_info
     except KeyError:
         # chunk not initialized
-        # print(f"Chunk NOT initialized: CKEY {ckey} not in CHUNK_STORE {self.chunk_store}")
         if self._fill_value is not None:
             if fields:
                 fill_value = self._fill_value[fields]
@@ -240,14 +231,9 @@ def as_chunk_getitem(self, chunk_coords, chunk_selection, out, out_selection,
                 fill_value = self._fill_value
             out[out_selection] = fill_value
         pci_info = self._process_chunk_V(chunk_selection)
-        return pci_info
 
-    else:
-        # print("Processing chunk.")
-        self._process_chunk(out, cdata, chunk_selection, drop_axes,
-                            out_is_ndarray, fields, out_selection)
-        pci_info = self._process_chunk_V(chunk_selection)
-        return pci_info
+    return pci_info
+
 
 def as_process_chunk(
     self,
@@ -335,5 +321,5 @@ def as_process_chunk(
 def as_process_chunk_V(self, chunk_selection):
     """Run an instance of PCI inside the engine."""
     index_selection = PartialChunkIterator(chunk_selection, self.chunks)
-    for start, nitems, partial_out_selection in index_selection:
+    for _, _, _ in index_selection:
         return self.chunks, chunk_selection, index_selection
