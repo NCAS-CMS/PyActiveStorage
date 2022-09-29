@@ -1,6 +1,7 @@
 import os
 import numpy as np
-import pytest
+import shutil
+import tempfile
 import unittest
 
 from activestorage.active import Active
@@ -16,9 +17,16 @@ class TestActive(unittest.TestCase):
         """ 
         Ensure there is test data
         """
-        self.testfile = 'test_bizarre.nc'
+        self.temp_folder = tempfile.mkdtemp()
+        self.testfile = os.path.join(self.temp_folder,
+                                     'test_bizarre.nc')
+        print(f"Test file is {self.testfile}")
         if not os.path.exists(self.testfile):
             make_test_ncdata(filename=self.testfile)
+
+    def tearDown(self):
+        """Remove temp folder."""
+        shutil.rmtree(self.temp_folder)
         
     def testRead0(self):
         """ 
