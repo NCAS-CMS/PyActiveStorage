@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - unpin_deps
+      - move_active
   schedule:
     - cron: '0 */1 * * *'  # nightly
 
