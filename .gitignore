@@ -1,3 +1,4 @@
 activestorage/__pycache__
 activestorage/*.pyc*
 tests/*.pyc*
+tests/__pycache__
