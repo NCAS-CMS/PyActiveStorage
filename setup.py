@@ -19,12 +19,12 @@ REQUIREMENTS = {
     # Use with pip install . to install from source
     'install': [
         'dask',
-        'h5py==3.7.0',  # nompi_py310h416281c_101
-        'kerchunk==0.0.7',  # pyhd8ed1ab_0
+        'h5py',
+        'kerchunk',
         'netcdf4',
         'pytest',
         'xarray',
-        'zarr==2.12.0',
+        'zarr',
     ],
 }
 
