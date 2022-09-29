@@ -6,10 +6,13 @@ def decode_chunk(rfile, offset, size, dtype, shape, order, chunk_selection, meth
         rfile - the actual file with the data 
         offset, size - where and what we want ...
         dtype - likely float32 in most cases. 
-        shape - will be a tuple, something like (3,3,1) 
+        shape - will be a tuple, something like (3,3,1), this is the dimensionality of the 
+                chunk itself
         order - typically 'C' for c-type ordering
         chunk_selection - python slice tuples for each dimension, e.g.
                            (slice(0, 2, 1), slice(1, 3, 1), slice(0, 1, 1))
+                           this defines the part of the chunk which is to be obtained
+                           or operated upon.
         method - computation desired 
                (in this Python version it's an actual method, in 
                storage implementations we'll change to controlled vocabulary)
