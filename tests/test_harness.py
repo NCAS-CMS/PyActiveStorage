@@ -1,15 +1,14 @@
 import unittest
 import os
-from dummy_data import make_test_ncdata
+from activestorage.dummy_data import make_test_ncdata
 from netCDF4 import Dataset
 import numpy as np
 
 from zarr.indexing import (
     OrthogonalIndexer,
 )
-import netcdf_to_zarr as nz
-
-from storage import decode_chunk
+from activestorage import netcdf_to_zarr as nz
+from activestorage.storage import decode_chunk
 
 class Active:
     """ 
