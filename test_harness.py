@@ -3,15 +3,13 @@ import os
 from dummy_data import make_test_ncdata
 from netCDF4 import Dataset
 import numpy as np
-from numcodecs.compat import ensure_ndarray
+
 from zarr.indexing import (
     OrthogonalIndexer,
 )
 import netcdf_to_zarr as nz
 
-
-
-
+from storage import decode_chunk
 
 class Active:
     """ 
@@ -127,7 +125,8 @@ class Active:
       
         key = "data/" + ".".join([str(c) for c in chunk_coords])
         rfile, offset, size = tuple(fsref[key])
-        tmp = self._decode_chunk( rfile, offset, size, chunk_selection, method=self.method)
+        tmp = decode_chunk(rfile, offset, size, 
+                                 self.zds._dtype, self.zds._chunks, self.zds._order, chunk_selection, method=self.method)
         
         if self.method is not None:
             out.append(tmp)
@@ -139,34 +138,6 @@ class Active:
             # store selected data in output
             out[out_selection] = tmp
 
-    def _decode_chunk(self, rfile, offset, size, chunk_selection, method=None):
-        """ We do our own read of chunks and decoding etc """
-       
-        #fIXME: for the moment, open the file every time ... we might want to do that, or not
-        with open(rfile,'rb') as open_file:
-            # get the data
-            chunk = self._read_block(open_file, offset, size)
-            # make it a numpy array of bytes
-            chunk = ensure_ndarray(chunk)
-            # convert to the appropriate data type
-            chunk = chunk.view(self.zds._dtype)
-            # sort out ordering and convert to the parent hyperslab dimensions
-            chunk = chunk.reshape(-1, order='A')
-            chunk = chunk.reshape(self.zds._chunks, order=self.zds._order)
-
-        tmp = chunk[chunk_selection]
-        if method:
-            return method(tmp)
-        else:
-            return tmp
-
-    def _read_block(self, open_file, offset, size):
-        """ Read <size> bytes from <open_file> at <offset>"""
-        place = open_file.tell()
-        open_file.seek(offset)
-        data = open_file.read(size)
-        open_file.seek(place)
-        return data
 
     def close(self):
         self.file.close()
