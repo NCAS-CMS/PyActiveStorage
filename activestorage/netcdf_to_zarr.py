@@ -7,11 +7,10 @@ import fsspec
 from kerchunk.hdf import SingleHdf5ToZarr
 
 
-def gen_json(file_url, fs, fs2, **so):
+def gen_json(file_url, fs, fs2, variable, **so):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
     # set some name for the output json file
     fname = os.path.splitext(file_url)[0]
-    variable = file_url.split('/')[-1].split('.')[0]  # just as an example
     outf = f'{fname}_{variable}.json' # vanilla file name
 
     # write it out if it's not there
@@ -23,16 +22,15 @@ def gen_json(file_url, fs, fs2, **so):
             # a higher inline threshold can result in a larger json file but
             # faster loading time
             # for active storage, we don't want anything inline
-
-            fname = os.path.splitext(file_url)[0]
-            outf = f'{fname}_{variable}.json' # vanilla file name
+#            fname = os.path.splitext(file_url)[0]
+#            outf = f'{fname}_{variable}.json' # vanilla file name
             with fs2.open(outf, 'wb') as f:
                 f.write(ujson.dumps(h5chunks.translate()).encode())
 
     return outf
 
 
-def open_zarr_group(out_json):
+def open_zarr_group(out_json, varname):
     """
     Do the magic opening
 
@@ -45,13 +43,13 @@ def open_zarr_group(out_json):
     #mapper.fs.reference has the kerchunk mapping, how does this propagate into the Zarr array?
     zarr_group = zarr.open_group(mapper)
     #print("Zarr group info:", zarr_group.info)
-    zarr_array = zarr_group.data
-    print("Zarr array info:",  zarr_array.info)
+    zarr_array = getattr(zarr_group, varname)
+    #print("Zarr array info:",  zarr_array.info)
 
     return zarr_array
 
 
-def load_netcdf_zarr_generic(fileloc, varname=None, build_dummy=True):
+def load_netcdf_zarr_generic(fileloc, varname, build_dummy=True):
     """Pass a netCDF4 file to be shaped as Zarr file by kerchunk."""
     so = dict(mode='rb', anon=True, default_fill_cache=False,
               default_cache_type='first') # args to fs.open()
@@ -59,10 +57,10 @@ def load_netcdf_zarr_generic(fileloc, varname=None, build_dummy=True):
     # file chunks to lower memory usage
     fs = fsspec.filesystem('')  # local, for S3: ('s3', anon=True)
     fs2 = fsspec.filesystem('')  # local file system to save final json to
-    out_json = gen_json(fileloc, fs, fs2)
+    out_json = gen_json(fileloc, fs, fs2, varname)
 
     # open this monster
-    ref_ds = open_zarr_group(out_json)
+    ref_ds = open_zarr_group(out_json, varname)
 
     return ref_ds
 
