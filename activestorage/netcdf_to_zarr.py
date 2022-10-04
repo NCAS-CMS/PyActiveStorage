@@ -7,11 +7,11 @@ import fsspec
 from kerchunk.hdf import SingleHdf5ToZarr
 
 
-def gen_json(file_url, fs, fs2, variable, **so):
+def gen_json(file_url, fs, fs2, varname, **so):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
     # set some name for the output json file
     fname = os.path.splitext(file_url)[0]
-    outf = f'{fname}_{variable}.json' # vanilla file name
+    outf = f'{fname}_{varname}.json' # vanilla file name
 
     # write it out if it's not there
     if not os.path.isfile(outf):
@@ -23,7 +23,7 @@ def gen_json(file_url, fs, fs2, variable, **so):
             # faster loading time
             # for active storage, we don't want anything inline
 #            fname = os.path.splitext(file_url)[0]
-#            outf = f'{fname}_{variable}.json' # vanilla file name
+#            outf = f'{fname}_{varname}.json' # vanilla file name
             with fs2.open(outf, 'wb') as f:
                 f.write(ujson.dumps(h5chunks.translate()).encode())
 
