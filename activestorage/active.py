@@ -192,7 +192,9 @@ class Active:
                                     drop_axes=drop_axes)
 
         if method is not None:
+            # Apply the method (again) to aggregate the result
             out = method(out)
+            
             if self._components:
                 # Return a dictionary of components containing the
                 # reduced data and the sample size ('n'). (Rationale:
@@ -212,14 +214,20 @@ class Active:
                 out = out.reshape(shape1)
 
                 if self._method == "mean":
-                    out = {"total": out, "n": n}
+                    # For the average, the returned component is
+                    # "sum", not "mean"
+                    out = {"sum": out, "n": n}
                 else:
                     out = {self._method: out, "n": n}
-            elif self._method == "mean":
-                # In this case, 'out' is sum, so needs divding by the
-                # sample size.
-                n = prod(out_shape)
-                out = out / n
+            else:
+                # Return the reduced data as a numpy array. For most
+                # methods the data is already in this form.
+                if self._method == "mean":
+                    # For the average, it is actually the sum that has
+                    # been created, so we need to divide by the sample
+                    # size.
+                    n = prod(out_shape)
+                    out = out / n
 
         return out
 
