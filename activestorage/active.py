@@ -119,7 +119,7 @@ class Active:
     @method.setter
     def method(self, value):
         if value is not None and value not in self._methods:
-            raise ValueError(f"Bad 'method': {method!r}")
+            raise ValueError(f"Bad 'method': {method}. Choose from min/max/mean/sum.")
 
         self._method = value
 
