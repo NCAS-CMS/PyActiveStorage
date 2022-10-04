@@ -106,7 +106,7 @@ class Active:
         ==========  ==================================================
         ``'min'``   The minumum
 
-        ``'min'``   The maximum
+        ``'max'``   The maximum
 
         ``'mean'``  The unweighted mean
 
