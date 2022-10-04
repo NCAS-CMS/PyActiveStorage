@@ -22,7 +22,7 @@ class Active:
     Version 2 will add methods for actual active storage.
 
     """
-    def __new__(cls, *args, **kwrags):
+    def __new__(cls, *args, **kwargs):
         """Store reduction methods."""
         instance = super().__new__(cls)
         instance._methods = {
