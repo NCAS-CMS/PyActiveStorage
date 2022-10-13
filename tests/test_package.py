@@ -10,7 +10,7 @@ def test_version():
     print(activestorage.__version__)
 
 # check activestorage class
-def test_class_attrs():
+def test_activestorage_class_attrs():
     assert hasattr(activestorage, "Active")
     assert hasattr(activestorage, "active")
     assert hasattr(activestorage, "storage")
