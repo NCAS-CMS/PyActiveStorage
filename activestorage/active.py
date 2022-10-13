@@ -163,10 +163,10 @@ class Active:
         from zarr and friends and use simple dictionaries and tupes, then
         we can go to the storage layer with no zarr.
         """
-        if self.zds._compressor:
-            raise ValueError("No active support for compression as yet")
-        if self.zds._filters:
-            raise ValueError("No active support for filters as yet")
+        compressor = self.zds._compressor
+        filters = self.zds._filters 
+        missing = None #FIXME: Needs implementation 
+
 
         indexer = OrthogonalIndexer(*args, self.zds)
         out_shape = indexer.shape
@@ -177,9 +177,9 @@ class Active:
         # yes this next line is bordering on voodoo ... 
         fsref = self.zds.chunk_store._mutable_mapping.fs.references
 
-        return self._from_storage(stripped_indexer, drop_axes, out_shape, out_dtype, fsref)
+        return self._from_storage(stripped_indexer, drop_axes, out_shape, out_dtype, compressor, filters, missing, fsref)
 
-    def _from_storage(self, stripped_indexer, drop_axes, out_shape, out_dtype, fsref):
+    def _from_storage(self, stripped_indexer, drop_axes, out_shape, out_dtype, compressor, filters, missing, fsref):
 
         method = self.method
         if method is not None:
@@ -188,7 +188,7 @@ class Active:
             out = np.empty(out_shape, dtype=out_dtype, order=self.zds._order)
 
         for chunk_coords, chunk_selection, out_selection in stripped_indexer:
-            self._process_chunk(fsref, chunk_coords,chunk_selection, out, out_selection,
+            self._process_chunk(fsref, chunk_coords,chunk_selection, out, out_selection, compressor, filters, missing,
                                     drop_axes=drop_axes)
 
         if method is not None:
@@ -231,7 +231,7 @@ class Active:
 
         return out
 
-    def _process_chunk(self, fsref, chunk_coords, chunk_selection, out, out_selection,
+    def _process_chunk(self, fsref, chunk_coords, chunk_selection, out, out_selection, compressor, filters, missing, 
                        drop_axes=None):
         """Obtain part or whole of a chunk.
 
@@ -242,7 +242,7 @@ class Active:
         coord = '.'.join([str(c) for c in chunk_coords])
         key = f"{self.ncvar}/{coord}"
         rfile, offset, size = tuple(fsref[key])
-        tmp = decode_chunk(rfile, offset, size,
+        tmp = decode_chunk(rfile, offset, size, compressor, filters, missing,
                                  self.zds._dtype, self.zds._chunks, self.zds._order, chunk_selection, method=self.method)
 
         if self.method is not None:
