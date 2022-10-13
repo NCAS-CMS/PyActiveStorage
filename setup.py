@@ -25,6 +25,8 @@ REQUIREMENTS = {
         'pytest',
         'xarray',
         'zarr',
+        # for testing
+        'pytest-xdist',
     ],
 }
 
