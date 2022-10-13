@@ -164,8 +164,11 @@ class Active:
         we can go to the storage layer with no zarr.
         """
         compressor = self.zds._compressor
-        filters = self.zds._filters 
-        missing = None #FIXME: Needs implementation 
+        filters = self.zds._filters
+
+        #FIXME: populate this from metadata, see issue #18
+        #interpretation: (_fillvalue, missing, min_valid_value, max_valid_value)
+        missing = (None,None,None,None) #FIXME: Needs implementation 
 
 
         indexer = OrthogonalIndexer(*args, self.zds)
