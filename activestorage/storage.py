@@ -1,6 +1,7 @@
+from ast import Not
 from numcodecs.compat import ensure_ndarray
 
-def decode_chunk(rfile, offset, size, dtype, shape, order, chunk_selection, method=None):
+def decode_chunk(rfile, offset, size, compression, filters, missing, dtype, shape, order, chunk_selection, method=None):
         """ We do our own read of chunks and decoding etc 
         
         rfile - the actual file with the data 
@@ -19,6 +20,14 @@ def decode_chunk(rfile, offset, size, dtype, shape, order, chunk_selection, meth
                         
         """
        
+        if compression is not None:
+            raise NotImplementedError
+        if filters is not None:
+            raise NotImplementedError
+        if missing is not (None, None, None, None):
+             #interpretation: (_fillvalue, missing, min_valid_value, max_valid_value)
+            raise NotImplementedError
+
         #fIXME: for the moment, open the file every time ... we might want to do that, or not
         with open(rfile,'rb') as open_file:
             # get the data
