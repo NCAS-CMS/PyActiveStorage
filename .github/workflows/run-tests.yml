@@ -34,7 +34,7 @@ jobs:
       - shell: bash -l {0}
         run: pip install -e .
       - shell: bash -l {0}
-        run: pytest
+        run: pytest -n 2
 
   osx:
     runs-on: "macos-latest"
