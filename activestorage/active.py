@@ -191,9 +191,10 @@ class Active:
             out = np.empty(out_shape, dtype=out_dtype, order=self.zds._order)
 
         for chunk_coords, chunk_selection, out_selection in stripped_indexer:
-            self._process_chunk(fsref, chunk_coords,chunk_selection, out, out_selection,
-                                              compressor, filters, missing,
-                                              drop_axes=drop_axes)
+            self._process_chunk(fsref, chunk_coords,chunk_selection,
+                                out, out_selection,
+                                compressor, filters, missing,
+                                drop_axes=drop_axes)
 
         if method is not None:
             # Apply the method (again) to aggregate the result
