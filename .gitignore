@@ -13,4 +13,5 @@ __pycache__/
 
 # doc shtuff
 doc/__pycache__
+doc/_sidebar.rst.inc
 _sidebar.rst.inc
