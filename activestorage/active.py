@@ -180,10 +180,11 @@ class Active:
         # yes this next line is bordering on voodoo ... 
         fsref = self.zds.chunk_store._mutable_mapping.fs.references
 
-        return self._from_storage(stripped_indexer, drop_axes, out_shape, out_dtype, compressor, filters, missing, fsref)
+        return self._from_storage(stripped_indexer, drop_axes, out_shape,
+                                  out_dtype, compressor, filters, missing, fsref)
 
-    def _from_storage(self, stripped_indexer, drop_axes, out_shape, out_dtype, compressor, filters, missing, fsref):
-
+    def _from_storage(self, stripped_indexer, drop_axes, out_shape, out_dtype,
+                      compressor, filters, missing, fsref):
         method = self.method
         if method is not None:
             out = []
@@ -236,7 +237,8 @@ class Active:
 
         return out
 
-    def _process_chunk(self, fsref, chunk_coords, chunk_selection, out, out_selection, compressor, filters, missing, 
+    def _process_chunk(self, fsref, chunk_coords, chunk_selection, out,
+                       out_selection, compressor, filters, missing, 
                        drop_axes=None):
         """Obtain part or whole of a chunk.
 
@@ -248,7 +250,8 @@ class Active:
         key = f"{self.ncvar}/{coord}"
         rfile, offset, size = tuple(fsref[key])
         tmp = decode_chunk(rfile, offset, size, compressor, filters, missing,
-                                 self.zds._dtype, self.zds._chunks, self.zds._order, chunk_selection, method=self.method)
+                           self.zds._dtype, self.zds._chunks, self.zds._order,
+                           chunk_selection, method=self.method)
 
         if self.method is not None:
             out.append(tmp)
