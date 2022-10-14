@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - improve_package
   schedule:
     - cron: '0 0 * * *'  # nightly
 
