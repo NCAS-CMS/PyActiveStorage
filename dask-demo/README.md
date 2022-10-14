@@ -3,6 +3,14 @@
 * The demonstration in this repository uses a modified version of
   dask: https://github.com/davidhassell/dask/tree/active-storage
 
+* To install the modified version of `dask`:
+
+```console
+$ pip install git+ssh://git@github.com/davidhassell/dask.git@active-storage
+...
+Successfully installed dask-2022.4.1+38.geef967a8
+```
+
 * Code changes in the modified dask can be seen at
   https://github.com/davidhassell/dask/pull/1/files (66 newlines of
   code).
