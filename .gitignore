@@ -10,3 +10,8 @@ ActiveStorage.egg-info
 __pycache__/
 *.py[cod]
 *$py.class
+
+# doc shtuff
+doc/__pycache__
+doc/_sidebar.rst.inc
+_sidebar.rst.inc

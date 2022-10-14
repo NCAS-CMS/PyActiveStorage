@@ -25,6 +25,12 @@ REQUIREMENTS = {
         'pytest',
         'xarray',
         'zarr',
+        # for testing
+        'pytest-xdist',
+        # for documentation
+        'autodocsumm',
+        'sphinx>2',
+        'sphinx_rtd_theme',
     ],
 }
 

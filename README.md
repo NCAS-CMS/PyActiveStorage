@@ -44,3 +44,12 @@ result = active[0:2, 4:6, 7:9]
 where `result` will be the mean of the appropriate slice of the hyperslab in `var`.
 
 There are some (relatively obsolete) documents from our exploration of zarr internals in the docs4understanding, but they are not germane to the usage of the Active class.
+
+
+## Documentation
+
+See available Sphinx [documentation](https://htmlpreview.github.io/?https://github.com/valeriupredoi/PyActiveStorage/blob/main/doc/build/index.html). To build locally the documentation run:
+
+```
+sphinx-build -Ea doc doc/build
+```
