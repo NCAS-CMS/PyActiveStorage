@@ -10,7 +10,7 @@ from activestorage.active import Active
 
 def create_hyb_pres_file_without_ap(dataset, short_name):
     """Create dataset without vertical auxiliary coordinate ``ap``."""
-    dataset.createDimension('time', size=1)
+    dataset.createDimension('time', size=11)
     dataset.createDimension('lev', size=2)
     dataset.createDimension('lat', size=3)
     dataset.createDimension('lon', size=4)
@@ -22,9 +22,9 @@ def create_hyb_pres_file_without_ap(dataset, short_name):
     dataset.createVariable('lev_bnds', np.float64, dimensions=('lev', 'bnds'))
     dataset.createVariable('lat', np.float64, dimensions=('lat',))
     dataset.createVariable('lon', np.float64, dimensions=('lon',))
-    dataset.variables['time'][:] = [0.0]
+    dataset.variables['time'][:] = range(11)
     dataset.variables['time'].standard_name = 'time'
-    dataset.variables['time'].units = 'days since 6543-2-1'
+    dataset.variables['time'].units = 'days since 1850-1-1'
     dataset.variables['lev'][:] = [1.0, 2.0]
     dataset.variables['lev'].bounds = 'lev_bnds'
     dataset.variables['lev'].standard_name = (
@@ -56,7 +56,7 @@ def create_hyb_pres_file_without_ap(dataset, short_name):
     # Variable
     dataset.createVariable(short_name, np.float32,
                            dimensions=('time', 'lev', 'lat', 'lon'))
-    dataset.variables[short_name][:] = np.full((1, 2, 3, 4), 0.0,
+    dataset.variables[short_name][:] = np.full((1, 2, 3, 4), 22.0,
                                                dtype=np.float32)
     dataset.variables[short_name].standard_name = (
         'cloud_area_fraction_in_atmosphere_layer')
@@ -93,13 +93,13 @@ def test_hefty_data(tmp_path):
     ncfile = save_cl_file_with_a(tmp_path)
     active = Active(ncfile, "cl")
     active._version = 0
-    d = active[0:2, 4:6, 7:9]
+    d = active[4:5, 1:2]
     mean_result = np.mean(d)
 
     active = Active(ncfile, "cl")
     active._version = 2
     active.method = "mean"
     active.components = True
-    result2 = active[0:2, 4:6, 7:9]
-    print(result2)
-    self.assertEqual(mean_result, result2["sum"]/result2["n"]) 
+    result2 = active[4:5, 1:2]
+    print(result2, ncfile)
+    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"]) 
