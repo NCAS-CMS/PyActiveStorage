@@ -1,4 +1,4 @@
-### Client-side demonstration of active storage
+### Demonstration of active storage with `dask`
 
 * The demonstration in this repository uses a modified version of
   dask: https://github.com/davidhassell/dask/tree/active-storage
