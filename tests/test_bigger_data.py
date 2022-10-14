@@ -165,3 +165,28 @@ def test_native_emac_model_fails(test_data_path):
     active.components = True
     with pytest.raises(OSError):
         result2 = active[4:5, 1:2]
+
+
+def test_cesm2_native(test_data_path):
+    """
+    Test again a native model, this time around netCDF4 loadable with h5py
+    Also, this has _FillValue and missing_value
+    """
+    ncfile = str(test_data_path / "cesm2_native.nc")
+    active = Active(ncfile, "TREFHT")
+    active._version = 0
+    d = active[4:5, 1:2]
+    mean_result = np.mean(d)
+
+    active = Active(ncfile, "TREFHT")
+    active._version = 2
+    active.method = "mean"
+    active.components = True
+    result2 = active[4:5, 1:2]
+    print(result2, ncfile)
+    # expect {'sum': array([[[2368.3232]]], dtype=float32), 'n': array([[[8]]])}
+    # check for typing and structure
+    np.testing.assert_array_equal(result2["sum"], np.array([[[2368.3232]]], dtype="float32"))
+    np.testing.assert_array_equal(result2["n"], np.array([[[8]]]))
+    # check for active
+    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
