@@ -24,7 +24,7 @@ def decode_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
             raise NotImplementedError
         if filters is not None:
             raise NotImplementedError
-        if missing is not (None, None, None, None):
+        if missing != (None, None, None, None):
              #interpretation: (_fillvalue, missing, min_valid_value, max_valid_value)
             raise NotImplementedError
 
