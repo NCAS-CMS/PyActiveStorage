@@ -1,0 +1,33 @@
+name: Test on Push on Linux64
+
+on:
+  push:
+
+jobs:
+  linux:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.10"]  # latest only
+      fail-fast: false
+    name: Linux Python ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: activestorage
+          environment-file: environment.yml
+          python-version: ${{ matrix.python-version }}
+          miniforge-version: "latest"
+          miniforge-variant: Mambaforge
+          use-mamba: true
+      - shell: bash -l {0}
+        run: conda --version
+      - shell: bash -l {0}
+        run: python -V
+      - shell: bash -l {0}
+        run: pip install -e .
+      - shell: bash -l {0}
+        run: pytest -n 2
