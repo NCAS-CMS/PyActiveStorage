@@ -19,7 +19,18 @@ class NetCDFArray:
 
     """
 
-    def __init__(self, filename=None, ncvar=None):
+    def __init__(self, filename, ncvar):
+        """Initialisation.
+
+        :Parameters:
+        
+            filename: `str`
+                The URI of the dataset.
+
+            ncvar: `str`
+                The name of a variable in the dataset.
+
+        """
         self.filename = filename
         self.ncvar = ncvar
 
