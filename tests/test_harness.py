@@ -5,7 +5,7 @@ import tempfile
 import unittest
 
 from activestorage.active import Active
-from activestorage.dummy_data import make_test_ncdata
+from activestorage.dummy_data import make_vanilla_ncdata
 
 
 class TestActive(unittest.TestCase):
@@ -22,7 +22,7 @@ class TestActive(unittest.TestCase):
                                      'test_bizarre.nc')
         print(f"Test file is {self.testfile}")
         if not os.path.exists(self.testfile):
-            make_test_ncdata(filename=self.testfile)
+            make_vanilla_ncdata(filename=self.testfile)
 
     def tearDown(self):
         """Remove temp folder."""

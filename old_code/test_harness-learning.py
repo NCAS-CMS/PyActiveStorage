@@ -2,7 +2,7 @@
 import unittest
 import os
 from activestorage.active_tools import make_an_array_instance_active
-from activestorage.dummy_data import make_test_ncdata
+from activestorage.dummy_data import make_vanilla_ncdata
 from netCDF4 import Dataset
 import numpy as np
 from numcodecs.compat import ensure_ndarray
@@ -217,7 +217,7 @@ class TestActive(unittest.TestCase):
         """
         self.testfile = 'test_bizarre.nc'
         if not os.path.exists(self.testfile):
-            make_test_ncdata(filename=self.testfile)
+            make_vanilla_ncdata(filename=self.testfile)
         
     def testRead0(self):
         """ 
