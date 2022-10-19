@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="406px" preserveAspectRatio="none" style="width:514px;height:406px;background:#FFFFFF;" version="1.1" viewBox="0 0 514 406" width="514px" zoomAndPan="magnify"><defs/><g><!--MD5=[0f4050eb25ca2e9ef33e4d67725bb0f8]
+class missing descriptor--><g id="elem_missing descriptor"><rect codeLine="6" fill="#F1F1F1" height="114.5742" id="missing descriptor" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="138" x="369.5" y="227.2422"/><text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacing" textLength="59" x="409" y="243.8438">«abstract»</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="127" x="375" y="259.9102">missing descriptor</text><line style="stroke:#181818;stroke-width:0.5;" x1="370.5" x2="506.5" y1="267.8633" y2="267.8633"/><ellipse cx="380.5" cy="281.6074" fill="none" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="53" x="389.5" y="285.3984">fillvalue</text><ellipse cx="380.5" cy="298.0957" fill="none" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="53" x="389.5" y="301.8867">missing</text><ellipse cx="380.5" cy="314.584" fill="none" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="108" x="389.5" y="318.375">min_valid_value</text><ellipse cx="380.5" cy="331.0723" fill="none" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="112" x="389.5" y="334.8633">max_valid_value</text></g><!--MD5=[299fc3db55cde6e0cd25327917422b0b]
+class dtypes--><g id="elem_dtypes"><rect codeLine="13" fill="#F1F1F1" height="100.4414" id="dtypes" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="79" x="238" y="234.7422"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="45" x="255" y="253.2773">dtypes</text><line style="stroke:#181818;stroke-width:0.5;" x1="239" x2="316" y1="261.2305" y2="261.2305"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="49" x="244" y="278.7656">float32</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="49" x="244" y="295.2539">float64</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="67" x="244" y="311.7422">integer64</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="67" x="244" y="328.2305">integer32</text></g><!--MD5=[c6b72c05d51bcb7e31ff846f5700ccfc]
+class decode_chunk--><g id="elem_decode_chunk"><rect codeLine="20" fill="#F1F1F1" height="229.9922" id="decode_chunk" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="179" x="7" y="169.7422"/><text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacing" textLength="62" x="65.5" y="186.3438">«interface»</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="99" x="47" y="202.4102">decode_chunk</text><line style="stroke:#181818;stroke-width:0.5;" x1="8" x2="185" y1="210.3633" y2="210.3633"/><ellipse cx="18" cy="224.1074" fill="none" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="69" x="27" y="227.8984">file: string</text><ellipse cx="18" cy="240.5957" fill="none" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="65" x="27" y="244.3867">offset: int</text><ellipse cx="18" cy="257.084" fill="none" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="53" x="27" y="260.875">size: int</text><ellipse cx="18" cy="273.5723" fill="none" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="114" x="27" y="277.3633">compression: int</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="65" x="27" y="293.8516">filters: int</text><ellipse cx="18" cy="306.5488" fill="none" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="114" x="27" y="310.3398">missing: missing</text><ellipse cx="18" cy="323.0371" fill="none" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="91" x="27" y="326.8281">dtype: dtypes</text><ellipse cx="18" cy="339.5254" fill="none" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="84" x="27" y="343.3164">shape: tuple</text><ellipse cx="18" cy="356.0137" fill="none" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="110" x="27" y="359.8047">order: character</text><ellipse cx="18" cy="372.502" fill="none" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="153" x="27" y="376.293">chunk_selection: tuple</text><ellipse cx="18" cy="388.9902" fill="none" rx="3" ry="3" style="stroke:#038048;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="101" x="27" y="392.7813">method: string</text></g><!--MD5=[55ca85caf7bbe383f0364542443144bd]
+class missing--><g id="elem_missing"><rect codeLine="35" fill="#F1F1F1" height="26.4883" id="missing" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="59" x="409" y="28.2422"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="53" x="412" y="46.7773">missing</text></g><!--MD5=[276382e3c498b6c1daa37bd79e75248e]
+class chunk--><g id="elem_chunk"><rect codeLine="38" fill="#F1F1F1" height="40.6211" id="chunk" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="119" x="37" y="20.7422"/><text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacing" textLength="117" x="38" y="37.3438">«sequence of bytes»</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="42" x="75.5" y="53.4102">chunk</text></g><!--MD5=[1df3e3069cf84e30561e513a46532965]
+class MV--><g id="elem_MV"><rect codeLine="39" fill="#F1F1F1" height="42.9766" id="MV" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="59" x="252" y="19.7422"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="53" x="255" y="38.2773">missing</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="43" x="260" y="54.7656">values</text></g><!--MD5=[c68504e5feef1b776fc52130375d1205]
+link missing to missing descriptor--><g id="link_missing_missing descriptor"><path codeLine="37" d="M438.5,54.5522 C438.5,82.2922 438.5,151.5922 438.5,206.7722 " fill="none" id="missing-to-missing descriptor" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="none" points="445.5,207.1222,438.5,227.1222,431.5,207.1222,445.5,207.1222" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[d1f9bfd1407e710acb581243bb24f644]
+link chunk to decode_chunk--><g id="link_chunk_decode_chunk"><path codeLine="41" d="M96.5,62.0022 C96.5,85.9422 96.5,128.2022 96.5,169.4622 " fill="none" id="chunk-decode_chunk" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[d96dbe43e5769f88d12ffa96ac251586]
+link missing to dtypes--><g id="link_missing_dtypes"><path codeLine="44" d="M408.73,54.2822 C390.96,62.7622 369.08,75.6522 354.5,92.7422 C320.83,132.2122 300.59,188.2922 289.37,229.4822 " fill="none" id="missing-to-dtypes" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="288.05,234.4322,294.2311,226.7644,289.3365,229.6005,286.5004,224.706,288.05,234.4322" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="74" x="355.5" y="113.8105">has implicit</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="69" x="358" y="129.1211">dtype from</text></g><!--MD5=[ea114bff665728d3b719865de54a3a02]
+link chunk to dtypes--><g id="link_chunk_dtypes"><path codeLine="45" d="M114.33,61.9422 C136.24,86.4722 174.11,130.0222 203.5,169.7422 C217.72,188.9622 232.28,210.8322 244.68,230.2422 " fill="none" id="chunk-to-dtypes" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="247.45,234.5922,245.9864,224.8527,244.7628,230.3756,239.2399,229.1521,247.45,234.5922" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="74" x="178.5" y="106.3105">has implicit</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="35" x="198" y="121.6211">dtype</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="30" x="200.5" y="136.9316">from</text></g><!--MD5=[0dd93d330a4b0cdb3e1978f95cd893b0]
+link chunk to MV--><g id="link_chunk_MV"><path codeLine="46" d="M156.05,41.2422 C185.93,41.2422 221.09,41.2422 246.57,41.2422 " fill="none" id="chunk-to-MV" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="251.86,41.2422,242.86,37.2422,246.86,41.2422,242.86,45.2422,251.86,41.2422" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="59" x="174.5" y="19.8105">implicitly</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="54" x="177" y="35.1211">contains</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="24" x="219.9224" y="55.2721">0..n</text></g><!--MD5=[321fadbe3a0ba0f7a174e755e3a8d94c]
+link MV to missing--><g id="link_MV_missing"><path codeLine="47" d="M311.03,41.2422 C337.37,41.2422 375.96,41.2422 403.77,41.2422 " fill="none" id="MV-to-missing" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="408.84,41.2422,399.84,37.2422,403.84,41.2422,399.84,45.2422,408.84,41.2422" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="61" x="329.5" y="19.8105">described</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="15" x="352.5" y="35.1211">by</text></g><!--MD5=[2190e3935b78e8f6f25c2c7f17d8c17a]
+@startuml
+
+hide circle
+hide empty methods
+hide empty attributes
+
+class "missing descriptor" <<abstract>>  {
+    +fillvalue
+    +missing
+    +min_valid_value
+    +max_valid_value
+}
+
+enum dtypes  {
+    float32
+    float64
+    integer64
+    integer32
+}
+
+class decode_chunk <<interface>>   {
+    +file: string 
+    +offset: int 
+    +size: int 
+    +compression: int
+    filters: int
+    +missing: missing
+    +dtype: dtypes
+    +shape: tuple
+    +order: character 
+    +chunk_selection: tuple
+    +method: string
+
+    }
+
+    class missing
+
+    missing - -|>"missing descriptor" 
+    class chunk <<sequence of bytes>>
+    class "missing\nvalues" as MV
+
+    chunk - - decode_chunk
+
+    
+    missing -> dtypes: has implicit\ndtype from
+    chunk - -> dtypes: has implicit\ndtype\nfrom 
+    chunk -> "0..n" MV: implicitly\ncontains 
+    MV -> missing: described\nby
+
+
+@enduml
+
+PlantUML version 1.2022.8(Sun Sep 25 10:00:33 BST 2022)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: GB
+--></g></svg>
