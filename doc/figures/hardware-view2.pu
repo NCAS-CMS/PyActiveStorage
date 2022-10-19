@@ -1,0 +1,21 @@
+@startuml
+package "hardware view 2" {
+    left to right direction
+
+    component "\nstorageB\n" {
+        database ost3
+        database ost2  
+        database ost1 
+    }
+    
+    component node {
+        component application 
+        component kernel
+        kernel <- application
+    }
+    kernel --> ost1: LAN
+    kernel --> ost2: LAN
+    kernel --> ost3: LAN
+   
+}
+@enduml

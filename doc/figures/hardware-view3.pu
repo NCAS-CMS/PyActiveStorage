@@ -1,0 +1,25 @@
+@startuml 
+left to right direction
+package "hardware view 3" {
+
+    component storageC {
+            database ost4
+            database ost3
+            database ost2
+            database ost1
+            storage oss2
+            storage oss1
+            oss1 -- ost1
+            oss1 -- ost2
+            oss2 -- ost3
+            oss2 -- ost4 
+        }
+        
+        component node {
+            component application 
+            component kernel
+            kernel <- application
+        }
+        kernel --> oss1: LAN
+        kernel --> oss2: LAN
+        }

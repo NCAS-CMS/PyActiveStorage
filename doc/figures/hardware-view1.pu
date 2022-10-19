@@ -1,0 +1,23 @@
+@startuml
+package "hardware view 1" {
+  left to right direction
+    component storageA {
+        database ost3
+        database ost2  
+        database ost1 
+        storage OSS
+        OSS -- ost3
+        OSS -- ost2
+        OSS -- ost1
+    }
+    
+    component node {
+        component application 
+        component kernel
+        kernel <- application
+    }
+    
+    kernel --> OSS: LAN traffic.
+    
+}
+@enduml
