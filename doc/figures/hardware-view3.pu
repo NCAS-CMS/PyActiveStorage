@@ -1,25 +1,26 @@
 @startuml 
 left to right direction
-package "hardware view 3" {
+package "Multiple OSS Pattern" {
 
-    component storageC {
-            database ost4
-            database ost3
-            database ost2
-            database ost1
-            storage oss2
-            storage oss1
-            oss1 -- ost1
-            oss1 -- ost2
-            oss2 -- ost3
-            oss2 -- ost4 
+    component "Storage-C" {
+            database OST4
+            database OST3
+            database OST2
+            database OST1
+            storage OSS2
+            storage OSS1
+            OSS1 -- OST1
+            OSS1 -- OST2
+            OSS2 -- OST3
+            OSS2 -- OST4 
         }
         
         component node {
-            component application 
-            component kernel
-            kernel <- application
+            component Application 
+            component "Storage\nClient" as kernel
+            kernel <- Application : sequence\nof\nstorage\nchunks
         }
-        kernel --> oss1: LAN
-        kernel --> oss2: LAN
+        kernel --> OSS1: LAN
+        kernel --> OSS2: LAN
         }
+@enduml
