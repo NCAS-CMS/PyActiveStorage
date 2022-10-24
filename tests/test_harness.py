@@ -78,3 +78,4 @@ class TestActive(unittest.TestCase):
         result2 = active[0:2, 4:6, 7:9]
         print(result2)
         self.assertEqual(mean_result, result2["sum"]/result2["n"])
+
