@@ -1,5 +1,4 @@
-from numpy.ma import masked_equal, masked_greater, masked_less
-from numpy.ma.core import MaskedConstant
+from numpy.ma import masked_equal, masked_greater, masked_less, is_masked
 from numcodecs.compat import ensure_ndarray
 
 def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shape, order, chunk_selection, method=None):
@@ -46,7 +45,7 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
             # a vanilla implementation of remove_missing which found
             # no valid data would have to do something like this too.
             result = method(tmp)
-            if type(result) == MaskedConstant:
+            if is_masked(result):
                 if missing[0]:
                     return missing[0]
                 if missing[1]:
