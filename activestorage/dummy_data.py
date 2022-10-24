@@ -18,6 +18,13 @@ def _make_data(n=10):
 
     return dd, data
 
+def make_pathological_ncdata(filename='test_pathological_missing.nc', chunksize=(3,3,1), n=10):
+    """ 
+    Makes a test dataset based on the default vanilla dataset, but which includes
+    half missing values
+    """
+    return make_ncdata(filename, chunksize, n, compression=None, missing=-999., pathological=True)
+
 
 def make_missing_ncdata(filename='test_missing.nc', chunksize=(3,3,1), n=10):
     """ 
@@ -68,7 +75,8 @@ def make_ncdata(filename, chunksize, n, compression=None,
                 fillvalue=None,
                 valid_range=None,
                 valid_min=None,
-                valid_max=None):
+                valid_max=None,
+                pathological=False):
     """ 
     If compression is required, it can be passed in via keyword
     and is applied to all variables.
@@ -79,6 +87,10 @@ def make_ncdata(filename, chunksize, n, compression=None,
 
     For the purposes of test data, bounds (valid_min, range etc)
     need to be non-zero, although that wont hold in real life.
+
+    pathological = True makes half the data missing so we can 
+    ensure we find some chunks which are all missing ... Can 
+    only be used in combination with a missing value.
     """
 
     def make_holes(var, indices, attribute, value, dummy):
@@ -112,8 +124,15 @@ def make_ncdata(filename, chunksize, n, compression=None,
     mindices, findices, vrindices, vm1indices, vm2indices = None, None, None, None, None
     if missing:
         # we use the deprecated missing_value option
-        mindices = [(1,1,1),(n/2,1,1),(1,nm1,1),(nm1,1,n/2)]
-        dvar = make_holes(dvar, mindices, 'missing_value', missing, missing)
+        if pathological:
+            dvar[::2,:,:] = missing
+            dvar.missing_value = missing
+        else:
+            mindices = [(1,1,1),(n/2,1,1),(1,nm1,1),(nm1,1,n/2)]
+            dvar = make_holes(dvar, mindices, 'missing_value', missing, missing)
+
+    if pathological and not missing:
+        raise ValueError('Cannot use pathological keyword without missing keyword')
 
     if fillvalue:
         # note we use a different set of indices for 
