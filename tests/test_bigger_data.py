@@ -157,7 +157,13 @@ def test_native_emac_model_fails(test_data_path):
     active = Active(ncfile, "aps_ave")
     active._version = 0
     d = active[4:5, 1:2]
-    mean_result = np.mean(d)
+    if len(d):
+        mean_result = np.mean(d)
+    else:
+        # as it happens it is is possible for a slice to be
+        # all missing, so for the purpose of this test we 
+        # ignore it, but the general case should not.
+        pass
 
     active = Active(ncfile, "aps_ave")
     active._version = 2
