@@ -7,7 +7,7 @@ from netCDF4 import Dataset
 from zarr.indexing import (
     OrthogonalIndexer,
 )
-from activestorage.storage import decode_chunk
+from activestorage.storage import reduce_chunk
 from activestorage import netcdf_to_zarr as nz
 
 
@@ -249,7 +249,7 @@ class Active:
         coord = '.'.join([str(c) for c in chunk_coords])
         key = f"{self.ncvar}/{coord}"
         rfile, offset, size = tuple(fsref[key])
-        tmp = decode_chunk(rfile, offset, size, compressor, filters, missing,
+        tmp = reduce_chunk(rfile, offset, size, compressor, filters, missing,
                            self.zds._dtype, self.zds._chunks, self.zds._order,
                            chunk_selection, method=self.method)
 
