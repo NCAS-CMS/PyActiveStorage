@@ -11,14 +11,14 @@ class "missing descriptor" <<abstract>>  {
     +max_valid_value
 }
 
-enum dtypes  {
+enum dtypes <<enum>> {
     float32
     float64
     integer64
     integer32
 }
 
-class decode_chunk <<interface>>   {
+class reduce_chunk <<interface>>   {
     +file: string 
     +offset: int 
     +size: int 
@@ -33,19 +33,20 @@ class decode_chunk <<interface>>   {
 
     }
 
-    class missing
+    object missing <<tuple>>
 
-    missing --|>"missing descriptor" 
-    class chunk <<sequence of bytes>>
-    class "missing\nvalues" as MV
+    missing ..> "missing descriptor" : "\n\n instance\nof"
+    class "storage\nchunk" as chunk  <<sequence of bytes>>
+    class "missing\nvalues" as MV <<concept>>
 
-    chunk -- decode_chunk
+    chunk -- reduce_chunk
 
     
-    missing -> dtypes: has implicit\ndtype from
-    chunk --> dtypes: has implicit\ndtype\nfrom 
-    chunk -> "0..n" MV: implicitly\ncontains 
-    MV -> missing: described\nby
+    missing .> dtypes: has\nimplicit\ndtype\nfrom
+    chunk -> MV: may contain 
+    chunk ..> dtypes: has implicit\ndtype\nfrom 
+   
+    MV -> missing: described by
 
 
 @enduml
