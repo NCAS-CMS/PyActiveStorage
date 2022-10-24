@@ -2,6 +2,7 @@ from math import prod
 
 import numpy as np
 
+#FIXME: Consider using h5py throughout, for more generality
 from netCDF4 import Dataset
 
 from zarr.indexing import (
@@ -35,15 +36,12 @@ class Active:
         }
         return instance
 
-    def __init__(self, uri, ncvar=None):
-        """Instantiate in the same way as normal.
-
-        :Parameters:
-
-            ncvar: `str`, optional
-                The netCDF variable name of the data. May also be set
-                with the `ncvar` attribute.
-
+    def __init__(self, uri, ncvar, missing_value=None, fill_value=None, valid_min=None, valid_max=None):
+        """
+        Instantiate with a NetCDF4 dataset and the variable of interest within that file.
+        (We need the variable, because we need variable specific metadata from within that
+        file, however, if that information is available at instantiation, it can be provided
+        using keywords and avoid a metadata read.)
         """
         # Assume NetCDF4 for now
         self.uri = uri
@@ -53,6 +51,38 @@ class Active:
         self._version = 1
         self._components = False
         self._method = None
+       
+        # obtain metadata, using netcdf4_python for now
+        # FIXME: There is an outstanding issue with ._FilLValue to be handled.
+        # If the user actually wrote the data with no fill value, or the
+        # default fill value is in play, then this might go wrong.
+        #
+        if (missing_value, fill_value, valid_min, valid_max) == (None, None, None, None):
+            ds = Dataset(uri)
+            self._missing = getattr(ds[ncvar], 'missing_value', None)
+            self._fillvalue = getattr(ds[ncvar], '_FillValue', None)
+            self._filters = ds[ncvar].filters()
+            valid_min = getattr(ds[ncvar], 'valid_min', None)
+            valid_max = getattr(ds[ncvar], 'valid_max', None)
+            valid_range = getattr(ds[ncvar], 'valid_range', None)
+            if valid_range and (valid_max or valid_min):
+                raise ValueError("Unexpected combination of missing value options ", valid_min, valid_max, valid_range)
+            if  valid_min or valid_max:
+                valid_range=[valid_min, valid_max]
+            if valid_range:
+                lengths = [len(valid_range[i]) for i in valid_range]
+                if lengths != [1,1]:
+                    raise ValueError('Unsupported valid_range: ', valid_range)
+                self._valid_min, self._valid_max = tuple(valid_range)
+            else:
+                self._valid_min, self._valid_max = None, None
+        else:
+            self._missing = missing_value
+            self._fillvalue = fill_value
+            self._valid_min = valid_min
+            self._valid_max = valid_max
+
+       
 
     def __getitem__(self, index):
         """ 
@@ -166,10 +196,7 @@ class Active:
         compressor = self.zds._compressor
         filters = self.zds._filters
 
-        # FIXME: populate this from metadata, see issue #18
-        # interpretation: (_fillvalue, missing, min_valid_value, max_valid_value)
-        missing = (None, None, None, None)  # FIXME: Needs implementation 
-
+        missing = self._fillvalue, self._missing, self._valid_min, self._valid_max
 
         indexer = OrthogonalIndexer(*args, self.zds)
         out_shape = indexer.shape
@@ -249,6 +276,7 @@ class Active:
         coord = '.'.join([str(c) for c in chunk_coords])
         key = f"{self.ncvar}/{coord}"
         rfile, offset, size = tuple(fsref[key])
+
         tmp = reduce_chunk(rfile, offset, size, compressor, filters, missing,
                            self.zds._dtype, self.zds._chunks, self.zds._order,
                            chunk_selection, method=self.method)
