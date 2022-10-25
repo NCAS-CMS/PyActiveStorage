@@ -279,6 +279,7 @@ class Active:
         rfile, offset, size = tuple(fsref[key])
 
         # note there is an ongoing discussion about this interface, and what it returns
+        # see https://github.com/valeriupredoi/PyActiveStorage/issues/33
         # so neither the returned data or the interface should be considered stable
         # although we will version changes.
         tmp, count = reduce_chunk(rfile, offset, size, compressor, filters, missing,
