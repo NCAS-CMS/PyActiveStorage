@@ -65,14 +65,11 @@ class Active:
             valid_min = getattr(ds[ncvar], 'valid_min', None)
             valid_max = getattr(ds[ncvar], 'valid_max', None)
             valid_range = getattr(ds[ncvar], 'valid_range', None)
-            if valid_range and (valid_max or valid_min):
+            if valid_range is not None and (valid_max or valid_min):
                 raise ValueError("Unexpected combination of missing value options ", valid_min, valid_max, valid_range)
             if  valid_min or valid_max:
                 valid_range=[valid_min, valid_max]
-            if valid_range:
-                lengths = [len(valid_range[i]) for i in valid_range]
-                if lengths != [1,1]:
-                    raise ValueError('Unsupported valid_range: ', valid_range)
+            if valid_range is not None:            
                 self._valid_min, self._valid_max = tuple(valid_range)
             else:
                 self._valid_min, self._valid_max = None, None

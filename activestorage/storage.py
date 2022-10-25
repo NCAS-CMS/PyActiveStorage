@@ -60,7 +60,7 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
         else:
             return method(tmp), tmp.size
     else:
-        return tmp
+        return tmp, None
 
 def remove_missing(data, missing):
     """ 
@@ -72,9 +72,9 @@ def remove_missing(data, missing):
         data = masked_equal(data, fill_value)
     if missing_value:
         data = masked_equal(data, missing_value)
-    if valid_min:
-        data = masked_greater(data, valid_max)
     if valid_max:
+        data = masked_greater(data, valid_max)
+    if valid_min:
         data = masked_less(data, valid_min)
     return data
 
