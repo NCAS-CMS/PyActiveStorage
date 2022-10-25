@@ -43,10 +43,13 @@ class TestActive(unittest.TestCase):
         Test a normal read slicing the data an interesting way, using version 1 (replicating native interface in our code)
         """
         active = Active(self.testfile, 'data')
+        active._version = 0
+        d0 = active[0:2,4:6,7:9]
+        
+        active = Active(self.testfile, 'data')
         active._version = 1
-        d = active[0:2,4:6,7:9]
-        nda = np.ndarray.flatten(d)
-        assert np.array_equal(nda,np.array([740.,840.,750.,850.,741.,841.,751.,851.]))
+        d1 = active[0:2,4:6,7:9]
+        assert np.array_equal(d0,d1)
 
     def testActive(self):
         """ 
