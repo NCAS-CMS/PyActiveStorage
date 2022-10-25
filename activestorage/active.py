@@ -190,7 +190,7 @@ class Active:
         """ 
         First we need to convert the selection into chunk coordinates,
         steps etc, via the Zarr machinery, then we get everything else we can
-        from zarr and friends and use simple dictionaries and tupes, then
+        from zarr and friends and use simple dictionaries and tuples, then
         we can go to the storage layer with no zarr.
         """
         compressor = self.zds._compressor
@@ -218,7 +218,7 @@ class Active:
             counts = []
         else:
             out = np.empty(out_shape, dtype=out_dtype, order=self.zds._order)
-            counts = None
+            counts = None  # should never get touched with no method!
 
         for chunk_coords, chunk_selection, out_selection in stripped_indexer:
             self._process_chunk(fsref, chunk_coords,chunk_selection,

@@ -58,7 +58,7 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
             else:
                 return result, tmp.count()   
         else:
-            return method(tmp), len(tmp)
+            return method(tmp), tmp.size
     else:
         return tmp
 
