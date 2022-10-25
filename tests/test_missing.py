@@ -72,7 +72,3 @@ class TestActive(unittest.TestCase):
         r = make_validrange_ncdata(testfile)
         self._doit(testfile)
 
-    
-
-
-
