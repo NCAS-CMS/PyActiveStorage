@@ -23,7 +23,7 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
     if compression is not None:
         raise NotImplementedError("Compression is not yet supported!")
     if filters is not None:
-        raise NotImplementedError
+        raise NotImplementedError("Filters are not yet supported!")
     
     #fIXME: for the moment, open the file every time ... we might want to do that, or not
     with open(rfile,'rb') as open_file:
