@@ -1,0 +1,21 @@
+@startuml
+package "No OSS Pattern" {
+    left to right direction
+
+    component "\nStorage-B\n" {
+        database OST3
+        database OST2  
+        database OST1 
+    }
+    
+    component node {
+        component Application 
+        component "Storage\nClient" as kernel
+        kernel <- Application: sequence\nof\nstorage\nchunks
+    }
+    kernel --> OST1: LAN
+    kernel --> OST2: LAN
+    kernel --> OST3: LAN
+   
+}
+@enduml

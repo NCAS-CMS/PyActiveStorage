@@ -1,0 +1,25 @@
+@startuml
+package "Single Server Pattern" {
+  skinparam DefaultTextAlignment center
+  left to right direction
+
+    component "Storage-A" {
+        database OST3
+        database OST2  
+        database OST1 
+        storage OSS
+        OSS -- OST3
+        OSS -- OST2
+        OSS -- OST1
+    }
+    
+    component node {
+        component Application 
+        component "Storage\nClient" as kernel
+        kernel <- Application : sequence\nof\nstorage\nchunks
+    }
+    
+    kernel --> OSS: LAN traffic\nsequence of\nblocks
+    
+}
+@enduml
