@@ -71,4 +71,3 @@ class TestActive(unittest.TestCase):
         testfile = os.path.join(self.temp_folder, 'test_validrange.nc')
         r = make_validrange_ncdata(testfile)
         self._doit(testfile)
-
