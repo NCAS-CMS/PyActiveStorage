@@ -215,12 +215,14 @@ class Active:
         method = self.method
         if method is not None:
             out = []
+            counts = []
         else:
             out = np.empty(out_shape, dtype=out_dtype, order=self.zds._order)
+            counts = None
 
         for chunk_coords, chunk_selection, out_selection in stripped_indexer:
             self._process_chunk(fsref, chunk_coords,chunk_selection,
-                                out, out_selection,
+                                out, counts, out_selection,
                                 compressor, filters, missing,
                                 drop_axes=drop_axes)
 
@@ -249,9 +251,9 @@ class Active:
                 if self._method == "mean":
                     # For the average, the returned component is
                     # "sum", not "mean"
-                    out = {"sum": out, "n": n}
+                    out = {"sum": out, "n": sum(counts)}
                 else:
-                    out = {self._method: out, "n": n}
+                    out = {self._method: out, "n": sum(counts)}
             else:
                 # Return the reduced data as a numpy array. For most
                 # methods the data is already in this form.
@@ -259,30 +261,36 @@ class Active:
                     # For the average, it is actually the sum that has
                     # been created, so we need to divide by the sample
                     # size.
-                    n = prod(out_shape)
-                    out = out / n
+                    out = out / sum(counts)
 
         return out
 
-    def _process_chunk(self, fsref, chunk_coords, chunk_selection, out,
+    def _process_chunk(self, fsref, chunk_coords, chunk_selection, out, counts,
                        out_selection, compressor, filters, missing, 
                        drop_axes=None):
-        """Obtain part or whole of a chunk.
+        """
+        Obtain part or whole of a chunk.
 
-         This is done by taking binary data from storage and filling
-         the output array.
+        This is done by taking binary data from storage and filling
+        the output array.
+
+        Note the need to use counts for some methods
 
         """
         coord = '.'.join([str(c) for c in chunk_coords])
         key = f"{self.ncvar}/{coord}"
         rfile, offset, size = tuple(fsref[key])
 
-        tmp = reduce_chunk(rfile, offset, size, compressor, filters, missing,
+        # note there is an ongoing discussion about this interface, and what it returns
+        # so neither the returned data or the interface should be considered stable
+        # although we will version changes.
+        tmp, count = reduce_chunk(rfile, offset, size, compressor, filters, missing,
                            self.zds._dtype, self.zds._chunks, self.zds._order,
                            chunk_selection, method=self.method)
 
         if self.method is not None:
             out.append(tmp)
+            counts.append(count)
         else:
 
             if drop_axes:
