@@ -1,0 +1,26 @@
+@startuml 
+left to right direction
+package "Multiple OSS Pattern" {
+
+    component "Storage-C" {
+            database OST4
+            database OST3
+            database OST2
+            database OST1
+            storage OSS2
+            storage OSS1
+            OSS1 -- OST1
+            OSS1 -- OST2
+            OSS2 -- OST3
+            OSS2 -- OST4 
+        }
+        
+        component node {
+            component Application 
+            component "Storage\nClient" as kernel
+            kernel <- Application : sequence\nof\nstorage\nchunks
+        }
+        kernel --> OSS1: LAN
+        kernel --> OSS2: LAN
+        }
+@enduml

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="417px" preserveAspectRatio="none" style="width:477px;height:417px;background:#FFFFFF;" version="1.1" viewBox="0 0 477 417" width="477px" zoomAndPan="magnify"><defs/><g><!--MD5=[7c884c1f32f42225d09578c79124f779]
+cluster Multiple OSS Pattern--><g id="cluster_Multiple OSS Pattern"><path d="M8.5,6 L159.5,6 A3.75,3.75 0 0 1 162,8.5 L169,28.4883 L467.5,28.4883 A2.5,2.5 0 0 1 470,30.9883 L470,407.5 A2.5,2.5 0 0 1 467.5,410 L8.5,410 A2.5,2.5 0 0 1 6,407.5 L6,8.5 A2.5,2.5 0 0 1 8.5,6 " fill="none" style="stroke:#000000;stroke-width:1.5;"/><line style="stroke:#000000;stroke-width:1.5;" x1="6" x2="169" y1="28.4883" y2="28.4883"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="150" x="10" y="21.5352">Multiple OSS Pattern</text></g><!--MD5=[51f1b811fc42dbd3438b72c5d413192b]
+cluster Storage-C--><g id="cluster_Storage-C"><rect fill="none" height="337" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:1.0;" width="206" x="240" y="49"/><rect fill="none" height="10" style="stroke:#181818;stroke-width:1.0;" width="15" x="426" y="54"/><rect fill="none" height="2" style="stroke:#181818;stroke-width:1.0;" width="4" x="424" y="56"/><rect fill="none" height="2" style="stroke:#181818;stroke-width:1.0;" width="4" x="424" y="60"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="73" x="306.5" y="75.5352">Storage-C</text></g><!--MD5=[b9de0669a29c7bc934fd916b09c39491]
+cluster node--><g id="cluster_node"><rect fill="none" height="258" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:1.0;" width="150" x="30" y="51"/><rect fill="none" height="10" style="stroke:#181818;stroke-width:1.0;" width="15" x="160" y="56"/><rect fill="none" height="2" style="stroke:#181818;stroke-width:1.0;" width="4" x="158" y="58"/><rect fill="none" height="2" style="stroke:#181818;stroke-width:1.0;" width="4" x="158" y="62"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="35" x="87.5" y="77.5352">node</text></g><!--MD5=[e5ffbae95e3fd1417fa8dd0ae4b6442c]
+entity OST4--><g id="elem_OST4"><path d="M373,334.5 C373,324.5 401.5,324.5 401.5,324.5 C401.5,324.5 430,324.5 430,334.5 L430,359.9883 C430,369.9883 401.5,369.9883 401.5,369.9883 C401.5,369.9883 373,369.9883 373,359.9883 L373,334.5 " fill="#F1F1F1" style="stroke:#181818;stroke-width:0.5;"/><path d="M373,334.5 C373,344.5 401.5,344.5 401.5,344.5 C401.5,344.5 430,344.5 430,334.5 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="37" x="383" y="362.0352">OST4</text></g><!--MD5=[4fb339280774b920f6f630b17a1ffebd]
+entity OST3--><g id="elem_OST3"><path d="M373,254.5 C373,244.5 401.5,244.5 401.5,244.5 C401.5,244.5 430,244.5 430,254.5 L430,279.9883 C430,289.9883 401.5,289.9883 401.5,289.9883 C401.5,289.9883 373,289.9883 373,279.9883 L373,254.5 " fill="#F1F1F1" style="stroke:#181818;stroke-width:0.5;"/><path d="M373,254.5 C373,264.5 401.5,264.5 401.5,264.5 C401.5,264.5 430,264.5 430,254.5 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="37" x="383" y="282.0352">OST3</text></g><!--MD5=[b45ac6e828f190b057189535d8c1e205]
+entity OST2--><g id="elem_OST2"><path d="M373,174.5 C373,164.5 401.5,164.5 401.5,164.5 C401.5,164.5 430,164.5 430,174.5 L430,199.9883 C430,209.9883 401.5,209.9883 401.5,209.9883 C401.5,209.9883 373,209.9883 373,199.9883 L373,174.5 " fill="#F1F1F1" style="stroke:#181818;stroke-width:0.5;"/><path d="M373,174.5 C373,184.5 401.5,184.5 401.5,184.5 C401.5,184.5 430,184.5 430,174.5 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="37" x="383" y="202.0352">OST2</text></g><!--MD5=[598792aac0dabf021d53e38489819ec8]
+entity OST1--><g id="elem_OST1"><path d="M373,94.5 C373,84.5 401.5,84.5 401.5,84.5 C401.5,84.5 430,84.5 430,94.5 L430,119.9883 C430,129.9883 401.5,129.9883 401.5,129.9883 C401.5,129.9883 373,129.9883 373,119.9883 L373,94.5 " fill="#F1F1F1" style="stroke:#181818;stroke-width:0.5;"/><path d="M373,94.5 C373,104.5 401.5,104.5 401.5,104.5 C401.5,104.5 430,104.5 430,94.5 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="37" x="383" y="122.0352">OST1</text></g><!--MD5=[7538ba870f6c805dafbf39fe67802502]
+entity OSS2--><g id="elem_OSS2"><rect fill="#F1F1F1" height="36.4883" rx="35" ry="35" style="stroke:#181818;stroke-width:0.5;" width="56" x="256" y="249"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="36" x="266" y="272.5352">OSS2</text></g><!--MD5=[0b47eabf245bf8f4f4b614d273b77c31]
+entity OSS1--><g id="elem_OSS1"><rect fill="#F1F1F1" height="36.4883" rx="35" ry="35" style="stroke:#181818;stroke-width:0.5;" width="56" x="256" y="169"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="36" x="266" y="192.5352">OSS1</text></g><!--MD5=[e5b7da8fa23ec8cac7d321a34f6e9ee1]
+entity Application--><g id="elem_Application"><rect fill="#F1F1F1" height="46.4883" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="118" x="46" y="86"/><rect fill="#F1F1F1" height="10" style="stroke:#181818;stroke-width:0.5;" width="15" x="144" y="91"/><rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="142" y="93"/><rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="142" y="97"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="78" x="61" y="119.5352">Application</text></g><!--MD5=[5427960f0a0d6e728427509f19a12a87]
+entity kernel--><g id="elem_kernel"><rect fill="#F1F1F1" height="62.9766" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="93" x="58.5" y="229.5"/><rect fill="#F1F1F1" height="10" style="stroke:#181818;stroke-width:0.5;" width="15" x="131.5" y="234.5"/><rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="129.5" y="236.5"/><rect fill="#F1F1F1" height="2" style="stroke:#181818;stroke-width:0.5;" width="4" x="129.5" y="240.5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="53" x="73.5" y="263.0352">Storage</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="40" x="73.5" y="279.5234">Client</text></g><!--MD5=[6448089f2d1bcb88db77625c252b659c]
+link OSS1 to OST1--><g id="link_OSS1_OST1"><path d="M311.21,168.85 C329.58,156.12 354.09,139.15 372.78,126.2 " fill="none" id="OSS1-OST1" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[da4204c121c4b4386f9b000372c85072]
+link OSS1 to OST2--><g id="link_OSS1_OST2"><path d="M312.08,187 C330.35,187 354.39,187 372.79,187 " fill="none" id="OSS1-OST2" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[1e4ebdd866c226cff2fc675e6329a7f4]
+link OSS2 to OST3--><g id="link_OSS2_OST3"><path d="M312.08,267 C330.35,267 354.39,267 372.79,267 " fill="none" id="OSS2-OST3" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[68f3b2e80641d2b1f144573b01b8a1ef]
+link OSS2 to OST4--><g id="link_OSS2_OST4"><path d="M311.21,285.15 C329.58,297.88 354.09,314.85 372.78,327.8 " fill="none" id="OSS2-OST4" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[9d4bfc14bfcd9cd39586079337125dba]
+reverse link kernel to Application--><g id="link_kernel_Application"><path d="M105,223.93 C105,195.38 105,156.78 105,132.39 " fill="none" id="kernel-backto-Application" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="105,229.14,109,220.14,105,224.14,101,220.14,105,229.14" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="59" x="41" y="162.8184">sequence</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="13" x="64" y="178.1289">of</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="47" x="47" y="193.4395">storage</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="46" x="47.5" y="208.75">chunks</text></g><!--MD5=[b337c1ceb0069bc19261ffec611884f2]
+link kernel to OSS1--><g id="link_kernel_OSS1"><path d="M151.58,241.94 C182.76,228.91 223.32,211.95 251.08,200.35 " fill="none" id="kernel-to-OSS1" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="255.76,198.39,245.9136,198.17,251.1467,200.3181,248.9986,205.5513,255.76,198.39" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="26" x="197" y="210.5684">LAN</text></g><!--MD5=[41c4226b3d332ab94ef419ecc579a836]
+link kernel to OSS2--><g id="link_kernel_OSS2"><path d="M151.58,262.55 C182.63,263.6 222.98,264.97 250.73,265.91 " fill="none" id="kernel-to-OSS2" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="255.76,266.08,246.9023,261.774,250.7629,265.9087,246.6282,269.7693,255.76,266.08" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="26" x="197" y="261.5684">LAN</text></g><!--MD5=[d63d9a8f07ec096d947e2fb05548b140]
+@startuml 
+left to right direction
+package "Multiple OSS Pattern" {
+
+    component "Storage-C" {
+            database OST4
+            database OST3
+            database OST2
+            database OST1
+            storage OSS2
+            storage OSS1
+            OSS1 - - OST1
+            OSS1 - - OST2
+            OSS2 - - OST3
+            OSS2 - - OST4 
+        }
+        
+        component node {
+            component Application 
+            component "Storage\nClient" as kernel
+            kernel <- Application : sequence\nof\nstorage\nchunks
+        }
+        kernel - -> OSS1: LAN
+        kernel - -> OSS2: LAN
+        }
+@enduml
+
+PlantUML version 1.2022.8(Sun Sep 25 10:00:33 BST 2022)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: GB
+--></g></svg>
