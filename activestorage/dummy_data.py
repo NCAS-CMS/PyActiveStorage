@@ -18,14 +18,14 @@ def _make_data(n=10):
 
     return dd, data
 
-def make_partially_missing_ncdata(filename='test_partially_missing_missing.nc',
+def make_partially_missing_ncdata(filename='test_partially_missing_data.nc',
                                   chunksize=(3,3,1), n=10):
     """ 
     Makes a test dataset based on the default vanilla dataset, but which includes
     half missing values
     """
     return make_ncdata(filename, chunksize, n, compression=None, missing=-999.,
-                       partially_missing=True)
+                       partially_missing_data=True)
 
 
 def make_missing_ncdata(filename='test_missing.nc', chunksize=(3,3,1), n=10):
@@ -78,7 +78,7 @@ def make_ncdata(filename, chunksize, n, compression=None,
                 valid_range=None,
                 valid_min=None,
                 valid_max=None,
-                partially_missing=False):
+                partially_missing_data=False):
     """ 
     If compression is required, it can be passed in via keyword
     and is applied to all variables.
@@ -90,10 +90,13 @@ def make_ncdata(filename, chunksize, n, compression=None,
     For the purposes of test data, bounds (valid_min, range etc)
     need to be non-zero, although that wont hold in real life.
 
-    partially_missing = True makes half the data missing so we can 
+    partially_missing_data = True makes half the data missing so we can 
     ensure we find some chunks which are all missing ... Can 
     only be used in combination with a missing value.
     """
+    if partially_missing_data and not missing:
+        raise ValueError(f'Missing data value keyword provided and set to {missing} '
+                         'but partially_missing_data keyword missing from func call.')
 
     def make_holes(var, indices, attribute, value, dummy):
         if value is not None:
@@ -126,15 +129,12 @@ def make_ncdata(filename, chunksize, n, compression=None,
     mindices, findices, vrindices, vm1indices, vm2indices = None, None, None, None, None
     if missing:
         # we use the deprecated missing_value option
-        if partially_missing:
+        if partially_missing_data:
             dvar[::2,:,:] = missing
             dvar.missing_value = missing
         else:
             mindices = [(1,1,1),(n/2,1,1),(1,nm1,1),(nm1,1,n/2)]
             dvar = make_holes(dvar, mindices, 'missing_value', missing, missing)
-
-    if partially_missing and not missing:
-        raise ValueError('Cannot use partially_missing keyword without using missing keyword too')
 
     if fillvalue:
         # note we use a different set of indices for 
