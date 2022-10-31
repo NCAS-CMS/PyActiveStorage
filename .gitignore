@@ -15,3 +15,6 @@ __pycache__/
 doc/__pycache__
 doc/_sidebar.rst.inc
 _sidebar.rst.inc
+
+# test output
+tests/test_data/cesm2_native_TREFHT.json
