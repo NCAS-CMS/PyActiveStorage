@@ -23,6 +23,7 @@ jobs:
           miniforge-version: "latest"
           miniforge-variant: Mambaforge
           use-mamba: true
+      - uses: codecov/codecov-action@v3
       - shell: bash -l {0}
         run: conda --version
       - shell: bash -l {0}
@@ -31,7 +32,3 @@ jobs:
         run: pip install -e .
       - shell: bash -l {0}
         run: pytest -n 2 --cov=./ --cov-report=xml
-  codecov:
-    name: Coverage Report via Codecov
-    steps:
-      - uses: codecov/codecov-action@v3
