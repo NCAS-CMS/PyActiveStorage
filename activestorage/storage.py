@@ -1,4 +1,6 @@
-from numpy.ma import masked_equal, masked_greater, masked_less, is_masked
+"""Active storage module."""
+import numpy as np
+
 from numcodecs.compat import ensure_ndarray
 
 def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shape, order, chunk_selection, method=None):
@@ -45,16 +47,19 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
             # a vanilla implementation of remove_missing which found
             # no valid data would have to do something like this too.
             result = method(tmp)
-            if is_masked(result):
+            if np.ma.is_masked(result):
+                prct = {False: 1.1, True: 0.9}
                 if missing[0]:
                     return missing[0]
                 if missing[1]:
                     return missing[1]
                 #FIXME how do we avoid fail with over/under flow?
                 if missing[2]:
-                    return missing[2]*{False: 1.1, True: 0.9}[missing[2]>0]
+                    norm_factor = prct[missing[2]>0]
+                    return missing[2] * norm_factor
                 if missing[3]:
-                    return missing[3]*{False: 1.1, True: 0.9}[missing[3]<0]
+                    norm_factor = prct[missing[3]<0]
+                    return missing[3] * norm_factor
             else:
                 return result, tmp.count()   
         else:
@@ -69,13 +74,13 @@ def remove_missing(data, missing):
     """
     fill_value, missing_value, valid_min, valid_max = missing
     if fill_value:
-        data = masked_equal(data, fill_value)
+        data = np.ma.masked_equal(data, fill_value)
     if missing_value:
-        data = masked_equal(data, missing_value)
+        data = np.ma.masked_equal(data, missing_value)
     if valid_max:
-        data = masked_greater(data, valid_max)
+        data = np.ma.masked_greater(data, valid_max)
     if valid_min:
-        data = masked_less(data, valid_min)
+        data = np.ma.masked_less(data, valid_min)
     return data
 
 def read_block(open_file, offset, size):
