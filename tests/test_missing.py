@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 from activestorage.active import Active
-from activestorage.dummy_data import *
+from activestorage import dummy_data as dd
 
 
 class TestActive(unittest.TestCase):
@@ -44,30 +44,30 @@ class TestActive(unittest.TestCase):
 
     def test_partially_missing_data(self):
         testfile = os.path.join(self.temp_folder, 'test_partially_missing_data.nc')
-        r = make_partially_missing_ncdata(testfile)
+        r = dd.make_partially_missing_ncdata(testfile)
         self._doit(testfile)
 
     def test_missing(self):
         testfile = os.path.join(self.temp_folder, 'test_missing.nc')
-        r = make_partially_missing_ncdata(testfile)
+        r = dd.make_partially_missing_ncdata(testfile)
         self._doit(testfile)
 
     def test_fillvalue(self):
         testfile = os.path.join(self.temp_folder, 'test_fillvalue.nc')
-        r = make_fillvalue_ncdata(testfile)
+        r = dd.make_fillvalue_ncdata(testfile)
         self._doit(testfile)
 
     def test_validmin(self):
         testfile = os.path.join(self.temp_folder, 'test_validmin.nc')
-        r = make_validmin_ncdata(testfile)
+        r = dd.make_validmin_ncdata(testfile)
         self._doit(testfile)
 
     def test_validmax(self):
         testfile = os.path.join(self.temp_folder, 'test_validmax.nc')
-        r = make_validmax_ncdata(testfile)
+        r = dd.make_validmax_ncdata(testfile)
         self._doit(testfile)
 
     def test_validrange(self):
         testfile = os.path.join(self.temp_folder, 'test_validrange.nc')
-        r = make_validrange_ncdata(testfile)
+        r = dd.make_validrange_ncdata(testfile)
         self._doit(testfile)
