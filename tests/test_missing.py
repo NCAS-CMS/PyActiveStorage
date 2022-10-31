@@ -43,7 +43,7 @@ class TestActive(unittest.TestCase):
 
 
     def test_partially_missing_data(self):
-        testfile = os.path.join(self.temp_folder, 'test_partially_missing_missing.nc')
+        testfile = os.path.join(self.temp_folder, 'test_partially_missing_data.nc')
         r = make_partially_missing_ncdata(testfile)
         self._doit(testfile)
 
