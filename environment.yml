@@ -8,6 +8,7 @@ dependencies:
   - h5py  # needed by Kerchunk
   - kerchunk
   - netcdf4
+  - pip !=21.3
   - pytest
   - xarray
   - zarr
