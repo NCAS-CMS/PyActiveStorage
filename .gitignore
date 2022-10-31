@@ -18,3 +18,8 @@ _sidebar.rst.inc
 
 # test output
 tests/test_data/cesm2_native_TREFHT.json
+
+# test coverage
+.coverage
+report-1.xml
+test-reports/
