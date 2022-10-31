@@ -42,14 +42,14 @@ class TestActive(unittest.TestCase):
         self.assertEqual(mean_result, result2["sum"]/result2["n"])
 
 
-    def test_pathological_data(self):
-        testfile = os.path.join(self.temp_folder, 'test_pathological_missing.nc')
-        r = make_pathological_ncdata(testfile)
+    def test_partially_missing_data(self):
+        testfile = os.path.join(self.temp_folder, 'test_partially_missing_missing.nc')
+        r = make_partially_missing_ncdata(testfile)
         self._doit(testfile)
 
     def test_missing(self):
         testfile = os.path.join(self.temp_folder, 'test_missing.nc')
-        r = make_pathological_ncdata(testfile)
+        r = make_partially_missing_ncdata(testfile)
         self._doit(testfile)
 
     def test_fillvalue(self):
