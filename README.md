@@ -54,3 +54,6 @@ See available Sphinx [documentation](https://htmlpreview.github.io/?https://gith
 ```
 sphinx-build -Ea doc doc/build
 ```
+## Code coverage (test coverage)
+
+We monitor test coverage via the [Codecov app](https://app.codecov.io/gh/valeriupredoi/PyActiveStorage) and employ a bot that displays coverage changes introduced in every PR; the bot posts a comment directly to the PR, in which coverage variations introduced by the proposed code changes are displayed.
