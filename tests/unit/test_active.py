@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import pytest
-import tempfile
 
 from activestorage.active import Active
 
