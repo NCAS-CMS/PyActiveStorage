@@ -25,8 +25,7 @@ def gen_json(file_url, fs, fs2, varname, **so):
                     custom_raiser_2 = "File is netCDF-classic"
                     exception = f"From upstream: {str(exc)}; possible cause: {custom_raiser_1} or {custom_raiser_2}."
                     raise IOError(exception)
-                else:
-                    raise exc
+
             # inline threshold adjusts the Size below which binary blocks are
             # included directly in the output
             # a higher inline threshold can result in a larger json file but
