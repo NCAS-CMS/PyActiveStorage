@@ -33,3 +33,35 @@ def test_uri_nonexistent():
     with pytest.raises(ValueError) as exc:
         active = Active(some_file)
     assert str(exc.value) == expected
+
+
+def test_getitem():
+    """Unit test for class:Active."""
+    uri = "tests/test_data/emac.nc"
+    active = Active(uri, ncvar=None)
+    index = 3
+    with pytest.raises(ValueError) as exc:
+        active.__getitem__(index)
+    assert str(exc.value) == "Must set a netCDF variable name to slice"
+
+    ncvar = "tas"
+    active = Active(uri, ncvar=ncvar)
+    baseexc = "From upstream: Unable to open file (file signature not found); " + \
+              "possible cause: Input file tests/test_data/emac.nc does not " + \
+              "contain variable tas. ."
+    with pytest.raises(OSError) as exc:
+        item = active.__getitem__(index)
+    assert str(exc.value) == baseexc
+
+
+
+
+
+
+
+
+
+
+
+
+
