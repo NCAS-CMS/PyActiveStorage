@@ -17,6 +17,15 @@ def assemble_zarr():
     return z
 
 
+def assemble_zarr_uncompressed():
+    """Create a test zarr object."""
+    import zarr
+    z = zarr.create((1000, 1000), chunks=(2, 8), dtype='i1', order='C',
+                    compressor=None)
+
+    return z
+
+
 def test_as_get_orthogonal_selection():
     """Test Zarr Orthogonal selection."""
     z = assemble_zarr()
@@ -55,4 +64,24 @@ def test_as_chunk_getitem():
                              drop_axes=None, fields=None)
     np.testing.assert_array_equal(ch[0], (1000, 1000))
     np.testing.assert_array_equal(ch[1], [slice(0, 2, 1)])
+    # PCI
     assert list(ch[2]) == [(0, 2000, (slice(0, 2, 1),))]
+
+
+def test_process_chunk():
+    """Test for processing chunk engine."""
+    z = assemble_zarr_uncompressed()
+    z = at.make_an_array_instance_active(z)
+    out = np.ones((1, 8))
+    cdata = np.ones((1, 2))
+    chunk_selection = slice(0, 1, 1)
+    out_selection = np.array((0))
+    ch = at.as_process_chunk(z,
+                             out,
+                             cdata,
+                             chunk_selection,
+                             drop_axes=False,
+                             out_is_ndarray=True,
+                             fields=None,
+                             out_selection=out_selection,
+                             partial_read_decode=False)
