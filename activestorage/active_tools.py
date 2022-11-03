@@ -194,6 +194,7 @@ def as_get_selection(self, indexer, out=None,
     else:
         return out[()], chunks_info, chunks_locs
 
+
 def as_chunk_getitem(self, chunk_coords, chunk_selection, out, out_selection,
                     drop_axes=None, fields=None):
     """Obtain part or whole of a chunk.
