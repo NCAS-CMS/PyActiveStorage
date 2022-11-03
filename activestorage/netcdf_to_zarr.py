@@ -16,7 +16,16 @@ def gen_json(file_url, fs, fs2, varname, **so):
     # write it out if it's not there
     if not os.path.isfile(outf):
         with fs.open(file_url, **so) as infile:
-            h5chunks = SingleHdf5ToZarr(infile, file_url, inline_threshold=0)
+            # FIXME need to disentangle HDF5 error: var not in file, netCDF-classic etc
+            try:
+                h5chunks = SingleHdf5ToZarr(infile, file_url, inline_threshold=0)
+            except OSError as exc:
+                if str(exc) == "Unable to open file (file signature not found)":
+                    custom_raiser = f"Input file {file_url} does not contain variable {varname}. "
+                    exception = f"From upstream: {str(exc)}; possible cause: {custom_raiser}."
+                    raise IOError(exception)
+                else:
+                    raise exc
             # inline threshold adjusts the Size below which binary blocks are
             # included directly in the output
             # a higher inline threshold can result in a larger json file but
