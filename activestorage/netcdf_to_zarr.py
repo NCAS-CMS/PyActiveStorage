@@ -21,8 +21,9 @@ def gen_json(file_url, fs, fs2, varname, **so):
                 h5chunks = SingleHdf5ToZarr(infile, file_url, inline_threshold=0)
             except OSError as exc:
                 if str(exc) == "Unable to open file (file signature not found)":
-                    custom_raiser = f"Input file {file_url} does not contain variable {varname}. "
-                    exception = f"From upstream: {str(exc)}; possible cause: {custom_raiser}."
+                    custom_raiser_1 = f"Input file {file_url} does not contain variable {varname}. "
+                    custom_raiser_2 = "File is netCDF-classic"
+                    exception = f"From upstream: {str(exc)}; possible cause: {custom_raiser_1} or {custom_raiser_2}."
                     raise IOError(exception)
                 else:
                     raise exc
