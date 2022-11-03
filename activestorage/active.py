@@ -1,7 +1,7 @@
-from math import prod
-
+import os
 import numpy as np
 
+from math import prod
 from netCDF4 import Dataset
 
 from zarr.indexing import (
@@ -47,6 +47,10 @@ class Active:
         """
         # Assume NetCDF4 for now
         self.uri = uri
+        if self.uri is None:
+            raise ValueError(f"Must use a valid file for uri. Got {self.uri}")
+        if not os.path.isfile(self.uri):
+            raise ValueError(f"Must use existing file for uri. {self.uri} not found")
         self.ncvar = ncvar
         self.zds = None
 
