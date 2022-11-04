@@ -1,9 +1,7 @@
 import os
 import numpy as np
 
-from math import prod
 from netCDF4 import Dataset
-
 from zarr.indexing import (
     OrthogonalIndexer,
 )
@@ -218,7 +216,7 @@ class Active:
                 # reductions require the per-dask-chunk partial
                 # reductions to retain these dimensions so that
                 # partial results can be concatenated correctly.)
-                n = prod(out_shape)
+                n = np.prod(out_shape)
                 shape1 = (1,) * len(out_shape)
                 n = np.reshape(n, shape1)
                 out = out.reshape(shape1)
@@ -236,7 +234,7 @@ class Active:
                     # For the average, it is actually the sum that has
                     # been created, so we need to divide by the sample
                     # size.
-                    n = prod(out_shape)
+                    n = np.prod(out_shape)
                     out = out / n
 
         return out
