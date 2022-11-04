@@ -16,15 +16,14 @@ def gen_json(file_url, fs, fs2, varname, **so):
     # write it out if it's not there
     if not os.path.isfile(outf):
         with fs.open(file_url, **so) as infile:
-            # FIXME need to disentangle HDF5 error: var not in file, netCDF-classic etc
+            # FIXME need to disentangle HDF5 errors if not OSError (most are)
             try:
                 h5chunks = SingleHdf5ToZarr(infile, file_url, inline_threshold=0)
             except OSError as exc:
-                if str(exc) == "Unable to open file (file signature not found)":
-                    custom_raiser_1 = f"Input file {file_url} does not contain variable {varname}. "
-                    custom_raiser_2 = "File is netCDF-classic"
-                    exception = f"From upstream: {str(exc)}; possible cause: {custom_raiser_1} or {custom_raiser_2}."
-                    raise IOError(exception)
+                raiser_1 = f"Unable to open file {file_url}. "
+                raiser_2 = "Check if file is netCDF3 or netCDF-classic"
+                print(raiser_1 + raiser_2)
+                raise exc
 
             # inline threshold adjusts the Size below which binary blocks are
             # included directly in the output
@@ -51,8 +50,12 @@ def open_zarr_group(out_json, varname):
     mapper = fs.get_mapper("")  # local FS mapper
     #mapper.fs.reference has the kerchunk mapping, how does this propagate into the Zarr array?
     zarr_group = zarr.open_group(mapper)
-    #print("Zarr group info:", zarr_group.info)
-    zarr_array = getattr(zarr_group, varname)
+    try:
+        zarr_array = getattr(zarr_group, varname)
+    except AttributeError as attrerr:
+        print(f"Zarr Group does not contain variable {varname}. "
+              f"Zarr Group info: {zarr_group.info}")
+        raise attrerr
     #print("Zarr array info:",  zarr_array.info)
 
     return zarr_array
