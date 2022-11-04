@@ -72,6 +72,7 @@ def load_netcdf_zarr_generic(fileloc, varname, build_dummy=True):
     out_json = gen_json(fileloc, fs, fs2, varname)
 
     # open this monster
+    print(f"Attempting to open and convert {fileloc}.")
     ref_ds = open_zarr_group(out_json, varname)
 
     return ref_ds
