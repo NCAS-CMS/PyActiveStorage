@@ -1,15 +1,19 @@
-"""All zarr imports are done at test instance level."""
 import os
 import numpy as np
 import pytest
+import zarr
 
 from activestorage import active_tools as at
+from numcodecs import Blosc
+from zarr.indexing import (
+    OrthogonalIndexer,
+    is_contiguous_selection,
+)
+from zarr.util import is_total_slice
 
 
 def assemble_zarr():
     """Create a test zarr object."""
-    import zarr
-    from numcodecs import Blosc
     compressor = Blosc(cname='zstd', clevel=1, shuffle=Blosc.BITSHUFFLE)
     z = zarr.create((10000, 10000), chunks=(1000, 1000), dtype='i1', order='C',
                     compressor=compressor)
@@ -19,8 +23,15 @@ def assemble_zarr():
 
 def assemble_zarr_uncompressed():
     """Create a test zarr object."""
-    import zarr
     z = zarr.create((1000, 1000), chunks=(2, 8), dtype='i1', order='C',
+                    compressor=None)
+
+    return z
+
+
+def assemble_zarr_uncompressed_2():
+    """Create a test zarr object."""
+    z = zarr.create((100, 100), chunks=(10, 10), dtype='i1', order='C',
                     compressor=None)
 
     return z
@@ -41,7 +52,6 @@ def test_as_get_orthogonal_selection():
 
 def test_as_get_selection():
     """Test chunk iterator."""
-    from zarr.indexing import OrthogonalIndexer
     z = assemble_zarr()
     selection = (slice(0, 2, 1), slice(4, 6, 1))
     indexer = OrthogonalIndexer(selection, z)
@@ -68,8 +78,8 @@ def test_as_chunk_getitem():
     assert list(ch[2]) == [(0, 2000, (slice(0, 2, 1),))]
 
 
-def test_process_chunk():
-    """Test for processing chunk engine."""
+def test_process_chunk_uncompressed():
+    """Test for processing chunk engine for uncompressed data"""
     z = assemble_zarr_uncompressed()
     z = at.make_an_array_instance_active(z)
     out = np.ones((1, 8))
@@ -85,3 +95,71 @@ def test_process_chunk():
                              fields=None,
                              out_selection=out_selection,
                              partial_read_decode=False)
+
+    assert is_contiguous_selection(out_selection)
+    assert not is_total_slice(chunk_selection, z._chunks)
+    assert out.any()
+    assert out.shape == (1, 8)
+
+
+def test_process_chunk_uncompressed_write_direct():
+    """Test for processing chunk engine for uncompressed data"""
+    z = assemble_zarr_uncompressed_2()
+    z = at.make_an_array_instance_active(z)
+    out = np.ones((10, 10))
+    cdata = np.ones((10, 10))
+    chunk_selection = (slice(0, 10, 1), slice(10, 20, 1))
+    out_selection = np.array((0))
+    with pytest.raises(ValueError) as exc:
+        ch = at.as_process_chunk(z,
+                                 out,
+                                 cdata,
+                                 chunk_selection,
+                                 drop_axes=False,
+                                 out_is_ndarray=True,
+                                 fields=None,
+                                 out_selection=out_selection,
+                                 partial_read_decode=False)
+    assert str(exc.value) == "Chunk shape (10, 80) exceeds data chunks shape (10, 10)"
+
+    assert is_contiguous_selection(out_selection)
+    assert is_total_slice(chunk_selection, z._chunks)
+
+    z._chunks = (2, 8)
+    out = np.ones((1, 8))
+    cdata = np.ones((1, 2))
+    chunk_selection = slice(0, 8, 1)
+    out_selection = np.array((0))
+    with pytest.raises(ValueError) as exc:
+        ch = at.as_process_chunk(z,
+                                 out,
+                                 cdata,
+                                 chunk_selection,
+                                 drop_axes=False,
+                                 out_is_ndarray=True,
+                                 fields=None,
+                                 out_selection=out_selection,
+                                 partial_read_decode=False)
+    assert str(exc.value) == "Chunk shape (2, 8) exceeds permitted output data shape (1, 8)."
+
+
+def test_process_chunk_compressed():
+    """Test for processing chunk engine for uncompressed data"""
+    z = assemble_zarr()
+    z = at.make_an_array_instance_active(z)
+    out = np.ones((1, 8))
+    cdata = np.ones((1, 2))
+    chunk_selection = slice(0, 1, 1)
+    out_selection = np.array((0))
+    with pytest.raises(RuntimeError) as exc:
+        ch = at.as_process_chunk(z,
+                                 out,
+                                 cdata,
+                                 chunk_selection,
+                                 drop_axes=False,
+                                 out_is_ndarray=True,
+                                 fields=None,
+                                 out_selection=out_selection,
+                                 partial_read_decode=False)
+    assert str(exc.value) == "error during blosc decompression: -1"
+
