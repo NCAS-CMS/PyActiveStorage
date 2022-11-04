@@ -44,15 +44,20 @@ def test_getitem():
         active.__getitem__(index)
     assert str(exc.value) == "Must set a netCDF variable name to slice"
 
-    # incorrect variable or unopenable file
+    # unopenable file
     ncvar = "tas"
     active = Active(uri, ncvar=ncvar)
-    baseexc = "From upstream: Unable to open file (file signature not found); " + \
-              "possible cause: Input file tests/test_data/emac.nc does not " + \
-              "contain variable tas.  or File is netCDF-classic."
+    baseexc = "Unable to open file (file signature not found)"
     with pytest.raises(OSError) as exc:
         item = active.__getitem__(index)
     assert str(exc.value) == baseexc
+
+    # good file; wrong variable
+    uri = "tests/test_data/daily_data.nc"
+    ncvar = "tas"
+    active = Active(uri, ncvar=ncvar)
+    with pytest.raises(AttributeError) as exc:
+        item = active.__getitem__(index)
 
     # openable file and correct variable
     uri = "tests/test_data/cesm2_native.nc"
