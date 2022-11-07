@@ -8,7 +8,7 @@ from activestorage.active import Active
 def test_no_attrs():
     """Unit test for class:Active."""
     # test lack of init
-    expected = "Active.__init__() missing 1 required positional argument: 'uri'"
+    expected = "Active.__init__() missing 2 required positional arguments: 'uri' and 'ncvar'"
     with pytest.raises(TypeError) as exc:
         active = Active()
     assert str(exc.value) == expected
@@ -20,7 +20,7 @@ def test_uri_none():
     some_file = None
     expected = "Must use a valid file for uri. Got None"
     with pytest.raises(ValueError) as exc:
-        active = Active(some_file)
+        active = Active(some_file, ncvar="")
     assert str(exc.value) == expected
 
 
@@ -30,7 +30,7 @@ def test_uri_nonexistent():
     some_file = 'cow.nc'
     expected = "Must use existing file for uri. cow.nc not found"
     with pytest.raises(ValueError) as exc:
-        active = Active(some_file)
+        active = Active(some_file, ncvar="")
     assert str(exc.value) == expected
 
 
@@ -38,26 +38,17 @@ def test_getitem():
     """Unit test for class:Active."""
     # no variable passed
     uri = "tests/test_data/emac.nc"
-    active = Active(uri, ncvar=None)
     index = 3
     with pytest.raises(ValueError) as exc:
-        active.__getitem__(index)
+        active = Active(uri, ncvar=None)
     assert str(exc.value) == "Must set a netCDF variable name to slice"
 
     # unopenable file
     ncvar = "tas"
-    active = Active(uri, ncvar=ncvar)
-    baseexc = "Unable to open file (file signature not found)"
-    with pytest.raises(OSError) as exc:
-        item = active.__getitem__(index)
-    assert str(exc.value) == baseexc
-
-    # good file; wrong variable
-    uri = "tests/test_data/daily_data.nc"
-    ncvar = "tas"
-    active = Active(uri, ncvar=ncvar)
-    with pytest.raises(AttributeError) as exc:
-        item = active.__getitem__(index)
+    baseexc = "tas not found in /"
+    with pytest.raises(IndexError) as exc:
+        active = Active(uri, ncvar=ncvar)
+    assert baseexc in str(exc.value)
 
     # openable file and correct variable
     uri = "tests/test_data/cesm2_native.nc"
