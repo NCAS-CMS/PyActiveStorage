@@ -140,7 +140,7 @@ def test_process_chunk_uncompressed_write_direct():
                                  fields=None,
                                  out_selection=out_selection,
                                  partial_read_decode=False)
-    assert str(exc.value) == "Chunk shape (2, 8) exceeds permitted output data shape (1, 8)."
+    assert str(exc.value) == "Storage chunk shape (2, 8) exceeds permitted output data shape (1, 8)."
 
 
 def test_process_chunk_compressed():
