@@ -12,6 +12,7 @@ def test_reduce_chunk():
     size = 128
     rc = st.reduce_chunk(rfile, offset, size,
                          compression=None, filters=None,
-                         missing=True, dtype="i2", shape=(8, 8),
+                         missing=[None, 2050, None, None],
+                         dtype="i2", shape=(8, 8),
                          order="C", chunk_selection=slice(0, 2, 1),
-                         method=None)
+                         method=np.min)
