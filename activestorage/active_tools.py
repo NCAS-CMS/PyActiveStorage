@@ -194,6 +194,7 @@ def as_get_selection(self, indexer, out=None,
     else:
         return out[()], chunks_info, chunks_locs
 
+
 def as_chunk_getitem(self, chunk_coords, chunk_selection, out, out_selection,
                     drop_axes=None, fields=None):
     """Obtain part or whole of a chunk.
@@ -274,6 +275,9 @@ def as_process_chunk(
                 self._compressor.decode(cdata, dest)
             else:
                 chunk = ensure_ndarray(cdata).view(self._dtype)
+                if np.prod(chunk.shape) > np.prod(self._chunks):
+                    raise ValueError(f"Chunk shape {chunk.shape} exceeds "
+                                     f"data chunks shape {self._chunks}")
                 chunk = chunk.reshape(self._chunks, order=self._order)
                 np.copyto(dest, chunk)
             return
@@ -316,6 +320,9 @@ def as_process_chunk(
         tmp = np.squeeze(tmp, axis=drop_axes)
 
     # store selected data in output
+    if np.prod(tmp.shape) > np.prod(out.shape):
+        raise ValueError(f"Chunk shape {tmp.shape} exceeds permitted "
+                         f"output data shape {out.shape}.")
     out[out_selection] = tmp
 
 def as_process_chunk_V(self, chunk_selection):

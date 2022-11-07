@@ -196,3 +196,27 @@ def test_cesm2_native(test_data_path):
     np.testing.assert_array_equal(result2["n"], np.array([[[8]]]))
     # check for active
     np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+
+
+def test_daily_data(test_data_path):
+    """
+    Test again with a daily data file,
+    """
+    ncfile = str(test_data_path / "daily_data.nc")
+    active = Active(ncfile, "ta")
+    active._version = 0
+    d = active[4:5, 1:2]
+    mean_result = np.mean(d)
+
+    active = Active(ncfile, "ta")
+    active._version = 2
+    active.method = "mean"
+    active.components = True
+    result2 = active[4:5, 1:2]
+    print(result2, ncfile)
+    # expect {'sum': array([[[[1515.9822]]]], dtype=float32), 'n': array([[[8]]])}
+    # check for typing and structure
+    np.testing.assert_array_equal(result2["sum"], np.array([[[[1515.9822]]]], dtype="float32"))
+    np.testing.assert_array_equal(result2["n"], np.array([[[[6]]]]))
+    # check for active
+    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])

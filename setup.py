@@ -26,7 +26,10 @@ REQUIREMENTS = {
         'xarray',
         'zarr',
         # for testing
+        'pytest-cov>=2.10.1',
         'pytest-xdist',
+        'pytest-html!=2.1.0',
+        'pytest-metadata>=1.5.1',
         # for documentation
         'autodocsumm',
         'sphinx>2',

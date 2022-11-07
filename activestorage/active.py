@@ -1,10 +1,8 @@
-from math import prod
-
+import os
 import numpy as np
 
 #FIXME: Consider using h5py throughout, for more generality
 from netCDF4 import Dataset
-
 from zarr.indexing import (
     OrthogonalIndexer,
 )
@@ -45,6 +43,10 @@ class Active:
         """
         # Assume NetCDF4 for now
         self.uri = uri
+        if self.uri is None:
+            raise ValueError(f"Must use a valid file for uri. Got {self.uri}")
+        if not os.path.isfile(self.uri):
+            raise ValueError(f"Must use existing file for uri. {self.uri} not found")
         self.ncvar = ncvar
         self.zds = None
 
@@ -240,7 +242,7 @@ class Active:
                 # reductions require the per-dask-chunk partial
                 # reductions to retain these dimensions so that
                 # partial results can be concatenated correctly.)
-                n = prod(out_shape)
+                n = np.prod(out_shape)
                 shape1 = (1,) * len(out_shape)
                 n = np.reshape(n, shape1)
                 out = out.reshape(shape1)

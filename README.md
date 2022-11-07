@@ -1,6 +1,7 @@
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity)
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 [![Test](https://github.com/valeriupredoi/PyActiveStorage/actions/workflows/run-tests.yml/badge.svg)](https://github.com/valeriupredoi/PyActiveStorage/actions/workflows/run-tests.yml)
+[![codecov](https://codecov.io/gh/valeriupredoi/PyActiveStorage/branch/main/graph/badge.svg?token=1VGKP4L3S3)](https://codecov.io/gh/valeriupredoi/PyActiveStorage)
 
 ## Active Storage Prototype
 
@@ -53,3 +54,6 @@ See available Sphinx [documentation](https://htmlpreview.github.io/?https://gith
 ```
 sphinx-build -Ea doc doc/build
 ```
+## Code coverage (test coverage)
+
+We monitor test coverage via the [Codecov app](https://app.codecov.io/gh/valeriupredoi/PyActiveStorage) and employ a bot that displays coverage changes introduced in every PR; the bot posts a comment directly to the PR, in which coverage variations introduced by the proposed code changes are displayed.
