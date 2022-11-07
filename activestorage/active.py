@@ -48,6 +48,8 @@ class Active:
         if not os.path.isfile(self.uri):
             raise ValueError(f"Must use existing file for uri. {self.uri} not found")
         self.ncvar = ncvar
+        if self.ncvar is None:
+            raise ValueError("Must set a netCDF variable name to slice")
         self.zds = None
 
         self._version = 1
@@ -61,6 +63,11 @@ class Active:
         #
         if (missing_value, fill_value, valid_min, valid_max) == (None, None, None, None):
             ds = Dataset(uri)
+            try:
+                ds_var = ds[ncvar]
+            except IndexError as exc:
+                print(f"Dataset {ds} does not contain ncvar {ncvar}.")
+                raise exc
             self._missing = getattr(ds[ncvar], 'missing_value', None)
             self._fillvalue = getattr(ds[ncvar], '_FillValue', None)
             self._filters = ds[ncvar].filters()
@@ -91,8 +98,6 @@ class Active:
         # and returning the requested slice ourselves. In version 2, we can pass this
         # through to the default method.
         ncvar = self.ncvar
-        if ncvar is None:
-            raise ValueError("Must set a netCDF variable name to slice")
 
         if self.method is None and self._version == 0:
             # No active operation
