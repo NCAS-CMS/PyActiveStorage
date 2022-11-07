@@ -82,11 +82,13 @@ def test_method():
 
     active._method = "cow"
     assert active.method is None
-    
 
 
-
-
-
-
-
+def test_active():
+    """Test with full complement of args."""
+    uri = "tests/test_data/cesm2_native.nc"
+    ncvar = "TREFHT"
+    active = Active(uri, ncvar=ncvar)
+    init = active.__init__(uri=uri, ncvar=ncvar, missing_value=True,
+                           fill_value=1e20, valid_min=-1,
+                           valid_max=1200)
