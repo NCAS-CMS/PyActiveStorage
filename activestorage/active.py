@@ -1,6 +1,7 @@
 import os
 import numpy as np
 
+#FIXME: Consider using h5py throughout, for more generality
 from netCDF4 import Dataset
 from zarr.indexing import (
     OrthogonalIndexer,
@@ -24,24 +25,21 @@ class Active:
         """Store reduction methods."""
         instance = super().__new__(cls)
         instance._methods = {
-            "min": np.min,
-            "max": np.max,
-            "sum": np.sum,
+            "min": np.ma.min,
+            "max": np.ma.max,
+            "sum": np.ma.sum,
             # For the unweighted mean we calulate the sum and divide
             # by the number of non-missing elements
-            "mean": np.sum,
+            "mean": np.ma.sum,
         }
         return instance
 
-    def __init__(self, uri, ncvar=None):
-        """Instantiate in the same way as normal.
-
-        :Parameters:
-
-            ncvar: `str`, optional
-                The netCDF variable name of the data. May also be set
-                with the `ncvar` attribute.
-
+    def __init__(self, uri, ncvar, missing_value=None, fill_value=None, valid_min=None, valid_max=None):
+        """
+        Instantiate with a NetCDF4 dataset and the variable of interest within that file.
+        (We need the variable, because we need variable specific metadata from within that
+        file, however, if that information is available at instantiation, it can be provided
+        using keywords and avoid a metadata read.)
         """
         # Assume NetCDF4 for now
         self.uri = uri
@@ -50,11 +48,47 @@ class Active:
         if not os.path.isfile(self.uri):
             raise ValueError(f"Must use existing file for uri. {self.uri} not found")
         self.ncvar = ncvar
+        if self.ncvar is None:
+            raise ValueError("Must set a netCDF variable name to slice")
         self.zds = None
 
         self._version = 1
         self._components = False
         self._method = None
+       
+        # obtain metadata, using netcdf4_python for now
+        # FIXME: There is an outstanding issue with ._FilLValue to be handled.
+        # If the user actually wrote the data with no fill value, or the
+        # default fill value is in play, then this might go wrong.
+        #
+        if (missing_value, fill_value, valid_min, valid_max) == (None, None, None, None):
+            ds = Dataset(uri)
+            try:
+                ds_var = ds[ncvar]
+            except IndexError as exc:
+                print(f"Dataset {ds} does not contain ncvar {ncvar}.")
+                raise exc
+            self._missing = getattr(ds[ncvar], 'missing_value', None)
+            self._fillvalue = getattr(ds[ncvar], '_FillValue', None)
+            self._filters = ds[ncvar].filters()
+            valid_min = getattr(ds[ncvar], 'valid_min', None)
+            valid_max = getattr(ds[ncvar], 'valid_max', None)
+            valid_range = getattr(ds[ncvar], 'valid_range', None)
+            if valid_range is not None and (valid_max or valid_min):
+                raise ValueError("Unexpected combination of missing value options ", valid_min, valid_max, valid_range)
+            if  valid_min or valid_max:
+                valid_range=[valid_min, valid_max]
+            if valid_range is not None:            
+                self._valid_min, self._valid_max = tuple(valid_range)
+            else:
+                self._valid_min, self._valid_max = None, None
+        else:
+            self._missing = missing_value
+            self._fillvalue = fill_value
+            self._valid_min = valid_min
+            self._valid_max = valid_max
+
+       
 
     def __getitem__(self, index):
         """ 
@@ -64,8 +98,6 @@ class Active:
         # and returning the requested slice ourselves. In version 2, we can pass this
         # through to the default method.
         ncvar = self.ncvar
-        if ncvar is None:
-            raise ValueError("Must set a netCDF variable name to slice")
 
         if self.method is None and self._version == 0:
             # No active operation
@@ -162,16 +194,13 @@ class Active:
         """ 
         First we need to convert the selection into chunk coordinates,
         steps etc, via the Zarr machinery, then we get everything else we can
-        from zarr and friends and use simple dictionaries and tupes, then
+        from zarr and friends and use simple dictionaries and tuples, then
         we can go to the storage layer with no zarr.
         """
         compressor = self.zds._compressor
         filters = self.zds._filters
 
-        # FIXME: populate this from metadata, see issue #18
-        # interpretation: (_fillvalue, missing, min_valid_value, max_valid_value)
-        missing = (None, None, None, None)  # FIXME: Needs implementation 
-
+        missing = self._fillvalue, self._missing, self._valid_min, self._valid_max
 
         indexer = OrthogonalIndexer(*args, self.zds)
         out_shape = indexer.shape
@@ -190,12 +219,14 @@ class Active:
         method = self.method
         if method is not None:
             out = []
+            counts = []
         else:
             out = np.empty(out_shape, dtype=out_dtype, order=self.zds._order)
+            counts = None  # should never get touched with no method!
 
         for chunk_coords, chunk_selection, out_selection in stripped_indexer:
             self._process_chunk(fsref, chunk_coords,chunk_selection,
-                                out, out_selection,
+                                out, counts, out_selection,
                                 compressor, filters, missing,
                                 drop_axes=drop_axes)
 
@@ -224,9 +255,9 @@ class Active:
                 if self._method == "mean":
                     # For the average, the returned component is
                     # "sum", not "mean"
-                    out = {"sum": out, "n": n}
+                    out = {"sum": out, "n": sum(counts)}
                 else:
-                    out = {self._method: out, "n": n}
+                    out = {self._method: out, "n": sum(counts)}
             else:
                 # Return the reduced data as a numpy array. For most
                 # methods the data is already in this form.
@@ -234,29 +265,37 @@ class Active:
                     # For the average, it is actually the sum that has
                     # been created, so we need to divide by the sample
                     # size.
-                    n = np.prod(out_shape)
-                    out = out / n
+                    out = out / sum(counts)
 
         return out
 
-    def _process_chunk(self, fsref, chunk_coords, chunk_selection, out,
+    def _process_chunk(self, fsref, chunk_coords, chunk_selection, out, counts,
                        out_selection, compressor, filters, missing, 
                        drop_axes=None):
-        """Obtain part or whole of a chunk.
+        """
+        Obtain part or whole of a chunk.
 
-         This is done by taking binary data from storage and filling
-         the output array.
+        This is done by taking binary data from storage and filling
+        the output array.
+
+        Note the need to use counts for some methods
 
         """
         coord = '.'.join([str(c) for c in chunk_coords])
         key = f"{self.ncvar}/{coord}"
         rfile, offset, size = tuple(fsref[key])
-        tmp = reduce_chunk(rfile, offset, size, compressor, filters, missing,
+
+        # note there is an ongoing discussion about this interface, and what it returns
+        # see https://github.com/valeriupredoi/PyActiveStorage/issues/33
+        # so neither the returned data or the interface should be considered stable
+        # although we will version changes.
+        tmp, count = reduce_chunk(rfile, offset, size, compressor, filters, missing,
                            self.zds._dtype, self.zds._chunks, self.zds._order,
                            chunk_selection, method=self.method)
 
         if self.method is not None:
             out.append(tmp)
+            counts.append(count)
         else:
 
             if drop_axes:

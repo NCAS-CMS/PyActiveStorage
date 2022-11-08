@@ -6,7 +6,7 @@ from activestorage import Active as act
 # test version
 def test_version():
     assert hasattr(activestorage, "__version__")
-    assert activestorage.__version__ == "0.0.0"
+    assert activestorage.__version__ == "0.0.1"
     print(activestorage.__version__)
 
 # check activestorage class
