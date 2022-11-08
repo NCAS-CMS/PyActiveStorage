@@ -321,7 +321,7 @@ def as_process_chunk(
 
     # store selected data in output
     if np.prod(tmp.shape) > np.prod(out.shape):
-        raise ValueError(f"Chunk shape {tmp.shape} exceeds permitted "
+        raise ValueError(f"Storage chunk shape {tmp.shape} exceeds permitted "
                          f"output data shape {out.shape}.")
     out[out_selection] = tmp
 
