@@ -48,7 +48,8 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
             # no valid data would have to do something like this too.
             result = method(tmp)
             if np.ma.is_masked(result):
-                return result, 0
+                nonmasked_result = result[~result.mask].data
+                return nonmasked_result, len(nonmasked_result)
             else:
                 return result, tmp.count()   
         else:
