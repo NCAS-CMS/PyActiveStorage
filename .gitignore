@@ -20,6 +20,7 @@ _sidebar.rst.inc
 tests/test_data/cesm2_native_TREFHT.json
 tests/test_data/daily_data_tas.json
 tests/test_data/daily_data_ta.json
+tests/test_data/daily_data_masked_ta.json
 
 # test coverage
 .coverage
