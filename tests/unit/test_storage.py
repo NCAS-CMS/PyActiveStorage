@@ -112,6 +112,7 @@ def test_reduced_chunk_fully_masked_data_vmin():
                          dtype="float32", shape=(62, 2, 3, 2),
                          order="C", chunk_selection=ch_sel,
                          method=np.ma.mean)
+    # FIXME dodgy
     assert rc == 900.
 
 
@@ -130,4 +131,5 @@ def test_reduced_chunk_fully_masked_data_vmax():
                          dtype="float32", shape=(62, 2, 3, 2),
                          order="C", chunk_selection=ch_sel,
                          method=np.ma.mean)
+    # FIXME dodgy
     assert rc == 1.1
