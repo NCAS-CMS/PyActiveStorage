@@ -56,6 +56,6 @@ def test_reduced_chunk_masked_data():
                          missing=(None, 999.0, None, None),
                          dtype="float32", shape=(62, 2, 3, 2),
                          order="C", chunk_selection=ch_sel,
-                         method=np.sum)
-    assert rc[0] == -1
-    assert rc[1] == 15
+                         method=np.ma.mean)
+    assert rc[0] == 249.45955882352942
+    assert rc[1] == 680
