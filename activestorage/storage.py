@@ -39,6 +39,8 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
         chunk = chunk.reshape(-1, order='A')
         chunk = chunk.reshape(shape, order=order)
 
+    print(f"Returned chunk {chunk}")
+
     tmp = chunk[chunk_selection]
     if method:
         if missing != (None, None, None, None):
@@ -73,6 +75,7 @@ def remove_missing(data, missing):
     will have to do this by hand 
     """
     fill_value, missing_value, valid_min, valid_max = missing
+
     if fill_value:
         data = np.ma.masked_equal(data, fill_value)
     if missing_value:
@@ -81,6 +84,7 @@ def remove_missing(data, missing):
         data = np.ma.masked_greater(data, valid_max)
     if valid_min:
         data = np.ma.masked_less(data, valid_min)
+
     return data
 
 def read_block(open_file, offset, size):
