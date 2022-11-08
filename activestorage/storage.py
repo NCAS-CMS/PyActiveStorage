@@ -48,6 +48,7 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
             # no valid data would have to do something like this too.
             result = method(tmp)
             if np.ma.is_masked(result):
+                # FIXME dodgy
                 prct = {False: 1.1, True: 0.9}
                 if missing[0]:
                     return missing[0]
