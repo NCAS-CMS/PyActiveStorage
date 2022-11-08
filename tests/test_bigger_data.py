@@ -239,9 +239,9 @@ def test_daily_data_masked(test_data_path):
     active.components = True
     result2 = active[:]
     print(result2, ncfile)
-    # expect {'sum': array([[[[1515.9822]]]], dtype=float32), 'n': array([[[8]]])}
+    # expect {'sum': array([[[[169632.5]]]], dtype=float32), 'n': 680}
     # check for typing and structure
-    np.testing.assert_array_equal(result2["sum"], np.array([[[[1515.9822]]]], dtype="float32"))
-    np.testing.assert_array_equal(result2["n"], np.array([[[[6]]]]))
+    np.testing.assert_array_equal(result2["sum"], np.array([[[[169632.5]]]], dtype="float32"))
+    np.testing.assert_array_equal(result2["n"], 680)
     # check for active
     np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
