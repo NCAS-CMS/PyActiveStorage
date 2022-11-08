@@ -5,15 +5,6 @@ import pytest
 from activestorage.active import Active
 
 
-def test_no_attrs():
-    """Unit test for class:Active."""
-    # test lack of init
-    expected = "Active.__init__() missing 1 required positional argument: 'uri'"
-    with pytest.raises(TypeError) as exc:
-        active = Active()
-    assert str(exc.value) == expected
-
-
 def test_uri_none():
     """Unit test for class:Active."""
     # test invalid uri
