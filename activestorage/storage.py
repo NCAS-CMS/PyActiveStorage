@@ -26,8 +26,8 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
         raise NotImplementedError("Compression is not yet supported!")
     if filters is not None:
         raise NotImplementedError("Filters are not yet supported!")
-    
-    #fIXME: for the moment, open the file every time ... we might want to do that, or not
+
+    #FIXME: for the moment, open the file every time ... we might want to do that, or not
     with open(rfile,'rb') as open_file:
         # get the data
         chunk = read_block(open_file, offset, size)
@@ -38,8 +38,6 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
         # sort out ordering and convert to the parent hyperslab dimensions
         chunk = chunk.reshape(-1, order='A')
         chunk = chunk.reshape(shape, order=order)
-
-    print(f"Returned chunk {chunk}")
 
     tmp = chunk[chunk_selection]
     if method:
