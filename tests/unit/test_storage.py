@@ -76,7 +76,8 @@ def test_reduced_chunk_fully_masked_data_fill():
                          dtype="float32", shape=(62, 2, 3, 2),
                          order="C", chunk_selection=ch_sel,
                          method=np.ma.mean)
-    assert rc == 999.
+    assert rc[1] == 0
+    np.testing.assert_array_equal(rc[0], np.array([], dtype=np.float64))
 
 
 def test_reduced_chunk_fully_masked_data_missing():
@@ -94,7 +95,8 @@ def test_reduced_chunk_fully_masked_data_missing():
                          dtype="float32", shape=(62, 2, 3, 2),
                          order="C", chunk_selection=ch_sel,
                          method=np.ma.mean)
-    assert rc == 999.
+    assert rc[1] == 0
+    np.testing.assert_array_equal(rc[0], np.array([], dtype=np.float64))
 
 
 def test_reduced_chunk_fully_masked_data_vmin():
@@ -112,8 +114,8 @@ def test_reduced_chunk_fully_masked_data_vmin():
                          dtype="float32", shape=(62, 2, 3, 2),
                          order="C", chunk_selection=ch_sel,
                          method=np.ma.mean)
-    # FIXME dodgy
-    assert rc == 900.
+    assert rc[1] == 0
+    np.testing.assert_array_equal(rc[0], np.array([], dtype=np.float64))
 
 
 def test_reduced_chunk_fully_masked_data_vmax():
@@ -131,5 +133,5 @@ def test_reduced_chunk_fully_masked_data_vmax():
                          dtype="float32", shape=(62, 2, 3, 2),
                          order="C", chunk_selection=ch_sel,
                          method=np.ma.mean)
-    # FIXME dodgy
-    assert rc == 1.1
+    assert rc[1] == 0
+    np.testing.assert_array_equal(rc[0], np.array([], dtype=np.float64))

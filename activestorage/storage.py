@@ -47,22 +47,7 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
             # a vanilla implementation of remove_missing which found
             # no valid data would have to do something like this too.
             result = method(tmp)
-            if np.ma.is_masked(result):
-                # FIXME dodgy
-                prct = {False: 1.1, True: 0.9}
-                if missing[0]:
-                    return missing[0]
-                if missing[1]:
-                    return missing[1]
-                #FIXME how do we avoid fail with over/under flow?
-                if missing[2]:
-                    norm_factor = prct[missing[2]>0]
-                    return missing[2] * norm_factor
-                if missing[3]:
-                    norm_factor = prct[missing[3]<0]
-                    return missing[3] * norm_factor
-            else:
-                return result, tmp.count()   
+            return result, tmp.count()   
         else:
             return method(tmp), tmp.size
     else:
