@@ -47,11 +47,7 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
             # a vanilla implementation of remove_missing which found
             # no valid data would have to do something like this too.
             result = method(tmp)
-            if np.ma.is_masked(result):
-                nonmasked_result = result[~result.mask].data
-                return nonmasked_result, len(nonmasked_result)
-            else:
-                return result, tmp.count()   
+            return result, tmp.count()   
         else:
             return method(tmp), tmp.size
     else:
