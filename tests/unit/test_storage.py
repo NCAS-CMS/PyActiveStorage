@@ -57,6 +57,10 @@ def test_reduced_chunk_masked_data():
                          dtype="float32", shape=(62, 2, 3, 2),
                          order="C", chunk_selection=ch_sel,
                          method=np.mean)
+    # test the output dtype
+    np.testing.assert_raises(AssertionError,
+                             np.testing.assert_array_equal, rc, (249.459564, 680))
+    # test result with correct dtype
     np.testing.assert_array_equal(rc, (np.float32(249.459564), 680))
 
 
