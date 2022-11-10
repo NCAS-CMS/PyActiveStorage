@@ -25,12 +25,12 @@ class Active:
         """Store reduction methods."""
         instance = super().__new__(cls)
         instance._methods = {
-            "min": np.ma.min,
-            "max": np.ma.max,
-            "sum": np.ma.sum,
+            "min": np.min,
+            "max": np.max,
+            "sum": np.sum,
             # For the unweighted mean we calulate the sum and divide
             # by the number of non-missing elements
-            "mean": np.ma.sum,
+            "mean": np.sum,
         }
         return instance
 

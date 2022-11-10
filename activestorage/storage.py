@@ -43,13 +43,11 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
     if method:
         if missing != (None, None, None, None):
             tmp = remove_missing(tmp, missing)
-            # we are using masked arrays here, so we have to undo that
-            # a vanilla implementation of remove_missing which found
-            # no valid data would have to do something like this too.
-            result = method(tmp)
-            return result, tmp.count()   
-        else:
+        # check on size of tmp; method(empty) returns nan
+        if tmp.any():
             return method(tmp), tmp.size
+        else:
+            return tmp, None
     else:
         return tmp, None
 
@@ -69,7 +67,10 @@ def remove_missing(data, missing):
     if valid_min:
         data = np.ma.masked_less(data, valid_min)
 
+    data = np.ma.compressed(data)
+
     return data
+
 
 def read_block(open_file, offset, size):
     """ Read <size> bytes from <open_file> at <offset>"""
