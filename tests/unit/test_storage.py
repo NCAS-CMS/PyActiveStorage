@@ -56,9 +56,8 @@ def test_reduced_chunk_masked_data():
                          missing=(None, 999.0, None, None),
                          dtype="float32", shape=(62, 2, 3, 2),
                          order="C", chunk_selection=ch_sel,
-                         method=np.ma.mean)
-    assert rc[0] == 249.45955882352942
-    assert rc[1] == 680
+                         method=np.mean)
+    np.testing.assert_array_equal(rc, (np.float32(249.459564), 680))
 
 
 def test_reduced_chunk_fully_masked_data_fill():
@@ -75,9 +74,9 @@ def test_reduced_chunk_fully_masked_data_fill():
                          missing=(None, 999.0, None, None),
                          dtype="float32", shape=(62, 2, 3, 2),
                          order="C", chunk_selection=ch_sel,
-                         method=np.ma.mean)
-    assert rc[1] == 0
-    np.testing.assert_array_equal(rc[0], np.array([], dtype=np.float64))
+                         method=np.mean)
+    assert rc[0].size == 0
+    assert rc[1] is None
 
 
 def test_reduced_chunk_fully_masked_data_missing():
@@ -94,9 +93,9 @@ def test_reduced_chunk_fully_masked_data_missing():
                          missing=(999., None, None, None),
                          dtype="float32", shape=(62, 2, 3, 2),
                          order="C", chunk_selection=ch_sel,
-                         method=np.ma.mean)
-    assert rc[1] == 0
-    np.testing.assert_array_equal(rc[0], np.array([], dtype=np.float64))
+                         method=np.mean)
+    assert rc[0].size == 0
+    assert rc[1] is None
 
 
 def test_reduced_chunk_fully_masked_data_vmin():
@@ -113,9 +112,9 @@ def test_reduced_chunk_fully_masked_data_vmin():
                          missing=(None, None, 1000., None),
                          dtype="float32", shape=(62, 2, 3, 2),
                          order="C", chunk_selection=ch_sel,
-                         method=np.ma.mean)
-    assert rc[1] == 0
-    np.testing.assert_array_equal(rc[0], np.array([], dtype=np.float64))
+                         method=np.mean)
+    assert rc[0].size == 0
+    assert rc[1] is None
 
 
 def test_reduced_chunk_fully_masked_data_vmax():
@@ -132,6 +131,6 @@ def test_reduced_chunk_fully_masked_data_vmax():
                          missing=(None, None, None, 1.),
                          dtype="float32", shape=(62, 2, 3, 2),
                          order="C", chunk_selection=ch_sel,
-                         method=np.ma.mean)
-    assert rc[1] == 0
-    np.testing.assert_array_equal(rc[0], np.array([], dtype=np.float64))
+                         method=np.mean)
+    assert rc[0].size == 0
+    assert rc[1] is None
