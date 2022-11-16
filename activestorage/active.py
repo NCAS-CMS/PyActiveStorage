@@ -41,19 +41,6 @@ class Active:
     Version 2 will add methods for actual active storage.
 
     """
-    def __new__(cls, *args, **kwargs):
-        """Store reduction methods."""
-        instance = super().__new__(cls)
-        instance._methods = {
-            "min": np.min,
-            "max": np.max,
-            "sum": np.sum,
-            # For the unweighted mean we calulate the sum and divide
-            # by the number of non-missing elements
-            "mean": np.sum,
-        }
-        return instance
-
     def __init__(self, uri, ncvar, storage_type="Posix",
                  missing_value=None, fill_value=None,
                  valid_min=None, valid_max=None):
@@ -80,8 +67,11 @@ class Active:
         # read config file
         self._config = _read_config_file(self.storage_type)
 
-        # read version, components
+        # read methods version, components
         self._version = self._config.get("version", 1)
+        self._methods = self._config.get("methods", None)
+        if not self._methods:
+            raise ValueError(f"Configuration dict {self._config} needs a valid methods group.")
         self._components = False
         self._method = None
        
@@ -177,13 +167,14 @@ class Active:
         ==========  ==================================================
 
         """
-        return self._methods.get(self._method)
+        method = self._methods.get(self._method, None)
+        if method:
+            return eval(method)
 
     @method.setter
     def method(self, value):
         if value is not None and value not in self._methods:
             raise ValueError(f"Bad 'method': {value}. Choose from min/max/mean/sum.")
-
         self._method = value
 
     @property
