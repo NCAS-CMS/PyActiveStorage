@@ -21,6 +21,8 @@ def _read_config_file(storage_type):
         config_file = base_path / Path("config-s3-storage.yml")
     elif storage_type == "Posix":
         config_file = base_path / Path("config-Posix-storage.yml")
+    else:
+        raise ValueError(f"Storage type {storage_type} not known.")
     if not config_file.exists():
         raise IOError(f'Config file `{config_file}` does not exist.')
 
