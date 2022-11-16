@@ -39,7 +39,7 @@ def _extract_method(method):
        except AttributeError:
            raise AttributeError(f"Method {method} is not a valid Numpy method.")
    else:
-       raise ValueError(f"Could not recognize {method} as permitted.")
+       raise ValueError(f"Could not recognize method {method} as permitted.")
 
 
 class Active:
