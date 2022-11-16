@@ -33,7 +33,11 @@ def _read_config_file(storage_type):
 def _extract_method(method):
    """Extract functional method from string. Works like eval but more secure."""
    if method.split(".")[0] == "np" or method.split(".")[0] == "numpy":
-       return getattr(np, method.split(".")[1])
+       try:
+           func = getattr(np, method.split(".")[1])
+           return func
+       except AttributeError:
+           raise AttributeError(f"Method {method} is not a valid Numpy method.")
    else:
        raise ValueError(f"Could not recognize {method} as permitted.")
 
