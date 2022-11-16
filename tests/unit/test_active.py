@@ -83,3 +83,23 @@ def test_active():
     init = active.__init__(uri=uri, ncvar=ncvar, missing_value=True,
                            fill_value=1e20, valid_min=-1,
                            valid_max=1200)
+
+
+def test_config_s3():
+    uri = "tests/test_data/cesm2_native.nc"
+    ncvar = "TREFHT"
+    active = Active(uri, ncvar=ncvar, storage_type="S3")
+    assert active._methods == {'max': 'max', 'mean': 'mean',
+                               'min': 'min', 'sum': 'dimsum'}
+    assert active.method is None
+    assert active._version == 1
+
+
+def test_config_Posix():
+    uri = "tests/test_data/cesm2_native.nc"
+    ncvar = "TREFHT"
+    active = Active(uri, ncvar=ncvar, storage_type="Posix")
+    assert active._methods == {'max': 'np.max', 'mean': 'np.sum',
+                               'min': 'np.min', 'sum': 'np.sum'}
+    assert active.method is None
+    assert active._version == 1
