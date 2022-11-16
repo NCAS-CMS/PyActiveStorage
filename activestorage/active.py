@@ -30,6 +30,14 @@ def _read_config_file(storage_type):
     return cfg
 
 
+def _extract_method(method):
+   """Extract functional method from string. Works like eval but more secure."""
+   if method.split(".")[0] == "np" or method.split(".")[0] == "numpy":
+       return getattr(np, method.split(".")[1])
+   else:
+       raise ValueError(f"Could not recognize {method} as permitted.")
+
+
 class Active:
     """ 
     Instantiates an interface to active storage which contains either zarr files
@@ -169,7 +177,7 @@ class Active:
         """
         method = self._methods.get(self._method, None)
         if method:
-            return eval(method)
+            return _extract_method(method)
 
     @method.setter
     def method(self, value):
