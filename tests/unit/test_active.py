@@ -94,6 +94,19 @@ def test_config_s3():
     assert active.method is None
     assert active._version == 1
 
+    active._version = 2
+
+    # statistical method can not be executed
+    active.method = "mean"
+    with pytest.raises(ValueError) as exc:
+        active[:]
+    assert str(exc.value) == "Could not recognize method mean as permitted."
+
+    # bad name for statistical method
+    with pytest.raises(ValueError) as exc:
+        active.method = "meany"
+    assert str(exc.value) == "Bad 'method': meany. Choose from min/max/mean/sum."
+
 
 def test_config_Posix():
     uri = "tests/test_data/cesm2_native.nc"
@@ -103,3 +116,23 @@ def test_config_Posix():
                                'min': 'np.min', 'sum': 'np.sum'}
     assert active.method is None
     assert active._version == 1
+
+    active._version = 2
+
+    # usual run
+    active.method = "mean"  # will exec np.mean from config
+    assert active[:] == 284.22694905598956
+
+    # passing wrong numpy method
+    active._methods["mean"] = "np.meany"
+    with pytest.raises(AttributeError) as exc:
+        active[:]
+    assert str(exc.value) == "Method np.meany is not a valid Numpy method."
+
+
+def test_config_invalid_storage_type():
+    uri = "tests/test_data/cesm2_native.nc"
+    ncvar = "TREFHT"
+    with pytest.raises(ValueError) as exc:
+        Active(uri, ncvar=ncvar, storage_type="cowabunga")
+    assert str(exc.value) == "Storage type cowabunga not known."
