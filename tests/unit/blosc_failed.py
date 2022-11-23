@@ -16,7 +16,7 @@ def assemble_zarr():
     return z
 
 
-@pytest.mark.xfail(reason='Issue with BLOSC decompression.')
+# @pytest.mark.xfail(reason='Issue with BLOSC decompression.')
 def test_process_chunk_compressed():
     """Test for processing chunk engine for uncompressed data"""
     z = assemble_zarr()
@@ -25,12 +25,15 @@ def test_process_chunk_compressed():
     cdata = np.ones((1, 2))
     chunk_selection = slice(0, 1, 1)
     out_selection = np.array((0))
-    ch = at.as_process_chunk(z,
-                             out,
-                             cdata,
-                             chunk_selection,
-                             drop_axes=False,
-                             out_is_ndarray=True,
-                             fields=None,
-                             out_selection=out_selection,
-                             partial_read_decode=False)
+    raised = f'cdata {cdata} is an ndarray, can not decompress.'
+    with pytest.raises(TypeError) as exc:
+        ch = at.as_process_chunk(z,
+                                 out,
+                                 cdata,
+                                 chunk_selection,
+                                 drop_axes=False,
+                                 out_is_ndarray=True,
+                                 fields=None,
+                                 out_selection=out_selection,
+                                 partial_read_decode=False)
+    assert str(exc.value) == raised
