@@ -29,6 +29,16 @@ def assemble_zarr_uncompressed():
     return z
 
 
+def assemble_zarr_with_fillvalue():
+    """Create a test zarr object."""
+    compressor = Blosc(cname='zstd', clevel=1, shuffle=Blosc.BITSHUFFLE)
+    z = zarr.create((10000, 10000), chunks=(1000, 1000), dtype='i1', order='C',
+                    compressor=compressor)
+    z._fill_value = -99
+
+    return z
+
+
 def assemble_zarr_uncompressed_2():
     """Create a test zarr object."""
     z = zarr.create((100, 100), chunks=(10, 10), dtype='i1', order='C',
@@ -65,6 +75,22 @@ def test_as_get_selection():
 def test_as_chunk_getitem():
     """Test chunk get item."""
     z = assemble_zarr()
+    z = at.make_an_array_instance_active(z)
+    chunk_coords = (0, 3)
+    chunk_selection = [slice(0, 2, 1)]
+    out = np.array((2, 2, 2))
+    out_selection = slice(0, 2, 1)
+    ch = at.as_chunk_getitem(z, chunk_coords, chunk_selection, out, out_selection,
+                             drop_axes=None, fields=None)
+    np.testing.assert_array_equal(ch[0], (1000, 1000))
+    np.testing.assert_array_equal(ch[1], [slice(0, 2, 1)])
+    # PCI
+    assert list(ch[2]) == [(0, 2000, (slice(0, 2, 1),))]
+
+
+def test_as_chunk_getitem_with_fillvalue():
+    """Test chunk get item."""
+    z = assemble_zarr_with_fillvalue()
     z = at.make_an_array_instance_active(z)
     chunk_coords = (0, 3)
     chunk_selection = [slice(0, 2, 1)]
@@ -140,7 +166,7 @@ def test_process_chunk_uncompressed_write_direct():
                                  fields=None,
                                  out_selection=out_selection,
                                  partial_read_decode=False)
-    assert str(exc.value) == "Chunk shape (2, 8) exceeds permitted output data shape (1, 8)."
+    assert str(exc.value) == "Storage chunk shape (2, 8) exceeds permitted output data shape (1, 8)."
 
 
 def test_process_chunk_compressed():

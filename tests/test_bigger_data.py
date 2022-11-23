@@ -220,3 +220,28 @@ def test_daily_data(test_data_path):
     np.testing.assert_array_equal(result2["n"], np.array([[[[6]]]]))
     # check for active
     np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+
+
+def test_daily_data_masked(test_data_path):
+    """
+    Test again with a daily data file, with masking on
+    """
+    ncfile = str(test_data_path / "daily_data_masked.nc")
+    active = Active(ncfile, "ta", missing_value=999.)
+    active._version = 0
+    d = active[:]
+    d = np.ma.masked_where(d==999., d)
+    mean_result = np.ma.mean(d)
+
+    active = Active(ncfile, "ta", missing_value=999.)
+    active._version = 2
+    active.method = "mean"
+    active.components = True
+    result2 = active[:]
+    print(result2, ncfile)
+    # expect {'sum': array([[[[169632.5]]]], dtype=float32), 'n': 680}
+    # check for typing and structure
+    np.testing.assert_array_equal(result2["sum"], np.array([[[[169632.5]]]], dtype="float32"))
+    np.testing.assert_array_equal(result2["n"], 680)
+    # check for active
+    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
