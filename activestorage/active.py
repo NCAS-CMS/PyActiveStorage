@@ -23,8 +23,9 @@ def _read_config_file(storage_type):
         config_file = base_path / Path("config-Posix-storage.yml")
     else:
         raise ValueError(f"Storage type {storage_type} not known.")
-    if not config_file.exists():
-        raise IOError(f'Config file `{config_file}` does not exist.')
+    # should not need this if conf file is at package-level
+    # if not config_file.exists():
+    #     raise IOError(f'Config file `{config_file}` does not exist.')
 
     with open(config_file, 'r') as file:
         cfg = yaml.safe_load(file)
@@ -84,8 +85,9 @@ class Active:
         # read methods version, components
         self._version = self._config.get("version", 1)
         self._methods = self._config.get("methods", None)
-        if not self._methods:
-            raise ValueError(f"Configuration dict {self._config} needs a valid methods group.")
+        # should not need this if conf file is at package-level
+        # if not self._methods:
+        #     raise ValueError(f"Configuration dict {self._config} needs a valid methods group.")
         self._components = False
         self._method = None
        
