@@ -3,6 +3,8 @@
 [![Test](https://github.com/valeriupredoi/PyActiveStorage/actions/workflows/run-tests.yml/badge.svg)](https://github.com/valeriupredoi/PyActiveStorage/actions/workflows/run-tests.yml)
 [![codecov](https://codecov.io/gh/valeriupredoi/PyActiveStorage/branch/main/graph/badge.svg?token=1VGKP4L3S3)](https://codecov.io/gh/valeriupredoi/PyActiveStorage)
 
+![pyactivestoragelogo](https://github.com/valeriupredoi/PyActiveStorage/blob/main/doc/figures/PyActiveStorage-logo-complete.jpg)
+
 ## Active Storage Prototype
 
 ### Create virtual environment
