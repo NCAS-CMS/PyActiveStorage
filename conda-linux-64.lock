@@ -95,7 +95,7 @@ https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.1-pyhd8ed1ab_0.tar.bz2#5
 https://conda.anaconda.org/conda-forge/noarch/toolz-0.12.0-pyhd8ed1ab_0.tar.bz2#92facfec94bc02d6ccf42e7173831a36
 https://conda.anaconda.org/conda-forge/linux-64/tornado-6.2-py311hd4cff14_1.tar.bz2#4d86cd6dbdc1185f4e72d974f1f1f852
 https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.4.0-pyha770c72_0.tar.bz2#2d93b130d148d7fc77e583677792fc6a
-https://conda.anaconda.org/conda-forge/linux-64/ujson-5.5.0-py311ha362b79_1.tar.bz2#fa1ca431aba553604f452d3044bf1070
+https://conda.anaconda.org/conda-forge/linux-64/ujson-5.7.0-py311hcafe171_0.conda#ec3960b6d13bb60aad9c67f42a801720
 https://conda.anaconda.org/conda-forge/noarch/wheel-0.38.4-pyhd8ed1ab_0.tar.bz2#c829cfb8cb826acb9de0ac1a2df0a940
 https://conda.anaconda.org/conda-forge/noarch/cached-property-1.5.2-hd8ed1ab_1.tar.bz2#9b347a7ec10940d3f7941ff6c460b551
 https://conda.anaconda.org/conda-forge/linux-64/cffi-1.15.1-py311h409f033_3.conda#9025d0786dbbe4bc91fd8e85502decce
@@ -107,7 +107,7 @@ https://conda.anaconda.org/conda-forge/noarch/jinja2-3.1.2-pyhd8ed1ab_1.tar.bz2#
 https://conda.anaconda.org/conda-forge/linux-64/numcodecs-0.11.0-py311hcafe171_1.conda#ecdaf0772e524ed51218f6d52ef74424
 https://conda.anaconda.org/conda-forge/noarch/partd-1.3.0-pyhd8ed1ab_0.tar.bz2#af8c82d121e63082926062d61d9abb54
 https://conda.anaconda.org/conda-forge/linux-64/pillow-9.4.0-py311h104bd61_0.conda#42357babd6bc40498a2aa13ffdcebe75
-https://conda.anaconda.org/conda-forge/noarch/pip-22.3.1-pyhd8ed1ab_0.tar.bz2#da66f2851b9836d3a7c5190082a45f7d
+https://conda.anaconda.org/conda-forge/noarch/pip-23.0-pyhd8ed1ab_0.conda#85b35999162ec95f9f999bac15279c02
 https://conda.anaconda.org/conda-forge/noarch/pytest-7.2.1-pyhd8ed1ab_0.conda#f0be05afc9c9ab45e273c088e00c258b
 https://conda.anaconda.org/conda-forge/noarch/python-dateutil-2.8.2-pyhd8ed1ab_0.tar.bz2#dd999d1cc9f79e67dbb855c8924c7984
 https://conda.anaconda.org/conda-forge/noarch/zict-2.2.0-pyhd8ed1ab_0.tar.bz2#cd563d01df94e51f968645dbf3b310b0
