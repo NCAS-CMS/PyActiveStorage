@@ -55,12 +55,14 @@ class Active:
         self._version = 1
         self._components = False
         self._method = None
-       
+        self._lock = False
+      
         # obtain metadata, using netcdf4_python for now
         # FIXME: There is an outstanding issue with ._FilLValue to be handled.
         # If the user actually wrote the data with no fill value, or the
         # default fill value is in play, then this might go wrong.
         #
+        # FIXME: Lock this Dataset access?
         if (missing_value, fill_value, valid_min, valid_max) == (None, None, None, None):
             ds = Dataset(uri)
             try:
@@ -74,14 +76,19 @@ class Active:
             valid_min = getattr(ds[ncvar], 'valid_min', None)
             valid_max = getattr(ds[ncvar], 'valid_max', None)
             valid_range = getattr(ds[ncvar], 'valid_range', None)
-            if valid_range is not None and (valid_max or valid_min):
+            if (
+                    valid_range is not None
+                    and (valid_max is not None or valid_min is not None)
+            ):
                 raise ValueError("Unexpected combination of missing value options ", valid_min, valid_max, valid_range)
-            if  valid_min or valid_max:
+            if valid_max is not None or valid_min is not None:
                 valid_range=[valid_min, valid_max]
             if valid_range is not None:            
                 self._valid_min, self._valid_max = tuple(valid_range)
             else:
                 self._valid_min, self._valid_max = None, None
+
+            ds.close()
         else:
             self._missing = missing_value
             self._fillvalue = fill_value
@@ -101,13 +108,22 @@ class Active:
 
         if self.method is None and self._version == 0:
             # No active operation
+            lock = self.lock
+            if lock:
+                lock.acquire()
+                
             nc = Dataset(self.uri)
             data = nc[ncvar][index]
             nc.close()
+
+            if lock:
+                lock.release()
+
             return data
         elif self._version == 1:
             return self._via_kerchunk(index)
         elif self._version  == 2:
+            # FIXME: Add the lock here when the code is written
             return self._via_kerchunk(index)
         else:
             raise ValueError(f'Version {self._version} not supported')
@@ -165,6 +181,27 @@ class Active:
     @ncvar.setter
     def ncvar(self, value):
         self._ncvar = value
+
+    @property
+    def lock(self):
+        """Return or set a lock that prevents concurrent file reads.
+
+        The same lock instance must be used across all process
+        threads.
+
+        The lock is either a `threading.Lock` instance (or an object
+        with same API and functionality), or is `False` if no lock is
+        required.
+
+        """
+        return self._lock
+
+    @lock.setter
+    def lock(self, value):
+        if not value:
+            value = False
+            
+        self._lock = value
 
     def _get_active(self, method, *args):
         """ 
