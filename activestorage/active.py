@@ -61,8 +61,6 @@ class Active:
         # FIXME: There is an outstanding issue with ._FilLValue to be handled.
         # If the user actually wrote the data with no fill value, or the
         # default fill value is in play, then this might go wrong.
-        #
-        # FIXME: Lock this Dataset access?
         if (missing_value, fill_value, valid_min, valid_max) == (None, None, None, None):
             ds = Dataset(uri)
             try:
