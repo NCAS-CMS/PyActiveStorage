@@ -66,34 +66,33 @@ class Active:
             try:
                 ds_var = ds[ncvar]
             except IndexError as exc:
-                print(f"Dataset {ds} does not contain ncvar {ncvar}.")
+                print(f"Dataset {ds} does not contain ncvar {ncvar!r}.")
                 raise exc
-            self._missing = getattr(ds[ncvar], 'missing_value', None)
-            self._fillvalue = getattr(ds[ncvar], '_FillValue', None)
-            self._filters = ds[ncvar].filters()
-            valid_min = getattr(ds[ncvar], 'valid_min', None)
-            valid_max = getattr(ds[ncvar], 'valid_max', None)
-            valid_range = getattr(ds[ncvar], 'valid_range', None)
-            if (
-                    valid_range is not None
-                    and (valid_max is not None or valid_min is not None)
-            ):
-                raise ValueError("Unexpected combination of missing value options ", valid_min, valid_max, valid_range)
-            if valid_max is not None or valid_min is not None:
-                valid_range=[valid_min, valid_max]
-            if valid_range is not None:            
-                self._valid_min, self._valid_max = tuple(valid_range)
-            else:
-                self._valid_min, self._valid_max = None, None
 
+            self._filters = ds_var.filters()
+            self._missing = getattr(ds_var, 'missing_value', None)
+            self._fillvalue = getattr(ds_var, '_FillValue', None)
+            valid_min = getattr(ds_var, 'valid_min', None)
+            valid_max = getattr(ds_var, 'valid_max', None)
+            valid_range = getattr(ds_var, 'valid_range', None)
+            if valid_max is not None or valid_min is not None:
+                if valid_range is not None:
+                    raise ValueError(
+                        "Invalid combination in the file of valid_min, "
+                        "valid_max, valid_range: "
+                        f"{valid_min}, {valid_max}, {valid_range}"
+                    )                
+                valid_range = (valid_min, valid_max)
+            else:
+                valid_range = (None, None)
+            self._valid_min, self._valid_max = valid_range
+            
             ds.close()
         else:
             self._missing = missing_value
             self._fillvalue = fill_value
             self._valid_min = valid_min
             self._valid_max = valid_max
-
-       
 
     def __getitem__(self, index):
         """ 
@@ -158,7 +157,7 @@ class Active:
 
         ``'mean'``  The unweighted mean
 
-        ``'sum'``   The sum
+        ``'sum'``   The unweighted sum
         ==========  ==================================================
 
         """
@@ -182,14 +181,15 @@ class Active:
 
     @property
     def lock(self):
-        """Return or set a lock that prevents concurrent file reads.
+        """Return or set a lock that prevents concurrent file reads when accessing the data locally.
 
-        The same lock instance must be used across all process
-        threads.
-
-        The lock is either a `threading.Lock` instance (or an object
-        with same API and functionality), or is `False` if no lock is
+        The lock is either a `threading.Lock` instance, an object with
+        same API and functionality (such as
+        `dask.utils.SerializableLock`), or is `False` if no lock is
         required.
+
+        To be effective, the same lock instance must be used across
+        all process threads.
 
         """
         return self._lock
