@@ -11,4 +11,4 @@ dependencies:
   - pip !=21.3
   - pytest
   - xarray
-  - zarr
+  - zarr <=2.13.3  # github.com/valeriupredoi/PyActiveStorage/issues/62
