@@ -24,7 +24,7 @@ REQUIREMENTS = {
         'netcdf4',
         'pytest',
         'xarray',
-        'zarr',
+        'zarr<=2.13.3', # github.com/valeriupredoi/PyActiveStorage/issues/62
         # for testing
         'pytest-cov>=2.10.1',
         'pytest-xdist',
