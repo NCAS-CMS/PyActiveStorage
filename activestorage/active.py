@@ -34,7 +34,7 @@ class Active:
         }
         return instance
 
-    def __init__(self, uri, ncvar, missing_value=None, fill_value=None, valid_min=None, valid_max=None):
+    def __init__(self, uri, ncvar, missing_value=None, _FillValue=None, valid_min=None, valid_max=None):
         """
         Instantiate with a NetCDF4 dataset and the variable of interest within that file.
         (We need the variable, because we need variable specific metadata from within that
@@ -61,7 +61,7 @@ class Active:
         # If the user actually wrote the data with no fill value, or the
         # default fill value is in play, then this might go wrong.
         #
-        if (missing_value, fill_value, valid_min, valid_max) == (None, None, None, None):
+        if (missing_value, _FillValue, valid_min, valid_max) == (None, None, None, None):
             ds = Dataset(uri)
             try:
                 ds_var = ds[ncvar]
@@ -84,7 +84,7 @@ class Active:
                 self._valid_min, self._valid_max = None, None
         else:
             self._missing = missing_value
-            self._fillvalue = fill_value
+            self._fillvalue = _FillValue
             self._valid_min = valid_min
             self._valid_max = valid_max
 
