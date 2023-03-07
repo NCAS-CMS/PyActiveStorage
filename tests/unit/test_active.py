@@ -82,7 +82,7 @@ def test_active():
     ncvar = "TREFHT"
     active = Active(uri, ncvar=ncvar)
     init = active.__init__(uri=uri, ncvar=ncvar, missing_value=True,
-                           fill_value=1e20, valid_min=-1,
+                           _FillValue=1e20, valid_min=-1,
                            valid_max=1200)
 
 
