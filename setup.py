@@ -24,7 +24,8 @@ REQUIREMENTS = {
         'netcdf4',
         'pytest',
         'xarray',
-        'zarr<=2.13.3', # github.com/valeriupredoi/PyActiveStorage/issues/62
+        # pin Zarr to use new FSStore instead of KVStore
+        'zarr>=2.13.3', # github.com/zarr-developers/zarr-python/issues/1362
         # for testing
         'pytest-cov>=2.10.1',
         'pytest-xdist',

@@ -243,8 +243,12 @@ class Active:
         stripped_indexer = [(a, b, c) for a,b,c in indexer]
         drop_axes = indexer.drop_axes  # not sure what this does and why, yet.
 
-        # yes this next line is bordering on voodoo ... 
-        fsref = self.zds.chunk_store._mutable_mapping.fs.references
+        # yes this next line is bordering on voodoo ...
+        # this returns a nested dictionary with the full file FS reference
+        # ie all the gubbins: chunks, data structure, types, etc
+        # if using zarr<=2.13.3 call with _mutable_mapping ie
+        # fsref = self.zds.chunk_store._mutable_mapping.fs.references 
+        fsref = self.zds.chunk_store.fs.references
 
         return self._from_storage(stripped_indexer, drop_axes, out_shape,
                                   out_dtype, compressor, filters, missing, fsref)
