@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pytest
+import threading
 
 from activestorage.active import Active
 
@@ -83,3 +84,24 @@ def test_active():
     init = active.__init__(uri=uri, ncvar=ncvar, missing_value=True,
                            fill_value=1e20, valid_min=-1,
                            valid_max=1200)
+
+
+def test_lock():
+    """Unit test for class:Active."""
+    uri = "tests/test_data/cesm2_native.nc"
+    ncvar = "TREFHT"
+    active = Active(uri, ncvar=ncvar)
+
+    lock = threading.Lock()
+    active.lock = lock
+    assert active.lock is lock
+
+    # Pass through code that uses the lock
+    active.method = None
+    index = 3
+    for version in (0,):  # TODO later: add in the local reduction version
+        active._version = version
+        active[index]
+
+    active.lock = None
+    assert active.lock is False
