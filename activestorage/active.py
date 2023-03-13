@@ -11,7 +11,24 @@ from activestorage import netcdf_to_zarr as nz
 
 
 def uri_analyzer(uri):
-    """Run a first-pass examination on the file with uri."""
+    """Run a first-pass examination on the file with given uri.
+
+    Parameters
+    ----------
+    uri: str
+        input ile URI.
+
+    Returns
+    -------
+    bool
+        Boolean that sets other methods/attributes in Active.
+
+    Raises
+    ------
+    ValueError
+        if file URI is None
+        if file URI is pointing to a nonexistent file
+    """
     #TODO probably best placed in an acctive_tools library
     result = True
     if uri is None:
