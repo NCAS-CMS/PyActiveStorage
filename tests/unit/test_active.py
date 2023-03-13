@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 import threading
 
-from activestorage.active import Active
+from activestorage.active import Active, uri_analyzer
 
 
 def test_uri_none():
@@ -105,3 +105,30 @@ def test_lock():
 
     active.lock = None
     assert active.lock is False
+
+
+def test_uri_analyzer_invalid_uri():
+    """Test the uri_analyzer functionality."""
+    #TODO implement correct test cases when fully functional
+    uri = "tests/test_data/cesm2_native_cow.nc"
+    ncvar = "TREFHT"
+    active = Active(uri, ncvar=ncvar)
+    assert active.do_active is False
+    raised_exc = "'Active' object has no attribute '_ncvar'"
+
+    # test abusing active
+    with pytest.raises(AttributeError) as exc:
+        active.__getitem__(index=3)[0, 0]
+    assert raised_exc in str(exc.value)
+
+
+def test_uri_analyzer_valid_uri():
+    """Test the uri_analyzer functionality."""
+    #TODO implement correct test cases when fully functional
+    uri = "tests/test_data/cesm2_native.nc"
+    ncvar = "TREFHT"
+    active = Active(uri, ncvar=ncvar)
+    assert active.do_active is True
+
+    active._method = "min"
+    assert active.method([3,444]) == 3
