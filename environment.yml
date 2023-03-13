@@ -2,6 +2,7 @@
 name: activestorage
 channels:
   - conda-forge
+  - nodefaults
 
 dependencies:
   - dask
@@ -9,8 +10,16 @@ dependencies:
   - kerchunk
   - netcdf4
   - pip !=21.3
-  - pytest
-  - xarray
   # pin Zarr to avoid using old KVStore interface
   # see github.com/zarr-developers/zarr-python/issues/1362
   - zarr >=2.13.6  # KVStore to FSStore
+  # Python packages for testing
+  - pytest
+  - pytest-cov>=2.10.1
+  - pytest-html!=2.1.0
+  - pytest-metadata>=1.5.1
+  - pytest-xdist
+  # Python packages needed for building docs
+  - autodocsumm>=0.2.2
+  - sphinx>=5
+  - sphinx_rtd_theme
