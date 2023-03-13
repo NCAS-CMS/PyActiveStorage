@@ -8,7 +8,7 @@ dependencies:
   - dask
   - fsspec
   - h5py  # needed by Kerchunk
-  # - kerchunk
+  - kerchunk
   - netcdf4
   - numpy
   - pip !=21.3
