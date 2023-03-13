@@ -10,6 +10,25 @@ from activestorage.storage import reduce_chunk
 from activestorage import netcdf_to_zarr as nz
 
 
+def uri_analyzer(uri):
+    """Run a first-pass examination on the file with uri."""
+    #TODO probably best placed in an acctive_tools library
+    result = True
+    if uri is None:
+        raise ValueError(f"Must use a valid file for uri. Got {uri}")
+    else:
+        if not os.path.isfile(uri):
+            raise ValueError(f"Must use existing file for uri. "
+                             f"{uri} not found")
+        else:
+            # bogus condition until we fix criteria
+            if "cow" in uri:
+                print("This file doesn't support active storage.")
+                result = False
+
+        return result
+
+
 class Active:
     """ 
     Instantiates an interface to active storage which contains either zarr files
@@ -43,10 +62,13 @@ class Active:
         """
         # Assume NetCDF4 for now
         self.uri = uri
-        if self.uri is None:
-            raise ValueError(f"Must use a valid file for uri. Got {self.uri}")
-        if not os.path.isfile(self.uri):
-            raise ValueError(f"Must use existing file for uri. {self.uri} not found")
+        self.do_active = True
+        # run in active storage mode only if the uri analyzer returns True
+        uri_analyzer_result = uri_analyzer(self.uri)
+        self.do_active = uri_analyzer_result
+        # otherwise just get out and return active.do_active = False
+        if not self.do_active:
+            return
         self.ncvar = ncvar
         if self.ncvar is None:
             raise ValueError("Must set a netCDF variable name to slice")
