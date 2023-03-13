@@ -19,6 +19,7 @@ REQUIREMENTS = {
     # Use with pip install . to install from source
     'install': [
         'dask',
+        'fsspec',
         'h5py',  # needed by Kerchunk
         'kerchunk',
         'netcdf4',
