@@ -19,21 +19,22 @@ REQUIREMENTS = {
     # Use with pip install . to install from source
     'install': [
         'dask',
+        'fsspec',
         'h5py',  # needed by Kerchunk
         'kerchunk',
         'netcdf4',
-        'pytest',
-        'xarray',
+        'numpy',
         # pin Zarr to use new FSStore instead of KVStore
         'zarr>=2.13.3', # github.com/zarr-developers/zarr-python/issues/1362
         # for testing
+        'pytest',
         'pytest-cov>=2.10.1',
-        'pytest-xdist',
         'pytest-html!=2.1.0',
         'pytest-metadata>=1.5.1',
+        'pytest-xdist',
         # for documentation
         'autodocsumm',
-        'sphinx>2',
+        'sphinx>=5',
         'sphinx_rtd_theme',
     ],
 }
