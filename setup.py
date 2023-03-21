@@ -18,6 +18,7 @@ REQUIREMENTS = {
     # Installation dependencies
     # Use with pip install . to install from source
     'install': [
+        'python>=3.8',
         'dask',
         'fsspec',
         'h5py',  # needed by Kerchunk
