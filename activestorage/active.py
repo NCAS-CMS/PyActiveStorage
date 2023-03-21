@@ -120,8 +120,17 @@ class Active:
         elif self._version == 1:
             return self._via_kerchunk(index)
         elif self._version  == 2:
-            # FIXME: Add the lock here when the code is written
-            return self._via_kerchunk(index)
+            # No active operation either
+            lock = self.lock
+            if lock:
+                lock.acquire()
+
+            data = self._via_kerchunk(index)
+
+            if lock:
+                lock.release()
+
+            return data
         else:
             raise ValueError(f'Version {self._version} not supported')
 
