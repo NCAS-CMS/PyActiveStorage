@@ -116,10 +116,10 @@ def test_uri_analyzer_invalid_uri():
     assert active.do_active is False
     raised_exc = "'Active' object has no attribute '_ncvar'"
 
-    # test abusing active
-    with pytest.raises(AttributeError) as exc:
-        active.__getitem__(index=3)[0, 0]
-    assert raised_exc in str(exc.value)
+    # test version switching
+    item = active.__getitem__(index=3)[0, 0]
+    expected = np.array(277.11945, dtype="float32")
+    np.testing.assert_array_equal(item, expected)
 
 
 def test_uri_analyzer_valid_uri():
