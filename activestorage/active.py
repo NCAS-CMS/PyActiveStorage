@@ -42,6 +42,8 @@ def uri_analyzer(uri):
             if "cow" in uri:
                 print("This file doesn't support active storage.")
                 result = False
+            else:
+                print("This file supports active storage.")
 
         return result
 
@@ -85,7 +87,9 @@ class Active:
         self.do_active = uri_analyzer_result
         # otherwise just get out and return active.do_active = False
         if not self.do_active:
-            return
+            self._version = 1
+        else:
+            self._version = 2
         self.ncvar = ncvar
         if self.ncvar is None:
             raise ValueError("Must set a netCDF variable name to slice")
