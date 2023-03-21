@@ -5,6 +5,7 @@ channels:
   - nodefaults
 
 dependencies:
+  - python>=3.8
   - dask
   - fsspec
   - h5py  # needed by Kerchunk
