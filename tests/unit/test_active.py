@@ -99,7 +99,7 @@ def test_lock():
     # Pass through code that uses the lock
     active.method = None
     index = 3
-    for version in (0,):  # TODO later: add in the local reduction version
+    for version in (0, 2):
         active._version = version
         active[index]
 
