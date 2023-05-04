@@ -1,11 +1,15 @@
 import os
 import numpy as np
+import pathlib
+import s3fs
 
 #FIXME: Consider using h5py throughout, for more generality
 from netCDF4 import Dataset
 from zarr.indexing import (
     OrthogonalIndexer,
 )
+from activestorage.config import *
+from activestorage.s3 import reduce_chunk as s3_reduce_chunk
 from activestorage.storage import reduce_chunk
 from activestorage import netcdf_to_zarr as nz
 
@@ -317,6 +321,17 @@ class Active:
 
         return out
 
+    def _upload_to_s3(self, server, username, password, bucket, object, rfile):
+        """Upload a file to an S3 object store."""
+        s3_fs = s3fs.S3FileSystem(key=username, secret=password, client_kwargs={'endpoint_url': server})
+        # Make sure s3 bucket exists
+        try:
+            s3_fs.mkdir(bucket)
+        except FileExistsError:
+            pass
+
+        s3_fs.put_file(rfile, os.path.join(bucket, object))
+
     def _process_chunk(self, fsref, chunk_coords, chunk_selection, out, counts,
                        out_selection, compressor, filters, missing, 
                        drop_axes=None):
@@ -333,13 +348,26 @@ class Active:
         key = f"{self.ncvar}/{coord}"
         rfile, offset, size = tuple(fsref[key])
 
-        # note there is an ongoing discussion about this interface, and what it returns
-        # see https://github.com/valeriupredoi/PyActiveStorage/issues/33
-        # so neither the returned data or the interface should be considered stable
-        # although we will version changes.
-        tmp, count = reduce_chunk(rfile, offset, size, compressor, filters, missing,
-                           self.zds._dtype, self.zds._chunks, self.zds._order,
-                           chunk_selection, method=self.method)
+        if USE_S3:
+            object = os.path.basename(rfile)
+            self._upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET,
+                               object, rfile)
+            tmp, count = s3_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
+                                         S3_SECRET_KEY, S3_URL, S3_BUCKET,
+                                         object, offset, size,
+                                         compressor, filters, missing,
+                                         self.zds._dtype, self.zds._chunks,
+                                         self.zds._order, chunk_selection,
+                                         operation=self._method)
+        else:
+            # note there is an ongoing discussion about this interface, and what it returns
+            # see https://github.com/valeriupredoi/PyActiveStorage/issues/33
+            # so neither the returned data or the interface should be considered stable
+            # although we will version changes.
+            tmp, count = reduce_chunk(rfile, offset, size, compressor, filters,
+                                      missing, self.zds._dtype,
+                                      self.zds._chunks, self.zds._order,
+                                      chunk_selection, method=self.method)
 
         if self.method is not None:
             out.append(tmp)
