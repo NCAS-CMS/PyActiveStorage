@@ -4,6 +4,8 @@ import pytest
 import threading
 
 from activestorage.active import Active
+from activestorage.config import *
+from activestorage.s3 import reduce_chunk as s3_reduce_chunk
 
 
 def test_uri_none():
@@ -105,3 +107,24 @@ def test_lock():
 
     active.lock = None
     assert active.lock is False
+
+
+def test_s3_reduce_chunk():
+    """Unit test for s3_reduce_chunk."""
+    rfile = "tests/test_data/cesm2_native.nc"
+    offset = 2
+    size = 128
+
+    # no compression, filters, missing
+    object = os.path.basename(rfile)
+    with pytest.raises(OSError) as exc:
+        tmp, count = s3_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
+                                     S3_SECRET_KEY, S3_URL, S3_BUCKET,
+                                     object, offset, size,
+                                     None, None, [],
+                                     np.dtype("i2"), (8, 8),
+                                     "C", slice(0, 2, 1),
+                                     np.min)
+    url = " /v1/%3Cfunction%20amin%20at%200x7f"
+    assert "Resource unreachable" in str(exc.value)
+    assert url in str(exc.value)
