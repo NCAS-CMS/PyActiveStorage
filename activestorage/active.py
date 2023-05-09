@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import pathlib
-import s3fs
 
 #FIXME: Consider using h5py throughout, for more generality
 from netCDF4 import Dataset
@@ -321,17 +320,6 @@ class Active:
 
         return out
 
-    def _upload_to_s3(self, server, username, password, bucket, object, rfile):
-        """Upload a file to an S3 object store."""
-        s3_fs = s3fs.S3FileSystem(key=username, secret=password, client_kwargs={'endpoint_url': server})
-        # Make sure s3 bucket exists
-        try:
-            s3_fs.mkdir(bucket)
-        except FileExistsError:
-            pass
-
-        s3_fs.put_file(rfile, os.path.join(bucket, object))
-
     def _process_chunk(self, fsref, chunk_coords, chunk_selection, out, counts,
                        out_selection, compressor, filters, missing, 
                        drop_axes=None):
@@ -350,8 +338,6 @@ class Active:
 
         if USE_S3:
             object = os.path.basename(rfile)
-            self._upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET,
-                               object, rfile)
             tmp, count = s3_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
                                          S3_SECRET_KEY, S3_URL, S3_BUCKET,
                                          object, offset, size,

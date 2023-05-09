@@ -5,8 +5,10 @@ import pytest
 import numpy as np
 from netCDF4 import Dataset
 from pathlib import Path
+import s3fs
 
 from activestorage.active import Active
+from activestorage.config import *
 
 
 @pytest.fixture
@@ -85,6 +87,18 @@ def create_hyb_pres_file_with_a(dataset, short_name):
         'p0: p0 a: a_bnds b: b_bnds ps: ps')
 
 
+def upload_to_s3(server, username, password, bucket, object, rfile):
+    """Upload a file to an S3 object store."""
+    s3_fs = s3fs.S3FileSystem(key=username, secret=password, client_kwargs={'endpoint_url': server})
+    # Make sure s3 bucket exists
+    try:
+        s3_fs.mkdir(bucket)
+    except FileExistsError:
+        pass
+
+    s3_fs.put_file(rfile, os.path.join(bucket, object))
+
+
 def save_cl_file_with_a(tmp_path):
     """Create netcdf file for ``cl`` with ``a`` coordinate."""
     save_path = tmp_path / 'common_cl_a.nc'
@@ -92,6 +106,9 @@ def save_cl_file_with_a(tmp_path):
     dataset = Dataset(nc_path, mode='w')
     create_hyb_pres_file_with_a(dataset, 'cl')
     dataset.close()
+    if USE_S3:
+        object = os.path.basename(nc_path)
+        upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, object, nc_path)
     print(f"Saved {save_path}")
     return str(save_path)
 
