@@ -1,11 +1,14 @@
 import os
 import numpy as np
+import pathlib
 
 #FIXME: Consider using h5py throughout, for more generality
 from netCDF4 import Dataset
 from zarr.indexing import (
     OrthogonalIndexer,
 )
+from activestorage.config import *
+from activestorage.s3 import reduce_chunk as s3_reduce_chunk
 from activestorage.storage import reduce_chunk
 from activestorage import netcdf_to_zarr as nz
 
@@ -333,13 +336,24 @@ class Active:
         key = f"{self.ncvar}/{coord}"
         rfile, offset, size = tuple(fsref[key])
 
-        # note there is an ongoing discussion about this interface, and what it returns
-        # see https://github.com/valeriupredoi/PyActiveStorage/issues/33
-        # so neither the returned data or the interface should be considered stable
-        # although we will version changes.
-        tmp, count = reduce_chunk(rfile, offset, size, compressor, filters, missing,
-                           self.zds._dtype, self.zds._chunks, self.zds._order,
-                           chunk_selection, method=self.method)
+        if USE_S3:
+            object = os.path.basename(rfile)
+            tmp, count = s3_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
+                                         S3_SECRET_KEY, S3_URL, S3_BUCKET,
+                                         object, offset, size,
+                                         compressor, filters, missing,
+                                         self.zds._dtype, self.zds._chunks,
+                                         self.zds._order, chunk_selection,
+                                         operation=self._method)
+        else:
+            # note there is an ongoing discussion about this interface, and what it returns
+            # see https://github.com/valeriupredoi/PyActiveStorage/issues/33
+            # so neither the returned data or the interface should be considered stable
+            # although we will version changes.
+            tmp, count = reduce_chunk(rfile, offset, size, compressor, filters,
+                                      missing, self.zds._dtype,
+                                      self.zds._chunks, self.zds._order,
+                                      chunk_selection, method=self.method)
 
         if self.method is not None:
             out.append(tmp)
