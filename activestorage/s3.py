@@ -42,16 +42,24 @@ def reduce_chunk(server, username, password, source, bucket, object, offset,
     if filters is not None:
         raise NotImplementedError("Filters are not yet supported!")
 
-    request_data = build_request_data(source, bucket, object, offset, size, compression, filters, missing, dtype, shape, order, chunk_selection)
+    request_data = build_request_data(source, bucket, object, offset, size,
+                                      compression, filters, missing, dtype,
+                                      shape, order, chunk_selection)
     api_operation = "sum" if operation == "mean" else operation or "select"
     url = f'{server}/v1/{api_operation}/'
-    response = request(url, username, password, request_data)
+    try:
+        response = request(url, username, password, request_data)
+    except requests.exceptions.ConnectionError as exc:
+        raise OSError(f"Resource unreachable: {str(exc)}")
 
     if response.ok:
         # FIXME: Return count from mean
         result = decode_result(response)
         if operation == "mean":
-            count = reduce_chunk(server, username, password, source, bucket, object, offset, size, compression, filters, missing, dtype, shape, order, chunk_selection, "count")[0]
+            count = reduce_chunk(server, username, password, source,
+                                 bucket, object, offset, size, compression,
+                                 filters, missing, dtype, shape, order,
+                                 chunk_selection, "count")[0]
         else:
             count = None
         return result, count
@@ -68,7 +76,10 @@ def encode_selection(selection):
             # Integer - select single value
             return [s, s + 1, 1]
 
-    return [encode_slice(s) for s in selection]
+    if isinstance(selection, list):
+        return [encode_slice(s) for s in selection]
+    else:
+        return encode_slice(selection)
 
 
 def build_request_data(source: str, bucket: str, object: str, offset: int,
