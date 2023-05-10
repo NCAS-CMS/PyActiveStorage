@@ -5,8 +5,7 @@ on:
   # NOTE that push: main will create the file very often
   # and hence lots of automated PRs
   push:
-    branches:
-      - fix_condalock_creation
+  #   branches:
   #     - main
   schedule:
     - cron: '0 4 */10 * *'
