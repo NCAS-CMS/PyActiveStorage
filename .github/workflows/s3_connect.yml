@@ -41,8 +41,6 @@ jobs:
 
       - name: Start minio object storage
         run: |
-          pwd
-          ls -la
           s3_scripts/minio-start
 
       - name: Wait for minio object storage to start
@@ -51,26 +49,15 @@ jobs:
             sleep 1;
           done
 
-      - name: Run active storage container
-        run: make run
-
       - name: Wait for active storage server to start
         run: |
           until curl -if http://localhost:8080/.well-known/s3-active-storage-schema; do
             sleep 1;
           done
 
-      - name: Run compliance test suite
+      - name: Run tests
         run: pytest
 
-      - name: Get active storage logs
-        run: docker logs s3-active-storage
-        if: always()
-
       - name: Stop minio object storage
-        run: scripts/minio-stop
-        if: always()
-
-      - name: Stop active storage container
-        run: make stop
+        run: s3_scripts/minio-stop
         if: always()
