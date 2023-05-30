@@ -49,12 +49,6 @@ jobs:
             sleep 1;
           done
 
-      - name: Wait for active storage server to start
-        run: |
-          until curl -if http://localhost:8080/.well-known/s3-active-storage-schema; do
-            sleep 1;
-          done
-
       - name: Run tests
         run: pytest
 
