@@ -64,6 +64,7 @@ jobs:
           miniforge-variant: Mambaforge
           use-mamba: true
       - name: Get PyActiveStorage and run tests
+        shell: bash -l {0}
         run: |
           conda --version
           python -V
