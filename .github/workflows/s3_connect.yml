@@ -57,6 +57,11 @@ jobs:
           git clone https://github.com/valeriupredoi/PyActiveStorage.git
           cd PyActiveStorage
           conda --version
+          which python
+          python -V
+          conda install -c conda-forge mamba
+          mamba env create -n pyactivestorage -f environment.yml
+          conda activate pyactivestorage
           python -V
           which python
           pytest
