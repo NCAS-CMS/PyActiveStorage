@@ -52,14 +52,14 @@ jobs:
       - name: Run container
         run: docker run -it --detach --rm --net=host --name s3-active-storage ghcr.io/stackhpc/s3-active-storage-rs:latest
 
-      - name: Get PyActiveStorage and run tests
-        uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: activestorage-minio
           python-version: ${{ matrix.python-version }}
           miniforge-version: "latest"
           miniforge-variant: Mambaforge
           use-mamba: true
+      - name: Get PyActiveStorage and run tests
         run: |
           conda --version
           which python
