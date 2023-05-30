@@ -1,0 +1,57 @@
+# adapted GA workflow from https://github.com/stackhpc/s3-active-storage-rs
+---
+name: S3 Test Connect
+
+on:
+  push:
+    branches:
+      - main
+      - add_s3_tests
+  schedule:
+    - cron: '0 0 * * *'  # nightly
+
+jobs:
+  linux-test:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+      fail-fast: false
+    name: Linux Python ${{ matrix.python-version }}
+    steps:
+      - name: Configure compliance test suite
+        run: |
+          echo 'PROXY_URL = "http://localhost:8080"' >> config.py
+
+      - name: Start minio object storage
+        run: s3_scripts/minio-start
+
+      - name: Wait for minio object storage to start
+        run: |
+          until curl -if http://localhost:9001; do
+            sleep 1;
+          done
+
+      - name: Run active storage container
+        run: make run
+
+      - name: Wait for active storage server to start
+        run: |
+          until curl -if http://localhost:8080/.well-known/s3-active-storage-schema; do
+            sleep 1;
+          done
+
+      - name: Run compliance test suite
+        run: pytest
+
+      - name: Get active storage logs
+        run: docker logs s3-active-storage
+        if: always()
+
+      - name: Stop minio object storage
+        run: scripts/minio-stop
+        if: always()
+
+      - name: Stop active storage container
+        run: make stop
+        if: always()
