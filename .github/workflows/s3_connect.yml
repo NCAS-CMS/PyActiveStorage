@@ -26,6 +26,7 @@ jobs:
       - name: Start minio object storage
         run: |
           pwd
+          ls -la
           s3_scripts/minio-start
 
       - name: Wait for minio object storage to start
