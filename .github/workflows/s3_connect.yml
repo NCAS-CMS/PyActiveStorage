@@ -19,6 +19,22 @@ jobs:
       fail-fast: false
     name: Linux Python ${{ matrix.python-version }}
     steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: activestorage
+          environment-file: environment.yml
+          python-version: ${{ matrix.python-version }}
+          miniforge-version: "latest"
+          miniforge-variant: Mambaforge
+          use-mamba: true
+      - shell: bash -l {0}
+        run: conda --version
+      - shell: bash -l {0}
+        run: python -V
+
       - name: Configure compliance test suite
         run: |
           echo 'PROXY_URL = "http://localhost:8080"' >> config.py
