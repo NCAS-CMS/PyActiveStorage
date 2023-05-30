@@ -52,8 +52,14 @@ jobs:
       - name: Run container
         run: docker run -it --detach --rm --net=host --name s3-active-storage ghcr.io/stackhpc/s3-active-storage-rs:latest
 
-      - name: Run tests
-        run: pytest
+      - name: Get PyActiveStorage and run tests
+        run: |
+          git clone https://github.com/valeriupredoi/PyActiveStorage.git
+          cd PyActiveStorage
+          conda --version
+          python -V
+          which python
+          pytest
 
       - name: Stop minio object storage
         run: s3_scripts/minio-stop
