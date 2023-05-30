@@ -61,7 +61,7 @@ jobs:
           python -V
           conda install -c conda-forge mamba
           mamba env create -n pyactivestorage -f environment.yml
-          conda activate pyactivestorage
+          mamba activate pyactivestorage
           python -V
           which python
           pytest
