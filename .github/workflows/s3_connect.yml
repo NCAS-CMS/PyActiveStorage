@@ -63,8 +63,18 @@ jobs:
           miniforge-version: "latest"
           miniforge-variant: Mambaforge
           use-mamba: true
+      - name: Put data in AWS bucket
+        shell: bash -l {0}
+        run: |
+          aws s3 mb s3://pyactivestorage-17666C4471777760
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: 'eu-west-1'
       - name: Get PyActiveStorage and run tests
         shell: bash -l {0}
+        # this bit here runs the full s3 shortcut of PyActiveStorage
+        # at the mo does it all but hits AWS error - no bucket (duh!)
         run: |
           conda --version
           python -V
