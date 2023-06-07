@@ -116,6 +116,7 @@ def test_s3_reduce_chunk():
     size = 128
 
     # no compression, filters, missing
+    # identical test to one from test_storage
     object = os.path.basename(rfile)
     with pytest.raises(OSError) as exc:
         tmp, count = s3_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
