@@ -124,7 +124,8 @@ def test_s3_reduce_chunk():
                                      None, None, [],
                                      np.dtype("i2"), (8, 8),
                                      "C", slice(0, 2, 1),
-                                     np.min)
-    url = " /v1/%3Cfunction%20amin%20at%200x7f"
-    assert "Resource unreachable" in str(exc.value)
+                                     "min")
+    url = " /v1/min"
+    conn_err = "Failed to establish a new connection:"
+    assert conn_err in str(exc.value)
     assert url in str(exc.value)
