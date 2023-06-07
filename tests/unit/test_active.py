@@ -124,7 +124,7 @@ def test_s3_reduce_chunk():
                                      object, offset, size,
                                      None, None, [],
                                      np.dtype("int32"), (8, 8),
-                                     "C", [slice(0, 2, 1)],
+                                     "C", [slice(0, 2, 1), slice(3, 5, 1)],
                                      "min")
     url = " /v1/min"
     conn_err = "Failed to establish a new connection:"
