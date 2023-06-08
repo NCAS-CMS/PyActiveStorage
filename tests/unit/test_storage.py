@@ -156,10 +156,9 @@ def test_like_s3_reduce_chunk():
                          dtype=np.dtype("int32"), shape=(32, ),
                          order="C", chunk_selection=slice(0, 2, 1),
                          method=np.min)
-    print(rc)
-    print(x)
-    assert rc[0] == -1
-    assert rc[1] == 15
+
+    assert rc[0] == 134351386
+    assert rc[1] == 2
 
 
 def test_s3_reduce_chunk():
@@ -194,7 +193,7 @@ def test_s3_reduce_chunk():
                                      np.dtype("int32"), (32, ),
                                      "C", [slice(0, 2, 1), ],
                                      "min")
-        print(tmp, count)
-        print(x)
+        assert tmp == 134351386
+        assert count == 2
     except:
-        pass
+        raise
