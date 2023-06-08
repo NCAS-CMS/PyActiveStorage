@@ -1,10 +1,8 @@
-import os
 import numpy as np
 import pytest
 import threading
 
 from activestorage.active import Active
-from activestorage.config import *
 
 
 def test_uri_none():
