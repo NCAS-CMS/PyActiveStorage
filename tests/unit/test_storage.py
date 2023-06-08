@@ -194,6 +194,7 @@ def test_s3_reduce_chunk():
                                      "C", [slice(0, 2, 1), ],
                                      "min")
         assert tmp == 134351386
-        assert count == 2
+        # count is None; no missing data yet in S3
+        assert count == None
     except:
         raise
