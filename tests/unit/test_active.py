@@ -7,6 +7,8 @@ from activestorage.active import Active
 from activestorage.config import *
 from activestorage.s3 import reduce_chunk as s3_reduce_chunk
 
+from .. import test_bigger_data
+
 
 def test_uri_none():
     """Unit test for class:Active."""
@@ -118,6 +120,19 @@ def test_s3_reduce_chunk():
     # no compression, filters, missing
     # identical test to one from test_storage
     object = os.path.basename(rfile)
+
+    # create bucket and upload to Minio's S3 bucket
+    S3_ACTIVE_STORAGE_URL = "http://localhost:8080"
+    S3_URL = 'http://localhost:9000'
+    S3_ACCESS_KEY = 'minioadmin'
+    S3_SECRET_KEY = 'minioadmin'
+    S3_BUCKET = 'pyactivestorage'
+    try:
+        test_bigger_data.upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY,
+                                      S3_BUCKET, object, rfile)
+    except:
+        pass
+
     with pytest.raises(OSError) as exc:
         tmp, count = s3_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
                                      S3_SECRET_KEY, S3_URL, S3_BUCKET,
