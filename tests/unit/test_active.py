@@ -127,20 +127,25 @@ def test_s3_reduce_chunk():
     S3_ACCESS_KEY = 'minioadmin'
     S3_SECRET_KEY = 'minioadmin'
     S3_BUCKET = 'pyactivestorage'
+    # local test won't build a bucket
     try:
         test_bigger_data.upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY,
                                       S3_BUCKET, object, rfile)
     except:
         pass
 
-    with pytest.raises(OSError) as exc:
-        tmp, count = s3_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
-                                     S3_SECRET_KEY, S3_URL, S3_BUCKET,
-                                     object, offset, size,
-                                     None, None, [],
-                                     np.dtype("int32"), (8, ),
-                                     "C", [slice(0, 2, 1), ],
-                                     "min")
+    # test on local machine fails; should pass when connected to Minio
+    # try:
+    tmp, count = s3_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
+                                 S3_SECRET_KEY, S3_URL, S3_BUCKET,
+                                 object, offset, size,
+                                 None, None, [],
+                                 np.dtype("int32"), (8, ),
+                                 "C", [slice(0, 2, 1), ],
+                                 "min")
+    print(tmp, count)
+    print(x)
+        
     url = " /v1/min"
     conn_err = "Failed to establish a new connection:"
     assert conn_err in str(exc.value)
