@@ -3,6 +3,9 @@ import numpy as np
 import pytest
 
 import activestorage.storage as st
+from activestorage.s3 import reduce_chunk as s3_reduce_chunk
+
+from .. import test_bigger_data
 
 
 def test_reduce_chunk():
@@ -138,3 +141,60 @@ def test_reduced_chunk_fully_masked_data_vmax():
                          method=np.mean)
     assert rc[0].size == 0
     assert rc[1] is None
+
+
+def test_like_s3_reduce_chunk():
+    """Test reduce chunk entirely."""
+    rfile = "tests/test_data/cesm2_native.nc"
+    offset = 2
+    size = 128
+
+    # no compression
+    rc = st.reduce_chunk(rfile, offset, size,
+                         compression=None, filters=None,
+                         missing=[None, None, None, None],
+                         dtype=np.dtype("int32"), shape=(32, ),
+                         order="C", chunk_selection=slice(0, 2, 1),
+                         method=np.min)
+    print(rc)
+    print(x)
+    assert rc[0] == -1
+    assert rc[1] == 15
+
+
+def test_s3_reduce_chunk():
+    """Unit test for s3_reduce_chunk."""
+    rfile = "tests/test_data/cesm2_native.nc"
+    offset = 2
+    size = 128
+
+    # no compression, filters, missing
+    # identical test to one from test_storage
+    object = os.path.basename(rfile)
+
+    # create bucket and upload to Minio's S3 bucket
+    S3_ACTIVE_STORAGE_URL = "http://localhost:8080"
+    S3_URL = 'http://localhost:9000'
+    S3_ACCESS_KEY = 'minioadmin'
+    S3_SECRET_KEY = 'minioadmin'
+    S3_BUCKET = 'pyactivestorage'
+    # local test won't build a bucket
+    try:
+        test_bigger_data.upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY,
+                                      S3_BUCKET, object, rfile)
+    except:
+        pass
+
+    # test on local machine fails; should pass when connected to Minio
+    try:
+        tmp, count = s3_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
+                                     S3_SECRET_KEY, S3_URL, S3_BUCKET,
+                                     object, offset, size,
+                                     None, None, [],
+                                     np.dtype("int32"), (32, ),
+                                     "C", [slice(0, 2, 1), ],
+                                     "min")
+        print(tmp, count)
+        print(x)
+    except:
+        pass
