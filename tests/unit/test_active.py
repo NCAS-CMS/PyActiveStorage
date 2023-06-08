@@ -138,7 +138,7 @@ def test_s3_reduce_chunk():
                                      S3_SECRET_KEY, S3_URL, S3_BUCKET,
                                      object, offset, size,
                                      None, None, [],
-                                     np.dtype("int32"), (8, 8),
+                                     np.dtype("int32"), (8, ),
                                      "C", [slice(0, 2, 1), ],
                                      "min")
     url = " /v1/min"
