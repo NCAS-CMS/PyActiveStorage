@@ -2,6 +2,8 @@ import os
 import numpy as np
 import pathlib
 
+import fsspec
+
 #FIXME: Consider using h5py throughout, for more generality
 from netCDF4 import Dataset
 from zarr.indexing import (
