@@ -48,8 +48,9 @@ class Active:
         self.uri = uri
         if self.uri is None:
             raise ValueError(f"Must use a valid file for uri. Got {self.uri}")
-        if not os.path.isfile(self.uri):
-            raise ValueError(f"Must use existing file for uri. {self.uri} not found")
+        # TODO this needs tweaking for S3 storage; S3 file is not an URI
+        # if not os.path.isfile(self.uri):
+        #     raise ValueError(f"Must use existing file for uri. {self.uri} not found")
         self.ncvar = ncvar
         if self.ncvar is None:
             raise ValueError("Must set a netCDF variable name to slice")
