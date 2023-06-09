@@ -37,7 +37,7 @@ class Active:
         }
         return instance
 
-    def __init__(self, uri, ncvar, missing_value=None, _FillValue=None, valid_min=None, valid_max=None):
+    def __init__(self, uri, ncvar, storage_type=None, missing_value=None, _FillValue=None, valid_min=None, valid_max=None):
         """
         Instantiate with a NetCDF4 dataset and the variable of interest within that file.
         (We need the variable, because we need variable specific metadata from within that
@@ -48,9 +48,11 @@ class Active:
         self.uri = uri
         if self.uri is None:
             raise ValueError(f"Must use a valid file for uri. Got {self.uri}")
-        # TODO this needs tweaking for S3 storage; S3 file is not an URI
-        # if not os.path.isfile(self.uri):
-        #     raise ValueError(f"Must use existing file for uri. {self.uri} not found")
+        self.storage_type = storage_type
+        if self.storage_type == "s3":
+            USE_S3 = True
+        if not os.path.isfile(self.uri) and not self.storage_type:
+            raise ValueError(f"Must use existing file for uri. {self.uri} not found")
         self.ncvar = ncvar
         if self.ncvar is None:
             raise ValueError("Must set a netCDF variable name to slice")
@@ -337,6 +339,10 @@ class Active:
         key = f"{self.ncvar}/{coord}"
         rfile, offset, size = tuple(fsref[key])
 
+        if self.storage_type == "s3":
+            USE_S3 = True
+        else:
+            USE_S3 = False
         if USE_S3:
             object = os.path.basename(rfile)
             tmp, count = s3_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
