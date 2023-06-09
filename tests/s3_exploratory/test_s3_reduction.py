@@ -42,6 +42,8 @@ def upload_to_s3(server, username, password, bucket, object, rfile):
 
     s3_fs.put_file(rfile, os.path.join(bucket, object))
 
+    return os.path.join(bucket, object)
+
 
 def test_Active():
     """
@@ -52,12 +54,13 @@ def test_Active():
 
     # put s3 dummy data onto S3. then rm from local
     object = os.path.basename(s3_testfile)
-    upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY,
-                 S3_BUCKET, object, s3_testfile)
+    bucket_file = upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY,
+                               S3_BUCKET, object, s3_testfile)
     os.remove(s3_testfile)
+    s3_testfile_uri = os.path.join("s3://", bucket_file)
 
     # run Active on s3 file
-    active = Active(s3_testfile, "data", "s3")
+    active = Active(s3_testfile_uri, "data", "s3")
     active._version = 2
     active.method = "mean"
     active.components = True
