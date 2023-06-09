@@ -57,11 +57,12 @@ def test_Active():
     os.remove(s3_testfile)
 
     # run Active on s3 file
-    # Active should be run with USE_S3 set to true here
-    active = Active(s3_testfile, "data")
-    active._version = 0
-    d = active[0:2, 4:6, 7:9]
-    mean_result = np.mean(d)
+    active = Active(s3_testfile, "data", "s3")
+    active._version = 2
+    active.method = "mean"
+    active.components = True
+    result1 = active[0:2, 4:6, 7:9]
+    print(result1)
 
     # run Active on local file
     active = Active(local_testfile, "data")
@@ -70,7 +71,8 @@ def test_Active():
     active.components = True
     result2 = active[0:2, 4:6, 7:9]
     print(result2)
-    assert_array_equal(mean_result, result2["sum"]/result2["n"])
+
+    assert_array_equal(result1, result2["sum"]/result2["n"])
 
 
 def test_s3_reduce_chunk():
