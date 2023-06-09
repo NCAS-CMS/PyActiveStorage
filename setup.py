@@ -27,6 +27,7 @@ REQUIREMENTS = {
         's3fs',
         # pin Zarr to use new FSStore instead of KVStore
         'zarr>=2.13.3', # github.com/zarr-developers/zarr-python/issues/1362
+        'xarray',  # for testing only
         # for testing
         'pytest',
         'pytest-cov>=2.10.1',
