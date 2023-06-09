@@ -3,7 +3,6 @@ import numpy as np
 import pathlib
 
 import s3fs
-import xarray as xr
 
 #FIXME: Consider using h5py throughout, for more generality
 from netCDF4 import Dataset
@@ -82,8 +81,9 @@ class Active:
                 with fs.open(uri, 'rb') as s3file:
                     # this will throw a FileNotFoundError: [Errno 2] No such file or directory: '<File-like object S3FileSystem, pyactivestorage/s3_test_bizarre.nc>'
                     # ds = Dataset(s3file)
-                    # try use xarray for now
-                    ds = xr.open_mfdataset(s3file, engine='h5netcdf')
+                    print("S3 file looks like:")
+                    print(s3file)
+                    print(dir(s3file))
             try:
                 ds_var = ds[ncvar]
             except IndexError as exc:
