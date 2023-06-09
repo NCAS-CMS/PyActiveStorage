@@ -42,8 +42,8 @@ jobs:
           until curl -if http://localhost:9001; do
             sleep 1;
           done
-      #- name: Run container
-      #  run: docker run -it --detach --rm --net=host --name s3-active-storage ghcr.io/stackhpc/s3-active-storage-rs:latest
+      - name: Run S3ActiveStorage container
+        run: docker run -it --detach --rm --net=host --name s3-active-storage ghcr.io/stackhpc/s3-active-storage-rs:latest
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
