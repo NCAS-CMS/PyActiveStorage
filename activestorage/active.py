@@ -83,7 +83,7 @@ class Active:
                     # this will throw a FileNotFoundError: [Errno 2] No such file or directory: '<File-like object S3FileSystem, pyactivestorage/s3_test_bizarre.nc>'
                     # ds = Dataset(s3file)
                     # try use xarray for now
-                    ds = xr.open_dataset(s3file, engine='h5netcdf')
+                    ds = xr.open_dataset(s3file, engine='netcdf4')
             try:
                 ds_var = ds[ncvar]
             except IndexError as exc:
