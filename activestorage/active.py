@@ -68,7 +68,11 @@ class Active:
         # If the user actually wrote the data with no fill value, or the
         # default fill value is in play, then this might go wrong.
         if (missing_value, _FillValue, valid_min, valid_max) == (None, None, None, None):
-            ds = Dataset(uri)
+            if storage_type is None:
+                ds = Dataset(uri)
+            elif storage_type == "s3":
+                fs = fsspec.filesystem("s3", anon=True)
+                ds = Dataset(fs.open(uri))
             try:
                 ds_var = ds[ncvar]
             except IndexError as exc:
