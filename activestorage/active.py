@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pathlib
 
-import fsspec
+import s3fs
 
 #FIXME: Consider using h5py throughout, for more generality
 from netCDF4 import Dataset
@@ -73,8 +73,8 @@ class Active:
             if storage_type is None:
                 ds = Dataset(uri)
             elif storage_type == "s3":
-                fs = fsspec.filesystem("s3", anon=True)
-                with fs.open(uri) as s3file:
+                fs = s3fs.S3FileSystem(key="minioadmin", secret="minioadmin")
+                with fs.open(uri, 'rb') as s3file:
                     ds = Dataset(s3file)
             try:
                 ds_var = ds[ncvar]
