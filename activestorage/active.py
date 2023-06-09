@@ -82,8 +82,8 @@ class Active:
                     # this will throw a FileNotFoundError: [Errno 2] No such file or directory: '<File-like object S3FileSystem, pyactivestorage/s3_test_bizarre.nc>'
                     # ds = Dataset(s3file)
                     print("S3 file looks like:")
-                    print(s3file)
-                    print(dir(s3file))
+                    for l in s3file.readlines():
+                        print(l)
             try:
                 ds_var = ds[ncvar]
             except IndexError as exc:
