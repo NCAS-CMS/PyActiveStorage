@@ -74,7 +74,8 @@ class Active:
                 ds = Dataset(uri)
             elif storage_type == "s3":
                 fs = fsspec.filesystem("s3", anon=True)
-                ds = Dataset(fs.open(uri))
+                with fs.open(uri) as s3file:
+                    ds = Dataset(s3file)
             try:
                 ds_var = ds[ncvar]
             except IndexError as exc:
