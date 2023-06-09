@@ -73,7 +73,9 @@ class Active:
             if storage_type is None:
                 ds = Dataset(uri)
             elif storage_type == "s3":
-                fs = s3fs.S3FileSystem(key="minioadmin", secret="minioadmin")
+                fs = s3fs.S3FileSystem(key="minioadmin",
+                                       secret="minioadmin",
+                                       client_kwargs={'endpoint_url': "http://localhost:9000"})
                 with fs.open(uri, 'rb') as s3file:
                     ds = Dataset(s3file)
             try:
