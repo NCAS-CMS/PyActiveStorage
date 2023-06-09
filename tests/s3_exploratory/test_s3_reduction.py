@@ -57,7 +57,7 @@ def test_Active():
     bucket_file = upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY,
                                S3_BUCKET, object, s3_testfile)
     os.remove(s3_testfile)
-    s3_testfile_uri = os.path.join("s3://", bucket_file)
+    s3_testfile_uri = bucket_file
 
     # run Active on s3 file
     active = Active(s3_testfile_uri, "data", "s3")
