@@ -12,6 +12,8 @@ def gen_json(file_url, fs, fs2, varname, **so):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
     # set some name for the output json file
     fname = os.path.splitext(file_url)[0]
+    if os.sep in fname:
+        fname = os.path.basename(fname)
     outf = f'{fname}_{varname}.json' # vanilla file name
 
     # write it out if it's not there
