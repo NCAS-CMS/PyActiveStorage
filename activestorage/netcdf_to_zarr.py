@@ -66,18 +66,21 @@ def open_zarr_group(out_json, varname):
 
 def load_netcdf_zarr_generic(fileloc, varname, storage_type, build_dummy=True):
     """Pass a netCDF4 file to be shaped as Zarr file by kerchunk."""
-    if storage_type not in ["s3"]:
+    print(f"Storage type {storage_type}")
+    object_filesystems = ["s3"]
+    if storage_type not in object_filesystems:
         so = dict(mode='rb', anon=True, default_fill_cache=False,
                   default_cache_type='first') # args to fs.open()
         # default_fill_cache=False avoids caching data in between
         # file chunks to lower memory usage
-        fs = fsspec.filesystem('')  # local, for S3: ('s3', anon=True)
+        fs = fsspec.filesystem('')
     elif storage_type == "s3":
         # TODO of course s3 connection params must be off the config
         fs = s3fs.S3FileSystem(key="minioadmin",
                                secret="minioadmin",
                                client_kwargs={'endpoint_url': "http://localhost:9000"})
-        so = None
+        so = {}
+
     fs2 = fsspec.filesystem('')  # local file system to save final json to
     out_json = gen_json(fileloc, fs, fs2, varname)
 
@@ -86,5 +89,3 @@ def load_netcdf_zarr_generic(fileloc, varname, storage_type, build_dummy=True):
     ref_ds = open_zarr_group(out_json, varname)
 
     return ref_ds
-
-
