@@ -28,31 +28,31 @@ def _doit(testfile):
 
 
 def test_partially_missing_data(tmp_path):
-    testfile = tmp_path / 'test_partially_missing_data.nc'
+    testfile = str(tmp_path / 'test_partially_missing_data.nc')
     r = dd.make_partially_missing_ncdata(testfile)
     _doit(testfile)
 
 def test_missing(tmp_path):
-    testfile = tmp_path / 'test_missing.nc'
+    testfile = str(tmp_path / 'test_missing.nc')
     r = dd.make_partially_missing_ncdata(testfile)
     _doit(testfile)
 
 def test_fillvalue(tmp_path):
-    testfile = tmp_path / 'test_fillvalue.nc'
+    testfile = str(tmp_path / 'test_fillvalue.nc')
     r = dd.make_fillvalue_ncdata(testfile)
     _doit(testfile)
 
 def test_validmin(tmp_path):
-    testfile = tmp_path / 'test_validmin.nc'
+    testfile = str(tmp_path / 'test_validmin.nc')
     r = dd.make_validmin_ncdata(testfile)
     _doit(testfile)
 
 def test_validmax(tmp_path):
-    testfile = tmp_path / 'test_validmax.nc'
+    testfile = str(tmp_path / 'test_validmax.nc')
     r = dd.make_validmax_ncdata(testfile)
     _doit(testfile)
 
 def test_validrange(tmp_path):
-    testfile = tmp_path / 'test_validrange.nc'
+    testfile = str(tmp_path / 'test_validrange.nc')
     r = dd.make_validrange_ncdata(testfile)
     _doit(testfile)
