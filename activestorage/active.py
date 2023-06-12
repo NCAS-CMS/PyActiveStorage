@@ -16,7 +16,7 @@ from activestorage.storage import reduce_chunk
 from activestorage import netcdf_to_zarr as nz
 
 
-def load_from_s3(uri)
+def load_from_s3(uri):
     """
     Load a netCDF4-like object from S3.
 
