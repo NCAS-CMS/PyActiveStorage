@@ -16,6 +16,29 @@ from activestorage.storage import reduce_chunk
 from activestorage import netcdf_to_zarr as nz
 
 
+def load_from_s3(uri)
+    """
+    Load a netCDF4-like object from S3.
+
+    First, set up an S3 filesystem with s3fs.S3FileSystem.
+    Then open the uri with this FS -> s3file
+    s3file is a File-like object: a memory view but wih all the metadata
+    gubbins inside it (no data!)
+    calling >> ds = netCDF4.Dataset(s3file) <<
+    will throw a FileNotFoundError because the netCDF4 library is always looking for
+    a local file, resulting in [Errno 2] No such file or directory:
+    '<File-like object S3FileSystem, pyactivestorage/s3_test_bizarre.nc>'
+    instead, we use h5netcdf: https://github.com/h5netcdf/h5netcdf
+    a Python binder straight to HDF5-netCDF4 interface, that doesn't need a "local" file
+    """
+    fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
+                           secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
+                           client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
+    with fs.open(uri, 'rb') as s3file:
+        ds = h5netcdf.File(s3file, 'r', invalid_netcdf=True)
+        print(f"Dataset loaded from S3 via h5netcdf: {ds}")
+
+
 class Active:
     """ 
     Instantiates an interface to active storage which contains either zarr files
@@ -74,21 +97,7 @@ class Active:
             if storage_type is None:
                 ds = Dataset(uri)
             elif storage_type == "s3":
-                # correct settings for Minio; need be imported from config.py
-                # calling open returns a File-like object S3FileSystem
-                fs = s3fs.S3FileSystem(key="minioadmin",
-                                       secret="minioadmin",
-                                       client_kwargs={'endpoint_url': "http://localhost:9000"})
-                with fs.open(uri, 'rb') as s3file:
-                    # s3file is a File-like object: a memory view but wih all the metadata
-                    # gubbins inside it (no data!)
-                    # >> ds = Dataset(s3file) <<
-                    # calling netCDF4.Dataset will throw a FileNotFoundError:
-                    # [Errno 2] No such file or directory:
-                    # '<File-like object S3FileSystem, pyactivestorage/s3_test_bizarre.nc>'
-                    # instead, try h5netcdf
-                    ds = h5netcdf.File(s3file, 'r', invalid_netcdf=True)
-                    print(f"Dataset loaded from S3 via h5netcdf: {ds}")
+                ds = load_from_s3(uri)
             try:
                 ds_var = ds[ncvar]
             except IndexError as exc:
