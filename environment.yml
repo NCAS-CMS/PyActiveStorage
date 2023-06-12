@@ -8,6 +8,7 @@ dependencies:
   - python >=3.9
   - dask
   - fsspec
+  - h5netcdf
   - h5py  # needed by Kerchunk
   - kerchunk
   - netcdf4
