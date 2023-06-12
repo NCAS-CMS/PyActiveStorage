@@ -20,6 +20,7 @@ REQUIREMENTS = {
     'install': [
         'dask',
         'fsspec',
+        'h5netcdf',
         'h5py',  # needed by Kerchunk
         'kerchunk',
         'netcdf4',
