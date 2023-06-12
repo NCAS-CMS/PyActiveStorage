@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pathlib
 
+import h5netcdf
 import s3fs
 
 #FIXME: Consider using h5py throughout, for more generality
@@ -81,9 +82,9 @@ class Active:
                 with fs.open(uri, 'rb') as s3file:
                     # this will throw a FileNotFoundError: [Errno 2] No such file or directory: '<File-like object S3FileSystem, pyactivestorage/s3_test_bizarre.nc>'
                     # ds = Dataset(s3file)
-                    print("S3 file looks like:")
-                    for l in s3file.readlines():
-                        print(l)
+                    # instead, try h5netcdf
+                    nc = h5netcdf.File(s3file,'r', invalid_netcdf=True)
+                    ds = Dataset(nc)
             try:
                 ds_var = ds[ncvar]
             except IndexError as exc:
