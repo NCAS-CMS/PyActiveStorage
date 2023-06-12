@@ -62,9 +62,7 @@ def test_Active():
 
     # run Active on s3 file
     active = Active(s3_testfile_uri, "data", "s3")
-    active._version = 2
     active.method = "mean"
-    active.components = True
     result1 = active[0:2, 4:6, 7:9]
     print(result1)
 
