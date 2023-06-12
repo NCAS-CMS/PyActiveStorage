@@ -87,7 +87,7 @@ class Active:
                     # [Errno 2] No such file or directory:
                     # '<File-like object S3FileSystem, pyactivestorage/s3_test_bizarre.nc>'
                     # instead, try h5netcdf
-                    ds = h5netcdf.File(s3file,'r', invalid_netcdf=True)
+                    ds = h5netcdf.File(s3file, 'r', invalid_netcdf=True)
                     print(f"Dataset loaded from S3 via h5netcdf: {ds}")
             try:
                 ds_var = ds[ncvar]
@@ -95,7 +95,11 @@ class Active:
                 print(f"Dataset {ds} does not contain ncvar {ncvar!r}.")
                 raise exc
 
-            self._filters = ds_var.filters()
+            try:
+                self._filters = ds_var.filters()
+            # ds from h5netcdf may not have _filters and other such metadata
+            except AttributeError:
+                self._filters = None
             self._missing = getattr(ds_var, 'missing_value', None)
             self._fillvalue = getattr(ds_var, '_FillValue', None)
             valid_min = getattr(ds_var, 'valid_min', None)
