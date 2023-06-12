@@ -256,7 +256,11 @@ class Active:
         """
         # FIXME: Order of calls is hardcoded'
         if self.zds is None:
-            ds = nz.load_netcdf_zarr_generic(self.uri, self.ncvar)
+            print(f"Kerchunking file {self.uri} with variable "
+                  f"{self.ncvar} for storage type {self.storage_type}")
+            ds = nz.load_netcdf_zarr_generic(self.uri,
+                                             self.ncvar,
+                                             self.storage_type)
             # The following is a hangove from exploration
             # and is needed if using the original doing it ourselves
             # self.zds = make_an_array_instance_active(ds)
