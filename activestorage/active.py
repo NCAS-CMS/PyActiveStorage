@@ -80,11 +80,15 @@ class Active:
                                        secret="minioadmin",
                                        client_kwargs={'endpoint_url': "http://localhost:9000"})
                 with fs.open(uri, 'rb') as s3file:
-                    # this will throw a FileNotFoundError: [Errno 2] No such file or directory: '<File-like object S3FileSystem, pyactivestorage/s3_test_bizarre.nc>'
-                    # ds = Dataset(s3file)
+                    # s3file is a File-like object: a memory view but wih all the metadata
+                    # gubbins inside it (no data!)
+                    # >> ds = Dataset(s3file) <<
+                    # calling netCDF4.Dataset will throw a FileNotFoundError:
+                    # [Errno 2] No such file or directory:
+                    # '<File-like object S3FileSystem, pyactivestorage/s3_test_bizarre.nc>'
                     # instead, try h5netcdf
-                    nc = h5netcdf.File(s3file,'r', invalid_netcdf=True)
-                    ds = Dataset(nc)
+                    ds = h5netcdf.File(s3file,'r', invalid_netcdf=True)
+                    print(f"Dataset loaded from S3 via h5netcdf: {ds}")
             try:
                 ds_var = ds[ncvar]
             except IndexError as exc:
