@@ -38,6 +38,8 @@ def load_from_s3(uri):
         ds = h5netcdf.File(s3file, 'r', invalid_netcdf=True)
         print(f"Dataset loaded from S3 via h5netcdf: {ds}")
 
+    return ds
+
 
 class Active:
     """ 
