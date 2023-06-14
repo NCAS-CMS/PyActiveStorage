@@ -114,6 +114,9 @@ def test_with_valid_netCDF_file(test_data_path):
     result1 = active[0:2, 4:6, 7:9]
     print(result1)
 
+    print("xxx", result1, result2, result2["sum"], result2["n"])
+    print(x)
+
     assert_array_equal(result1, result2["sum"]/result2["n"])
 
 
