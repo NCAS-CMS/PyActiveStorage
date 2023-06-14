@@ -89,6 +89,9 @@ def test_with_valid_netCDF_file(test_data_path):
     """
     Test as above but with an actual netCDF4 file.
     Also, this has _FillValue and missing_value
+
+    identical to tests/test_bigger_data.py::test_cesm2_native
+
     """
     ncfile = str(test_data_path / "cesm2_native.nc")
 
@@ -116,10 +119,12 @@ def test_with_valid_netCDF_file(test_data_path):
     result1 = active[4:5, 1:2]
     print(result1)
 
-    print("xxx", result1, result2, result2["sum"], result2["n"])
-    print(x)
+    # expect {'sum': array([[[2368.3232]]], dtype=float32), 'n': array([[[8]]])}
+    # check for typing and structure
+    np.testing.assert_array_equal(result1["sum"], np.array([[[2368.3232]]], dtype="float32"))
+    np.testing.assert_array_equal(result1["n"], np.array([[[8]]]))
 
-    assert_array_equal(result1, result2["sum"]/result2["n"])
+    assert_array_equal(result1, result2)
 
 
 def test_s3_reduce_chunk():
