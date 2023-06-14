@@ -115,4 +115,4 @@ def test_s3_storage_execution():
     if not os.path.exists(s3_testfile):
         make_vanilla_ncdata(filename=s3_testfile)
 
-    active = Active(s3_testfile_uri, "data", "s3")
+    active = Active(s3_testfile, "data", "s3")
