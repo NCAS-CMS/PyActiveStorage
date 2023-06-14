@@ -97,7 +97,7 @@ def test_with_valid_netCDF_file(test_data_path):
     active._version = 2
     active.method = "mean"
     active.components = True
-    result2 = active[0:2, 4:6, 7:9]
+    result2 = active[4:5, 1:2]
     print(result2)
 
     # put data onto S3. then rm from local
@@ -110,8 +110,10 @@ def test_with_valid_netCDF_file(test_data_path):
 
     # run Active on s3 file
     active = Active(s3_testfile_uri, "TREFHT", "s3")
+    active._version = 2
     active.method = "mean"
-    result1 = active[0:2, 4:6, 7:9]
+    active.components = True
+    result1 = active[4:5, 1:2]
     print(result1)
 
     print("xxx", result1, result2, result2["sum"], result2["n"])
