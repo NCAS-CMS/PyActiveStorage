@@ -2,8 +2,11 @@ import os
 import numpy as np
 import pytest
 import requests
+import tempfile
 from unittest import mock
 
+from activestorage.active import Active
+from activestorage.dummy_data import make_vanilla_ncdata
 from activestorage import s3
 
 
@@ -102,3 +105,14 @@ def test_s3_reduce_chunk_not_found(mock_request):
 
 
     assert str(exc.value) == 'S3 Active Storage error: HTTP 404: "Not found"'
+
+
+def test_s3_storage_execution():
+    """Test stack when call to Active contains storage_type == s3."""
+    temp_folder = tempfile.mkdtemp()
+    s3_testfile = os.path.join(temp_folder,
+                               's3_test_bizarre.nc')
+    if not os.path.exists(s3_testfile):
+        make_vanilla_ncdata(filename=s3_testfile)
+
+    active = Active(s3_testfile_uri, "data", "s3")
