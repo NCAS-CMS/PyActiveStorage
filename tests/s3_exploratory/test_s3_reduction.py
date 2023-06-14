@@ -50,6 +50,9 @@ def test_Active():
     """
     Shows what we expect an active example test to achieve and provides "the right answer"
     Done twice: POSIX active and S3 active; we compare results.
+
+    identical to tests/test_harness.py::testActive()
+
     """
     # make dummy data
     s3_testfile, local_testfile = make_tempfile()
