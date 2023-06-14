@@ -9,6 +9,7 @@ from activestorage.dummy_data import make_vanilla_ncdata
 import activestorage.storage as st
 from activestorage.s3 import reduce_chunk as s3_reduce_chunk
 from numpy.testing import assert_array_equal
+from pathlib import Path
 
 from config_minio import *
 
