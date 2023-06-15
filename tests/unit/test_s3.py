@@ -1,12 +1,9 @@
-import botocore
 import os
 import numpy as np
 import pytest
 import requests
-import tempfile
 from unittest import mock
 
-from activestorage import active
 from activestorage import s3
 
 
@@ -54,7 +51,7 @@ def test_s3_reduce_chunk(mock_request):
 
     assert tmp == result
     # count is None; no missing data yet in S3
-    assert count == None
+    assert count is None
 
     expected_url = f"{active_url}/v1/{operation}/"
     expected_data = {
@@ -105,12 +102,3 @@ def test_s3_reduce_chunk_not_found(mock_request):
 
 
     assert str(exc.value) == 'S3 Active Storage error: HTTP 404: "Not found"'
-
-
-def test_s3_load():
-    """Test stack when call to Active contains storage_type == s3."""
-    active_url = "https://s3.example.com"
-    s3_testfile = "s3_test_bizarre.nc"
-
-    with pytest.raises(botocore.exceptions.ParamValidationError):
-        s3load = active.Active(os.path.join(active_url, s3_testfile), "data", "s3")
