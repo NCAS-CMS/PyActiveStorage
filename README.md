@@ -50,6 +50,13 @@ where `result` will be the mean of the appropriate slice of the hyperslab in `va
 
 There are some (relatively obsolete) documents from our exploration of zarr internals in the docs4understanding, but they are not germane to the usage of the Active class.
 
+## Support for netCDF4 data on S3
+
+We now have support for Active runs with netCDF4 files on S3, from [PR 89](https://github.com/valeriupredoi/PyActiveStorage/pull/89):
+
+- `Active` finds out the `storage_type` which could be `s3` for S3 data
+- then it goes about and does the two file loads that are currently done in its bellows (ie open file, to get metadata/headers, NOT data) via a dedicated S3 mechanism that uses `s3fs`; then it goes about and uses `h5netcdf` to put the open file (which is nothing more than a memory view of the netCDF file) into an hdf5/netCDF-like object format
+- chunks access and indexing is done as per normal via the `s3_reduce_chunk()`, and from there on, `Active` works as per normal
 
 ## Documentation
 
