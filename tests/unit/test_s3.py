@@ -51,7 +51,7 @@ def test_s3_reduce_chunk(mock_request):
 
     assert tmp == result
     # count is None; no missing data yet in S3
-    assert count == None
+    assert count is None
 
     expected_url = f"{active_url}/v1/{operation}/"
     expected_data = {

@@ -2,6 +2,9 @@ import os
 import numpy as np
 import pathlib
 
+import h5netcdf
+import s3fs
+
 #FIXME: Consider using h5py throughout, for more generality
 from netCDF4 import Dataset
 from zarr.indexing import (
@@ -11,6 +14,31 @@ from activestorage.config import *
 from activestorage.s3 import reduce_chunk as s3_reduce_chunk
 from activestorage.storage import reduce_chunk
 from activestorage import netcdf_to_zarr as nz
+
+
+def load_from_s3(uri):
+    """
+    Load a netCDF4-like object from S3.
+
+    First, set up an S3 filesystem with s3fs.S3FileSystem.
+    Then open the uri with this FS -> s3file
+    s3file is a File-like object: a memory view but wih all the metadata
+    gubbins inside it (no data!)
+    calling >> ds = netCDF4.Dataset(s3file) <<
+    will throw a FileNotFoundError because the netCDF4 library is always looking for
+    a local file, resulting in [Errno 2] No such file or directory:
+    '<File-like object S3FileSystem, pyactivestorage/s3_test_bizarre.nc>'
+    instead, we use h5netcdf: https://github.com/h5netcdf/h5netcdf
+    a Python binder straight to HDF5-netCDF4 interface, that doesn't need a "local" file
+    """
+    fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
+                           secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
+                           client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
+    with fs.open(uri, 'rb') as s3file:
+        ds = h5netcdf.File(s3file, 'r', invalid_netcdf=True)
+        print(f"Dataset loaded from S3 via h5netcdf: {ds}")
+
+    return ds
 
 
 class Active:
@@ -37,7 +65,7 @@ class Active:
         }
         return instance
 
-    def __init__(self, uri, ncvar, missing_value=None, _FillValue=None, valid_min=None, valid_max=None):
+    def __init__(self, uri, ncvar, storage_type=None, missing_value=None, _FillValue=None, valid_min=None, valid_max=None):
         """
         Instantiate with a NetCDF4 dataset and the variable of interest within that file.
         (We need the variable, because we need variable specific metadata from within that
@@ -48,7 +76,10 @@ class Active:
         self.uri = uri
         if self.uri is None:
             raise ValueError(f"Must use a valid file for uri. Got {self.uri}")
-        if not os.path.isfile(self.uri):
+        self.storage_type = storage_type
+        if self.storage_type == "s3":
+            USE_S3 = True
+        if not os.path.isfile(self.uri) and not self.storage_type:
             raise ValueError(f"Must use existing file for uri. {self.uri} not found")
         self.ncvar = ncvar
         if self.ncvar is None:
@@ -65,14 +96,21 @@ class Active:
         # If the user actually wrote the data with no fill value, or the
         # default fill value is in play, then this might go wrong.
         if (missing_value, _FillValue, valid_min, valid_max) == (None, None, None, None):
-            ds = Dataset(uri)
+            if storage_type is None:
+                ds = Dataset(uri)
+            elif storage_type == "s3":
+                ds = load_from_s3(uri)
             try:
                 ds_var = ds[ncvar]
             except IndexError as exc:
                 print(f"Dataset {ds} does not contain ncvar {ncvar!r}.")
                 raise exc
 
-            self._filters = ds_var.filters()
+            try:
+                self._filters = ds_var.filters()
+            # ds from h5netcdf may not have _filters and other such metadata
+            except AttributeError:
+                self._filters = None
             self._missing = getattr(ds_var, 'missing_value', None)
             self._fillvalue = getattr(ds_var, '_FillValue', None)
             valid_min = getattr(ds_var, 'valid_min', None)
@@ -229,7 +267,11 @@ class Active:
         """
         # FIXME: Order of calls is hardcoded'
         if self.zds is None:
-            ds = nz.load_netcdf_zarr_generic(self.uri, self.ncvar)
+            print(f"Kerchunking file {self.uri} with variable "
+                  f"{self.ncvar} for storage type {self.storage_type}")
+            ds = nz.load_netcdf_zarr_generic(self.uri,
+                                             self.ncvar,
+                                             self.storage_type)
             # The following is a hangove from exploration
             # and is needed if using the original doing it ourselves
             # self.zds = make_an_array_instance_active(ds)
@@ -336,6 +378,10 @@ class Active:
         key = f"{self.ncvar}/{coord}"
         rfile, offset, size = tuple(fsref[key])
 
+        if self.storage_type == "s3":
+            USE_S3 = True
+        else:
+            USE_S3 = False
         if USE_S3:
             object = os.path.basename(rfile)
             tmp, count = s3_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,

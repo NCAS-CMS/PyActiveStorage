@@ -1,0 +1,68 @@
+# adapted GA workflow from https://github.com/stackhpc/s3-active-storage-rs
+---
+name: S3/Minio Exploratory Test
+
+on:
+  push:
+    branches:
+      - main
+      - real_world_s3_tests
+  schedule:
+    - cron: '0 0 * * *'  # nightly
+
+jobs:
+  linux-test:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+      fail-fast: false
+    name: Linux Python ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          miniforge-version: "latest"
+          miniforge-variant: Mambaforge
+          use-mamba: true
+      - shell: bash -l {0}
+        run: conda --version
+      - shell: bash -l {0}
+        run: python -V
+      - name: Export proxy
+        run: |
+          echo 'PROXY_URL = "http://localhost:8080"' >> config.py
+      - name: Start minio object storage
+        run: tests/s3_exploratory/minio_scripts/minio-start
+      - name: Wait for minio object storage to start
+        run: |
+          until curl -if http://localhost:9001; do
+            sleep 1;
+          done
+      - name: Run S3ActiveStorage container
+        run: docker run -it --detach --rm --net=host --name s3-active-storage ghcr.io/stackhpc/s3-active-storage-rs:latest
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: activestorage-minio
+          environment-file: environment.yml
+          python-version: ${{ matrix.python-version }}
+          miniforge-version: "latest"
+          miniforge-variant: Mambaforge
+          use-mamba: true
+      - name: Install PyActiveStorage and run tests
+        shell: bash -l {0}
+        run: |
+          conda --version
+          python -V
+          which python
+          pip install -e .
+          pytest tests/s3_exploratory/test_s3_reduction.py
+      - name: Stop minio object storage
+        run: tests/s3_exploratory/minio_scripts/minio-stop
+        if: always()

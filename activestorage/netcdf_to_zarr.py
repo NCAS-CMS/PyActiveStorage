@@ -3,7 +3,9 @@ import numpy as np
 import zarr
 import ujson
 import fsspec
+import s3fs
 
+from activestorage.config import *
 from kerchunk.hdf import SingleHdf5ToZarr
 
 
@@ -11,6 +13,8 @@ def gen_json(file_url, fs, fs2, varname, **so):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
     # set some name for the output json file
     fname = os.path.splitext(file_url)[0]
+    if "s3:" in fname:
+        fname = os.path.basename(fname)
     outf = f'{fname}_{varname}.json' # vanilla file name
 
     # write it out if it's not there
@@ -61,13 +65,25 @@ def open_zarr_group(out_json, varname):
     return zarr_array
 
 
-def load_netcdf_zarr_generic(fileloc, varname, build_dummy=True):
+def load_netcdf_zarr_generic(fileloc, varname, storage_type, build_dummy=True):
     """Pass a netCDF4 file to be shaped as Zarr file by kerchunk."""
-    so = dict(mode='rb', anon=True, default_fill_cache=False,
-              default_cache_type='first') # args to fs.open()
-    # default_fill_cache=False avoids caching data in between
-    # file chunks to lower memory usage
-    fs = fsspec.filesystem('')  # local, for S3: ('s3', anon=True)
+    print(f"Storage type {storage_type}")
+    object_filesystems = ["s3"]
+
+    # "local"/POSIX files; use a local FS with fsspec
+    if storage_type not in object_filesystems:
+        so = dict(mode='rb', anon=True, default_fill_cache=False,
+                  default_cache_type='first') # args to fs.open()
+        # default_fill_cache=False avoids caching data in between
+        # file chunks to lower memory usage
+        fs = fsspec.filesystem('')
+    # open file in memory view mode straight from the S3 object storage
+    elif storage_type == "s3":
+        fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
+                               secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
+                               client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
+        so = {}
+
     fs2 = fsspec.filesystem('')  # local file system to save final json to
     out_json = gen_json(fileloc, fs, fs2, varname)
 
@@ -76,5 +92,3 @@ def load_netcdf_zarr_generic(fileloc, varname, build_dummy=True):
     ref_ds = open_zarr_group(out_json, varname)
 
     return ref_ds
-
-
