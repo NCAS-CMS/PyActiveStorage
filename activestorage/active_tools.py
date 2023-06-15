@@ -5,8 +5,11 @@ We're effectively subclassing zarr.core.Array, but not actually doing so,
 instead we're providing tools to hack instances of it
 """
 import numpy as np
-from zarr.core import Array
+import zarr
 
+from packaging import version
+
+from zarr.core import Array
 # import other zarr gubbins used in the methods we override
 from zarr.indexing import (
     OrthogonalIndexer,
@@ -171,18 +174,32 @@ def as_get_selection(self, indexer, out=None,
     chunks_info = []
     chunks_locs = []
 
+    # note: Zarr API has changed with zarr=2.15
+    # hasattr(self.chunk_store, "getitems") = True for zarr >= 2.15
+    zarr_version = zarr.__version__
+    zarr_api_change_version = "2.15"
+    if version.parse(zarr_version) < version.parse(zarr_api_change_version):
+        att_getitems = not hasattr(self.chunk_store, "getitems")
+    elif version.parse(zarr_version) >= version.parse(zarr_api_change_version):
+        att_getitems = hasattr(self.chunk_store, "getitems")
     # iterate over chunks
-    if not hasattr(self.chunk_store, "getitems") or \
-        any(map(lambda x: x == 0, self.shape)):
+    if att_getitems or any(map(lambda x: x == 0, self.shape)):
         # sequentially get one key at a time from storage
         for chunk_coords, chunk_selection, out_selection in indexer:
 
-            # load chunk selection into output array
-            pci = self._chunk_getitem(chunk_coords, chunk_selection, out, out_selection,
-                                        drop_axes=indexer.drop_axes, fields=fields)
-                                        
-            chunks_info.append(pci)
-            chunks_locs.append(chunk_coords)
+            if version.parse(zarr_version) < version.parse(zarr_api_change_version):
+                # load chunk selection into output array
+                pci = self._chunk_getitem(chunk_coords, chunk_selection, out, out_selection,
+                                          drop_axes=indexer.drop_axes, fields=fields)
+                chunks_info.append(pci)
+                chunks_locs.append(chunk_coords)
+            elif version.parse(zarr_version) >= version.parse(zarr_api_change_version):
+                chunk_coords = [chunk_coords]
+                # load chunk selection into output array
+                pci = self._chunk_getitems(chunk_coords, chunk_selection, out, out_selection,
+                                           drop_axes=indexer.drop_axes, fields=fields)
+                chunks_info.append(pci)
+                chunks_locs.append(chunk_coords[0])
     else:
         # allow storage to get multiple items at once
         lchunk_coords, lchunk_selection, lout_selection = zip(*indexer)
