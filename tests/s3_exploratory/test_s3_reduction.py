@@ -110,7 +110,6 @@ def test_with_valid_netCDF_file(test_data_path):
     object = os.path.basename(ncfile)
     bucket_file = upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY,
                                S3_BUCKET, object, ncfile)
-    os.remove(ncfile)
     s3_testfile_uri = os.path.join("s3://", bucket_file)
     print("S3 file uri", s3_testfile_uri)
 
@@ -141,10 +140,6 @@ def test_s3_reduce_chunk():
     upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY,
                  S3_BUCKET, object, rfile)
     
-    # remove file during test session to be sure
-    # workflow uses uploaded file to S3 bucket
-    os.remove(rfile)
-
     # call s3_reduce_chunk
     tmp, count = s3_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
                                  S3_SECRET_KEY, S3_URL, S3_BUCKET,
