@@ -1,6 +1,6 @@
 # adapted GA workflow from https://github.com/stackhpc/s3-active-storage-rs
 ---
-name: S3/Minio Exploratory Test
+name: S3/Minio Test
 
 on:
   push:
