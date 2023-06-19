@@ -44,9 +44,6 @@ jobs:
           done
       - name: Run S3ActiveStorage container
         run: docker run -it --detach --rm --net=host --name s3-active-storage ghcr.io/stackhpc/s3-active-storage-rs:latest
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: activestorage-minio
