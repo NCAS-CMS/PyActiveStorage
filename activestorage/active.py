@@ -1,3 +1,4 @@
+import contextlib
 import os
 import numpy as np
 import pathlib
@@ -16,6 +17,7 @@ from activestorage.storage import reduce_chunk
 from activestorage import netcdf_to_zarr as nz
 
 
+@contextlib.contextmanager
 def load_from_s3(uri):
     """
     Load a netCDF4-like object from S3.
@@ -37,8 +39,7 @@ def load_from_s3(uri):
     with fs.open(uri, 'rb') as s3file:
         ds = h5netcdf.File(s3file, 'r', invalid_netcdf=True)
         print(f"Dataset loaded from S3 via h5netcdf: {ds}")
-
-    return ds
+        yield ds
 
 
 class Active:
@@ -99,7 +100,8 @@ class Active:
             if storage_type is None:
                 ds = Dataset(uri)
             elif storage_type == "s3":
-                ds = load_from_s3(uri)
+                with load_from_s3(uri) as _ds:
+                    ds = _ds
             try:
                 ds_var = ds[ncvar]
             except IndexError as exc:
@@ -150,9 +152,13 @@ class Active:
             if lock:
                 lock.acquire()
                 
-            nc = Dataset(self.uri)
-            data = nc[ncvar][index]
-            nc.close()
+            if self.storage_type is None:
+                nc = Dataset(self.uri)
+                data = nc[ncvar][index]
+                nc.close()
+            elif self.storage_type == "s3":
+                with load_from_s3(self.uri) as nc:
+                    data = nc[ncvar][index]
 
             if lock:
                 lock.release()

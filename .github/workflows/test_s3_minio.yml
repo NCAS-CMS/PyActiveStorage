@@ -34,7 +34,7 @@ jobs:
         run: python -V
       - name: Export proxy
         run: |
-          echo 'PROXY_URL = "http://localhost:8080"' >> config.py
+          echo 'USE_S3 = True\nPROXY_URL = "http://localhost:8080"' >> config.py
       - name: Start minio object storage
         run: tests/s3_exploratory/minio_scripts/minio-start
       - name: Wait for minio object storage to start
@@ -62,6 +62,7 @@ jobs:
           python -V
           which python
           pip install -e .
+          pytest
           pytest tests/s3_exploratory/test_s3_reduction.py
       - name: Stop minio object storage
         run: tests/s3_exploratory/minio_scripts/minio-stop

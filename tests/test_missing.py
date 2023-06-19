@@ -7,19 +7,23 @@ import tempfile
 import unittest
 
 from activestorage.active import Active
+from activestorage.config import *
 from activestorage import dummy_data as dd
+
+import utils
 
 
 def _doit(testfile):
     """ 
     Compare and contrast vanilla mean with actual means
     """
-    active = Active(testfile, "data")
+    uri = utils.write_to_storage(testfile)
+    active = Active(uri, "data", utils.get_storage_type())
     active._version = 0
     d = active[0:2, 4:6, 7:9]
     mean_result = np.mean(d)
 
-    active = Active(testfile, "data")
+    active = Active(uri, "data", utils.get_storage_type())
     active._version = 2
     active.method = "mean"
     active.components = True
