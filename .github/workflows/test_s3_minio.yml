@@ -1,12 +1,12 @@
 # adapted GA workflow from https://github.com/stackhpc/s3-active-storage-rs
 ---
-name: S3/Minio Exploratory Test
+name: S3/Minio Test
 
 on:
   push:
     branches:
       - main
-      - real_world_s3_tests
+  pull_request:
   schedule:
     - cron: '0 0 * * *'  # nightly
 
@@ -34,7 +34,7 @@ jobs:
         run: python -V
       - name: Export proxy
         run: |
-          echo 'PROXY_URL = "http://localhost:8080"' >> config.py
+          echo 'USE_S3 = True\nPROXY_URL = "http://localhost:8080"' >> config.py
       - name: Start minio object storage
         run: tests/s3_exploratory/minio_scripts/minio-start
       - name: Wait for minio object storage to start
@@ -44,9 +44,6 @@ jobs:
           done
       - name: Run S3ActiveStorage container
         run: docker run -it --detach --rm --net=host --name s3-active-storage ghcr.io/stackhpc/s3-active-storage-rs:latest
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: activestorage-minio
@@ -62,6 +59,7 @@ jobs:
           python -V
           which python
           pip install -e .
+          pytest
           pytest tests/s3_exploratory/test_s3_reduction.py
       - name: Stop minio object storage
         run: tests/s3_exploratory/minio_scripts/minio-stop
