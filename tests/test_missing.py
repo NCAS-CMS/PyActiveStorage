@@ -38,7 +38,7 @@ def test_partially_missing_data(tmp_path):
 
 def test_missing(tmp_path):
     testfile = str(tmp_path / 'test_missing.nc')
-    r = dd.make_partially_missing_ncdata(testfile)
+    r = dd.make_missing_ncdata(testfile)
     _doit(testfile)
 
 def test_fillvalue(tmp_path):
