@@ -6,7 +6,7 @@ on:
   push:
     branches:
       - main
-      - real_world_s3_tests
+  pull_request:
   schedule:
     - cron: '0 0 * * *'  # nightly
 
