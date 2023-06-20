@@ -5,7 +5,7 @@ name: S3/Minio Test
 on:
   push:
     branches:
-      - main
+      - is-it-using-s3
   pull_request:
   schedule:
     - cron: '0 0 * * *'  # nightly
