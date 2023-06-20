@@ -34,7 +34,7 @@ jobs:
         run: python -V
       - name: Export proxy
         run: |
-          echo 'USE_S3 = True\nPROXY_URL = "http://localhost:8080"' >> config.py
+          echo 'USE_S3 = True' >> activestorage/config.py
       - name: Start minio object storage
         run: tests/s3_exploratory/minio_scripts/minio-start
       - name: Wait for minio object storage to start
