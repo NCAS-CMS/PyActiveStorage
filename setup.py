@@ -33,6 +33,7 @@ REQUIREMENTS = {
         'pytest-cov>=2.10.1',
         'pytest-html!=2.1.0',
         'pytest-metadata>=1.5.1',
+        'pytest-timeout',
         'pytest-xdist',
         # for documentation
         'autodocsumm',
