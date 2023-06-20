@@ -1,5 +1,4 @@
 import os
-from this import d
 import numpy as np
 import pytest
 import shutil
@@ -17,18 +16,28 @@ def _doit(testfile, **kwargs):
     """ 
     Compare and contrast vanilla mean with actual means
     """
+    index = (slice(0, 2), slice(4, 6), slice(7, 9))
     uri = utils.write_to_storage(testfile)
     active = Active(uri, "data", utils.get_storage_type())
     active._version = 0
-    d = active[0:2, 4:6, 7:9]
+    d = active[index]
     mean_result = np.mean(d)
 
     active = Active(uri, "data", utils.get_storage_type(), **kwargs)
     active._version = 2
     active.method = "mean"
     active.components = True
-    result2 = active[0:2, 4:6, 7:9]
+    result2 = active[index]
     np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+
+    # Sanity check that the result without missing data info is different.
+    active = Active(uri, "data", utils.get_storage_type())
+    active._version = 2
+    active.method = "mean"
+    active.components = True
+    result3 = active[index]
+    with pytest.raises(AssertionError):
+        np.testing.assert_array_equal(result2["sum"]/result2["n"], result3["sum"]/result3["n"])
 
 def test_partially_missing_data(tmp_path):
     testfile = str(tmp_path / 'test_partially_missing_data.nc')
