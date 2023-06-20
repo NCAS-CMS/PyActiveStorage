@@ -27,6 +27,7 @@ Closes #issue_number
 ## Checklist
 
 - [ ] This pull request has a descriptive title and labels
-- [ ] Unit tests have been added
-- [ ] Any changed dependencies have been added or removed correctly
+- [ ] This pull request has a minimal description (most was discussed in the issue, but a two-liner description is still desirable)
+- [ ] Unit tests have been added (if codecov test fails)
+- [ ] Any changed dependencies have been added or removed correctly (if need be)
 - [ ] All tests pass
