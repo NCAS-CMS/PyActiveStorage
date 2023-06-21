@@ -62,7 +62,7 @@ jobs:
       - name: Run tests
         shell: bash -l {0}
         run: |
-          pytest
+          pytest --numprocesses 1
       - name: Run S3 exploratory tests
         shell: bash -l {0}
         run: |
