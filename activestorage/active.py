@@ -2,6 +2,7 @@ import contextlib
 import os
 import numpy as np
 import pathlib
+import urllib
 
 import h5netcdf
 import s3fs
@@ -383,9 +384,11 @@ class Active:
         rfile, offset, size = tuple(fsref[key])
 
         if self.storage_type == "s3":
-            object = os.path.basename(rfile)
+            parsed_url = urllib.parse.urlparse(rfile)
+            bucket = parsed_url.netloc
+            object = parsed_url.path
             tmp, count = s3_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
-                                         S3_SECRET_KEY, S3_URL, S3_BUCKET,
+                                         S3_SECRET_KEY, S3_URL, bucket,
                                          object, offset, size,
                                          compressor, filters, missing,
                                          self.zds._dtype, self.zds._chunks,
