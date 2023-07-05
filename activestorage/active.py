@@ -2,6 +2,7 @@ import contextlib
 import os
 import numpy as np
 import pathlib
+import urllib
 
 import h5netcdf
 import s3fs
@@ -78,8 +79,6 @@ class Active:
         if self.uri is None:
             raise ValueError(f"Must use a valid file for uri. Got {self.uri}")
         self.storage_type = storage_type
-        if self.storage_type == "s3":
-            USE_S3 = True
         if not os.path.isfile(self.uri) and not self.storage_type:
             raise ValueError(f"Must use existing file for uri. {self.uri} not found")
         self.ncvar = ncvar
@@ -385,13 +384,11 @@ class Active:
         rfile, offset, size = tuple(fsref[key])
 
         if self.storage_type == "s3":
-            USE_S3 = True
-        else:
-            USE_S3 = False
-        if USE_S3:
-            object = os.path.basename(rfile)
+            parsed_url = urllib.parse.urlparse(rfile)
+            bucket = parsed_url.netloc
+            object = parsed_url.path
             tmp, count = s3_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
-                                         S3_SECRET_KEY, S3_URL, S3_BUCKET,
+                                         S3_SECRET_KEY, S3_URL, bucket,
                                          object, offset, size,
                                          compressor, filters, missing,
                                          self.zds._dtype, self.zds._chunks,
