@@ -66,13 +66,21 @@ def make_validrange_ncdata(filename='test_validrange.nc', chunksize=(3, 3, 1), n
     return make_ncdata(filename, chunksize, n, compression=None, valid_range=[-1.0, 1.2 * n ** 3])
 
 
+def make_compressed_ncdata(filename='test_vanilla.nc', chunksize=(3, 3, 1), n=10, compression=None, shuffle=False):
+    """
+    Make a compressed and optionally shuffled vanilla test dataset which is
+    three dimensional with indices and values that aid in testing data
+    extraction.
+    """
+    return make_ncdata(filename, chunksize, n, compression=compression, shuffle=shuffle)
+
+
 def make_vanilla_ncdata(filename='test_vanilla.nc', chunksize=(3, 3, 1), n=10):
     """
     Make a vanilla test dataset which is three dimensional with indices and values that
     aid in testing data extraction.
     """
-    r = make_ncdata(filename, chunksize, n, None, False)
-    return 
+    return make_ncdata(filename, chunksize, n)
 
 
 def make_ncdata(filename, chunksize, n, compression=None, 
@@ -81,7 +89,8 @@ def make_ncdata(filename, chunksize, n, compression=None,
                 valid_range=None,
                 valid_min=None,
                 valid_max=None,
-                partially_missing_data=False):
+                partially_missing_data=False,
+                shuffle=False):
     """ 
     If compression is required, it can be passed in via keyword
     and is applied to all variables.
@@ -96,6 +105,8 @@ def make_ncdata(filename, chunksize, n, compression=None,
     partially_missing_data = True makes half the data missing so we can 
     ensure we find some chunks which are all missing ... Can 
     only be used in combination with a missing value.
+
+    shuffle: if True, apply the HDF5 shuffle filter before compression.
     """
     if partially_missing_data and not missing:
         raise ValueError(f'Missing data value keyword provided and set to {missing} '
@@ -119,15 +130,15 @@ def make_ncdata(filename, chunksize, n, compression=None,
     ydim = ds.createDimension("ydim", n)
     zdim = ds.createDimension("zdim", n)
     
-    x = ds.createVariable("x","i4",("xdim",), fill_value=fillvalue, compression=compression)
-    y = ds.createVariable("y","i4",("ydim",), fill_value=fillvalue, compression=compression)
-    z = ds.createVariable("z","i4",("zdim",), fill_value=fillvalue, compression=compression)
+    x = ds.createVariable("x","i4",("xdim",), fill_value=fillvalue, compression=compression, shuffle=shuffle)
+    y = ds.createVariable("y","i4",("ydim",), fill_value=fillvalue, compression=compression, shuffle=shuffle)
+    z = ds.createVariable("z","i4",("zdim",), fill_value=fillvalue, compression=compression, shuffle=shuffle)
 
     for a,s in zip([x, y, z],[1, n, n * n]):
         a[:] = dd * s
     
     dvar = ds.createVariable("data","f8", ("xdim","ydim","zdim"),
-                             chunksizes=chunksize, compression=compression)
+                             chunksizes=chunksize, compression=compression, shuffle=shuffle)
     dvar[:] = data
 
     nm1, nm2 = n - 1, n - 2
@@ -179,7 +190,7 @@ def make_ncdata(filename, chunksize, n, compression=None,
     var = ds.variables['data']
     print(f'\nCreated file "{filename}" with a variable called "data" with shape {var.shape} and chunking, compression {var.chunking()},{compression}\n')
 
-    return mindices, findices, vrindices, vm1indices, vm2indices 
+    return ds, mindices, findices, vrindices, vm1indices, vm2indices
 
 
 if __name__=="__main__":
