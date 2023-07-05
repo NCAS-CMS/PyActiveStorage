@@ -243,7 +243,6 @@ def test_daily_data_masked(test_data_path):
     """
     Test again with a daily data file, with masking on
     """
-    assert USE_S3
     ncfile = str(test_data_path / "daily_data_masked.nc")
     uri = utils.write_to_storage(ncfile)
     active = Active(uri, "ta", utils.get_storage_type(), missing_value=999.)
