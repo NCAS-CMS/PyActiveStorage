@@ -5,10 +5,16 @@ name: S3/Minio Test
 on:
   push:
     branches:
-      - is-it-using-s3
+      - main  # keep this at all times
+      - is-it-using-s3  # test on feature branch
   pull_request:
   schedule:
     - cron: '0 0 * * *'  # nightly
+
+# Required shell entrypoint to have properly configured bash shell
+defaults:
+  run:
+    shell: bash -l {0}
 
 jobs:
   linux-test:
@@ -28,10 +34,10 @@ jobs:
           miniforge-version: "latest"
           miniforge-variant: Mambaforge
           use-mamba: true
-      - shell: bash -l {0}
-        run: conda --version
-      - shell: bash -l {0}
-        run: python -V
+      - name: Get conda and Python versions
+        run: |
+          conda --version
+          python -V
       - name: Export proxy
         run: |
           echo 'USE_S3 = True' >> activestorage/config.py
@@ -53,18 +59,15 @@ jobs:
           miniforge-variant: Mambaforge
           use-mamba: true
       - name: Install PyActiveStorage
-        shell: bash -l {0}
         run: |
           conda --version
           python -V
           which python
           pip install -e .
       - name: Run tests
-        shell: bash -l {0}
         run: |
           pytest --numprocesses 1
       - name: Run S3 exploratory tests
-        shell: bash -l {0}
         run: |
           pytest tests/s3_exploratory/test_s3_reduction.py --html=test-reports/s3-exploratory-report.html
       - name: Stop minio object storage
