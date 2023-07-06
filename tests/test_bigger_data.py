@@ -97,10 +97,6 @@ def save_cl_file_with_a(tmp_path):
     create_hyb_pres_file_with_a(dataset, 'cl')
     dataset.close()
     uri = utils.write_to_storage(nc_path)
-    if USE_S3:
-        os.remove(save_path)
-    else:
-        print(f"Saved {save_path}")
     return uri
 
 
@@ -179,7 +175,7 @@ def test_native_emac_model_fails(test_data_path):
         with pytest.raises(OSError):
             active = Active(uri, "aps_ave", utils.get_storage_type())
     else:
-        active = Active(uri, "aps_ave", utils.get_storage_type())
+        active = Active(uri, "aps_ave")
         active._version = 2
         active.method = "mean"
         active.components = True
