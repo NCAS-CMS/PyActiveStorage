@@ -97,6 +97,9 @@ def save_cl_file_with_a(tmp_path):
     create_hyb_pres_file_with_a(dataset, 'cl')
     dataset.close()
     uri = utils.write_to_storage(nc_path)
+    if USE_S3:
+        os.remove(save_path)
+
     return uri
 
 
