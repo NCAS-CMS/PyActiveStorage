@@ -110,11 +110,6 @@ class Active:
             # FIXME: We do not get the correct byte order on the Zarr Array's dtype
             # when using S3, so capture it here.
             self._dtype = ds_var.dtype
-            try:
-                self._filters = ds_var.filters()
-            # ds from h5netcdf may not have _filters and other such metadata
-            except AttributeError:
-                self._filters = None
             if isinstance(ds, Dataset):
                 self._missing = getattr(ds_var, 'missing_value', None)
                 self._fillvalue = getattr(ds_var, '_FillValue', None)
