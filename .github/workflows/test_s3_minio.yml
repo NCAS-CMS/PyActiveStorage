@@ -5,10 +5,15 @@ name: S3/Minio Test
 on:
   push:
     branches:
-      - main
+      - main  # keep this at all times
   pull_request:
   schedule:
     - cron: '0 0 * * *'  # nightly
+
+# Required shell entrypoint to have properly configured bash shell
+defaults:
+  run:
+    shell: bash -l {0}
 
 jobs:
   linux-test:
@@ -28,13 +33,13 @@ jobs:
           miniforge-version: "latest"
           miniforge-variant: Mambaforge
           use-mamba: true
-      - shell: bash -l {0}
-        run: conda --version
-      - shell: bash -l {0}
-        run: python -V
+      - name: Get conda and Python versions
+        run: |
+          conda --version
+          python -V
       - name: Export proxy
         run: |
-          echo 'USE_S3 = True\nPROXY_URL = "http://localhost:8080"' >> config.py
+          echo 'USE_S3 = True' >> activestorage/config.py
       - name: Start minio object storage
         run: tests/s3_exploratory/minio_scripts/minio-start
       - name: Wait for minio object storage to start
@@ -52,15 +57,24 @@ jobs:
           miniforge-version: "latest"
           miniforge-variant: Mambaforge
           use-mamba: true
-      - name: Install PyActiveStorage and run tests
-        shell: bash -l {0}
+      - name: Install PyActiveStorage
         run: |
           conda --version
           python -V
           which python
           pip install -e .
+      - name: Run tests
+        run: |
           pytest
-          pytest tests/s3_exploratory/test_s3_reduction.py
+      - name: Run S3 exploratory tests
+        run: |
+          pytest tests/s3_exploratory/test_s3_reduction.py --html=test-reports/s3-exploratory-report.html
       - name: Stop minio object storage
         run: tests/s3_exploratory/minio_scripts/minio-stop
+        if: always()
+      - name: Upload HTML report artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: html-report
+          path: test-reports/
         if: always()
