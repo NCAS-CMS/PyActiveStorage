@@ -21,7 +21,7 @@ def _doit(testfile):
     active = Active(uri, "data", utils.get_storage_type())
     active._version = 0
     d = active[0:2, 4:6, 7:9]
-    mean_result = np.mean(d)
+    mean_result = np.ma.mean(d)
     print("Bogstandard numpy mean", mean_result)
 
     active = Active(uri, "data", utils.get_storage_type())
