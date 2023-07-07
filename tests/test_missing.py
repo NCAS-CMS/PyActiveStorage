@@ -17,20 +17,20 @@ def _doit(testfile):
     """ 
     Compare and contrast vanilla mean with actual means
     """
-    print(USE_S3)
-    print(utils.get_storage_type())
-    print(x)
     uri = utils.write_to_storage(testfile)
     active = Active(uri, "data", utils.get_storage_type())
     active._version = 0
     d = active[0:2, 4:6, 7:9]
     mean_result = np.mean(d)
+    print("Bogstandard numpy", mean_result)
 
     active = Active(uri, "data", utils.get_storage_type())
     active._version = 2
     active.method = "mean"
     active.components = True
     result2 = active[0:2, 4:6, 7:9]
+    print("Active result", result2["sum"]/result2["n"])
+    print(x)
     np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
 
 
@@ -50,9 +50,6 @@ def test_missing(tmp_path):
 def test_fillvalue(tmp_path):
     testfile = str(tmp_path / 'test_fillvalue.nc')
     r = dd.make_fillvalue_ncdata(testfile)
-    import iris
-    cube = iris.load_cube(testfile)
-    print(cube.data)
     _doit(testfile)
 
 # @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
