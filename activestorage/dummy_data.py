@@ -118,7 +118,8 @@ def make_ncdata(filename, chunksize, n, compression=None,
         a[:] = dd * s
     
     dvar = ds.createVariable("data","f8", ("xdim","ydim","zdim"),
-                             chunksizes=chunksize, compression=compression)
+                             chunksizes=chunksize, compression=compression,
+                             fill_value=None)
     dvar[:] = data
 
     nm1, nm2 = n - 1, n - 2
