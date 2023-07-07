@@ -10,7 +10,6 @@ dependencies:
   - fsspec
   - h5netcdf
   - h5py  # needed by Kerchunk
-  - iris  # for tests on this feature branch only
   - kerchunk
   - netcdf4
   - numpy !=1.24.3  # severe masking bug
