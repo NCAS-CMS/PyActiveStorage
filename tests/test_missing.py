@@ -31,37 +31,37 @@ def _doit(testfile):
     np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
 
 
-@pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
+# @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
 def test_partially_missing_data(tmp_path):
     testfile = str(tmp_path / 'test_partially_missing_data.nc')
     r = dd.make_partially_missing_ncdata(testfile)
     _doit(testfile)
 
-@pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
+# @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
 def test_missing(tmp_path):
     testfile = str(tmp_path / 'test_missing.nc')
     r = dd.make_missing_ncdata(testfile)
     _doit(testfile)
 
-@pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
+# @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
 def test_fillvalue(tmp_path):
     testfile = str(tmp_path / 'test_fillvalue.nc')
     r = dd.make_fillvalue_ncdata(testfile)
     _doit(testfile)
 
-@pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
+# @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
 def test_validmin(tmp_path):
     testfile = str(tmp_path / 'test_validmin.nc')
     r = dd.make_validmin_ncdata(testfile)
     _doit(testfile)
 
-@pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
+# @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
 def test_validmax(tmp_path):
     testfile = str(tmp_path / 'test_validmax.nc')
     r = dd.make_validmax_ncdata(testfile)
     _doit(testfile)
 
-@pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
+# @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
 def test_validrange(tmp_path):
     testfile = str(tmp_path / 'test_validrange.nc')
     r = dd.make_validrange_ncdata(testfile)
