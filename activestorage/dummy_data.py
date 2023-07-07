@@ -73,7 +73,13 @@ def make_vanilla_ncdata(filename='test_vanilla.nc', chunksize=(3, 3, 1), n=10):
     aid in testing data extraction.
     """
     r = make_ncdata(filename, chunksize, n, None, False)
-    return 
+    return
+
+
+def augment_indices(indices):
+    """Take a list of 3-len indices tuples and add elements."""
+    indices.append([(i - 2, j - 2, k - 2) for i, j, k in indices])
+    return indices
 
 
 def make_ncdata(filename, chunksize, n, compression=None, 
@@ -101,16 +107,6 @@ def make_ncdata(filename, chunksize, n, compression=None,
     if partially_missing_data and not missing:
         raise ValueError(f'Missing data value keyword provided and set to {missing} '
                          'but partially_missing_data keyword missing from func call.')
-
-    def make_holes(var, indices, attribute, value, dummy):
-        if value is not None:
-            assert type(value) == float
-            setattr(var, attribute, value)
-        for i, j, k in indices:
-            var[i, j, k] = dummy
-
-        return var
-
     assert n > 4
 
     ds = Dataset(filename, 'w', format="NETCDF4")
@@ -141,12 +137,18 @@ def make_ncdata(filename, chunksize, n, compression=None,
             dvar.missing_value = missing
         else:
             mindices = [(1,1,1),(n/2,1,1),(1,nm1,1),(nm1,1,n/2)]
-            dvar = make_holes(dvar, mindices, 'missing_value', missing, missing)
+            for ind in mindices:
+                for tup in ind:
+                    dvar[tup] = missing
+            setattr(dvar, "missing_value", missing)
 
     if fillvalue:
         # note we use a different set of indices for 
         findices = [(nm1,nm1,nm1),(n/2,n/2,1),(1,1,n/2),(nm1,nm1,n/2)]
-        dvar = make_holes(dvar, findices, '_FillValue', None, fillvalue)
+        for ind in findices:
+            for tup in ind:
+                dvar[tup] = fillvalue
+        setattr(dvar, "fill_value", fillvalue)
         
     if valid_range and valid_min or valid_range and valid_max:
         raise ValueError("Can't mix and match validity options")
@@ -155,13 +157,19 @@ def make_ncdata(filename, chunksize, n, compression=None,
         if valid_min == 0.0:
             raise ValueError('Dummy data needs a non-zero valid min')
         vm1indices = [(2,2,2),(n/2,2,2),(2,nm1,2),(nm1,2,nm1/2)]
-        dvar = make_holes(dvar, vm1indices, 'valid_min', valid_min, valid_min-abs(0.1*valid_min))
+        for ind in vm1indices:
+            for tup in ind:
+                dvar[tup] = valid_min-abs(0.1*valid_min)
+        setattr(dvar, "valid_min", valid_min)
     
     if valid_max:
         if valid_min == 0.0:
             raise ValueError('Dummy data needs a non-zero valid max')
         vm2indices = [(2,nm1,2),(2,2,nm1),(nm2,nm2,nm1),(nm1,nm2,n/2)]
-        dvar = make_holes(dvar, vm2indices, 'valid_max', valid_max, valid_max*10)
+        for ind in vm2indices:
+            for tup in ind:
+                dvar[tup] = valid_max*10
+        setattr(dvar, "valid_max", valid_max)
 
     if valid_range:
         assert len(valid_range) == 2 and type(valid_range[0]) == float
