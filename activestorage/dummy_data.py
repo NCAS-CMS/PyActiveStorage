@@ -76,12 +76,6 @@ def make_vanilla_ncdata(filename='test_vanilla.nc', chunksize=(3, 3, 1), n=10):
     return
 
 
-def augment_indices(indices):
-    """Take a list of 3-len indices tuples and add elements."""
-    indices.append([(i - 2, j - 2, k - 2) for i, j, k in indices])
-    return indices
-
-
 def make_ncdata(filename, chunksize, n, compression=None, 
                 missing=None, 
                 fillvalue=None,
