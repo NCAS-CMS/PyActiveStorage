@@ -37,21 +37,18 @@ def _doit(testfile):
 def test_partially_missing_data(tmp_path):
     testfile = str(tmp_path / 'test_partially_missing_data.nc')
     r = dd.make_partially_missing_ncdata(testfile)
-    print("Partially missing", testfile)
     _doit(testfile)
 
 # @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
 def test_missing(tmp_path):
     testfile = str(tmp_path / 'test_missing.nc')
     r = dd.make_missing_ncdata(testfile)
-    print("Missing", testfile)
     _doit(testfile)
 
 # @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
 def test_fillvalue(tmp_path):
     testfile = str(tmp_path / 'test_fillvalue.nc')
     r = dd.make_fillvalue_ncdata(testfile)
-    print("Fillvalue", testfile)
     _doit(testfile)
 
 # @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
