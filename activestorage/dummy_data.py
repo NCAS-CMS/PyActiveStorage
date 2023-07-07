@@ -41,7 +41,9 @@ def make_fillvalue_ncdata(filename='test_fillvalue.nc', chunksize=(3,3,1), n=10)
     Makes a test dataset based on the default vanilla dataset, but which includes
     some non-default fillvalues.
     """
-    return make_ncdata(filename, chunksize, n, compression=None, fillvalue=-999.)
+    ncdat = make_ncdata(filename, chunksize, n, compression=None, fillvalue=-999.)
+    print(ncdat)
+    return ncdat
 
 def make_validmin_ncdata(filename='test_validmin.nc', chunksize=(3,3,1), n=10):
     """ 
