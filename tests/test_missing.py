@@ -22,15 +22,14 @@ def _doit(testfile):
     active._version = 0
     d = active[0:2, 4:6, 7:9]
     mean_result = np.mean(d)
-    print("Bogstandard numpy", mean_result)
+    print("Bogstandard numpy mean", mean_result)
 
     active = Active(uri, "data", utils.get_storage_type())
     active._version = 2
     active.method = "mean"
     active.components = True
     result2 = active[0:2, 4:6, 7:9]
-    print("Active result", result2["sum"]/result2["n"])
-    print(x)
+    print("Active result mean", result2["sum"]/result2["n"])
     np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
 
 
@@ -38,18 +37,21 @@ def _doit(testfile):
 def test_partially_missing_data(tmp_path):
     testfile = str(tmp_path / 'test_partially_missing_data.nc')
     r = dd.make_partially_missing_ncdata(testfile)
+    print("Partially missing", testfile)
     _doit(testfile)
 
 # @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
 def test_missing(tmp_path):
     testfile = str(tmp_path / 'test_missing.nc')
     r = dd.make_missing_ncdata(testfile)
+    print("Missing", testfile)
     _doit(testfile)
 
 # @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
 def test_fillvalue(tmp_path):
     testfile = str(tmp_path / 'test_fillvalue.nc')
     r = dd.make_fillvalue_ncdata(testfile)
+    print("Fillvalue", testfile)
     _doit(testfile)
 
 # @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
