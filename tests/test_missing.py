@@ -283,7 +283,8 @@ def test_validrange(tmp_path):
     ds = Dataset(testfile)
     actual_data = ds["data"][:]
     ds.close()
-    actual_data = np.ma.masked_where(750 < actual_data.all() < 850., actual_data)
+    actual_data = np.ma.masked_where(750. < actual_data, actual_data)
+    actual_data = np.ma.masked_where(850. > actual_data, actual_data)
     numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
     print("Numpy masked result (mean)", numpy_mean)
 
@@ -291,16 +292,17 @@ def test_validrange(tmp_path):
     testfile = utils.write_to_storage(testfile)
 
     # run the two Active instances: transfer data and do active storage
-    active = Active(testfile, "data", utils.get_storage_type())
+    active = Active(testfile, "data", utils.get_storage_type(), valid_min=750., valid_max=850.)
     active._version = 0
     d = active[0:2, 4:6, 7:9]
-    d = np.ma.masked_where(750 < d.all() < 850., d)
+    d = np.ma.masked_where(750. < d, d)
+    d = np.ma.masked_where(850. > d, d)
 
     # NOT numpy masked to check for correct Active behaviour
     mean_result = np.mean(d)
     print("No active storage result (mean)", mean_result)
 
-    active = Active(testfile, "data", utils.get_storage_type())
+    active = Active(testfile, "data", utils.get_storage_type(), valid_min=750., valid_max=850.)
     active._version = 2
     active.method = "mean"
     active.components = True
