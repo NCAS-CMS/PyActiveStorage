@@ -58,7 +58,7 @@ def test_partially_missing_data(tmp_path):
                                  numpy_mean, mean_result)
     np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
 
-# @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
+
 def test_missing(tmp_path):
     testfile = str(tmp_path / 'test_missing.nc')
     r = dd.make_missing_ncdata(testfile)
@@ -98,11 +98,16 @@ def test_missing(tmp_path):
 
 
 def test_fillvalue(tmp_path):
+    """
+    fill_value set to -999 from dummy_data.py
+    note: no _FillValue attr set here, just fill_value!
+    """
     testfile = str(tmp_path / 'test_fillvalue.nc')
     r = dd.make_fillvalue_ncdata(testfile)
 
     # retrieve the actual numpy-ed result
     actual_data = Dataset(testfile)["data"][:]
+    actual_data = np.ma.masked_where(actual_data == -999., actual_data)
     numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
     print("Numpy masked result (mean)", numpy_mean)
 
@@ -113,8 +118,10 @@ def test_fillvalue(tmp_path):
     active = Active(testfile, "data", utils.get_storage_type())
     active._version = 0
     d = active[0:2, 4:6, 7:9]
+    # d is unmasked, contains fill_values=-999 just like any other data points
+    d = np.ma.masked_where(d == -999., d)
 
-    # NOT numpy masked to check for correct Active behaviour
+    # NOT masked
     mean_result = np.mean(d)
     print("No active storage result (mean)", mean_result)
 
