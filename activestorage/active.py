@@ -114,6 +114,9 @@ class Active:
                 self._filters = None
             self._missing = getattr(ds_var, 'missing_value', None)
             self._fillvalue = getattr(ds_var, '_FillValue', None)
+            # could be fill_value set as netCDF4 attr
+            if self._fillvalue is None:
+                self._fillvalue = getattr(ds_var, 'fill_value', None)
             valid_min = getattr(ds_var, 'valid_min', None)
             valid_max = getattr(ds_var, 'valid_max', None)
             valid_range = getattr(ds_var, 'valid_range', None)
