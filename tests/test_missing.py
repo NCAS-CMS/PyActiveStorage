@@ -27,7 +27,9 @@ def test_partially_missing_data(tmp_path):
     r = dd.make_partially_missing_ncdata(testfile)
 
     # retrieve the actual numpy-ed result
-    actual_data = Dataset(testfile)["data"][:]
+    ds = Dataset(testfile)
+    actual_data = ds["data"][:]
+    ds.close()
     numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
     print("Numpy masked result (mean)", numpy_mean)
 
@@ -65,7 +67,9 @@ def test_missing(tmp_path):
     r = dd.make_missing_ncdata(testfile)
 
     # retrieve the actual numpy-ed result
-    actual_data = Dataset(testfile)["data"][:]
+    ds = Dataset(testfile)
+    actual_data = ds["data"][:]
+    ds.close()
     numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
     print("Numpy masked result (mean)", numpy_mean)
 
@@ -108,7 +112,9 @@ def test_fillvalue(tmp_path):
     r = dd.make_fillvalue_ncdata(testfile)
 
     # retrieve the actual numpy-ed result
-    actual_data = Dataset(testfile)["data"][:]
+    ds = Dataset(testfile)
+    actual_data = ds["data"][:]
+    ds.close()
     actual_data = np.ma.masked_where(actual_data == -999., actual_data)
     numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
     print("Numpy masked result (mean)", numpy_mean)
@@ -137,11 +143,14 @@ def test_fillvalue(tmp_path):
 
     if not USE_S3:
         np.testing.assert_array_equal(numpy_mean, active_result)
+        np.testing.assert_array_equal(mean_result, active_result)
     else:
         np.testing.assert_raises(AssertionError,
                                  np.testing.assert_array_equal,
                                  numpy_mean, active_result)
-    np.testing.assert_array_equal(mean_result, active_result)
+        np.testing.assert_raises(AssertionError,
+                                 np.testing.assert_array_equal,
+                                 mean_result, active_result)
 
 
 def test_validmin(tmp_path):
@@ -149,7 +158,9 @@ def test_validmin(tmp_path):
     r = dd.make_validmin_ncdata(testfile)
 
     # retrieve the actual numpy-ed result
-    actual_data = Dataset(testfile)["data"][:]
+    ds = Dataset(testfile)
+    actual_data = ds["data"][:]
+    ds.close()
     numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
     print("Numpy masked result (mean)", numpy_mean)
 
@@ -173,12 +184,7 @@ def test_validmin(tmp_path):
     active_result = result2["sum"] / result2["n"]
     print("Active storage result (mean)", active_result)
 
-    if not USE_S3:
-        np.testing.assert_array_equal(numpy_mean, active_result)
-    else:
-        np.testing.assert_raises(AssertionError,
-                                 np.testing.assert_array_equal,
-                                 numpy_mean, active_result)
+    np.testing.assert_array_equal(numpy_mean, active_result)
     np.testing.assert_array_equal(mean_result, active_result)
 
 
@@ -187,7 +193,9 @@ def test_validmax(tmp_path):
     r = dd.make_validmax_ncdata(testfile)
 
     # retrieve the actual numpy-ed result
-    actual_data = Dataset(testfile)["data"][:]
+    ds = Dataset(testfile)
+    actual_data = ds["data"][:]
+    ds.close()
     numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
     print("Numpy masked result (mean)", numpy_mean)
 
@@ -211,12 +219,7 @@ def test_validmax(tmp_path):
     active_result = result2["sum"] / result2["n"]
     print("Active storage result (mean)", active_result)
 
-    if not USE_S3:
-        np.testing.assert_array_equal(numpy_mean, active_result)
-    else:
-        np.testing.assert_raises(AssertionError,
-                                 np.testing.assert_array_equal,
-                                 numpy_mean, active_result)
+    np.testing.assert_array_equal(numpy_mean, active_result)
     np.testing.assert_array_equal(mean_result, active_result)
 
 
@@ -225,7 +228,9 @@ def test_validrange(tmp_path):
     r = dd.make_validrange_ncdata(testfile)
 
     # retrieve the actual numpy-ed result
-    actual_data = Dataset(testfile)["data"][:]
+    ds = Dataset(testfile)
+    actual_data = ds["data"][:]
+    ds.close()
     numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
     print("Numpy masked result (mean)", numpy_mean)
 
@@ -249,10 +254,5 @@ def test_validrange(tmp_path):
     active_result = result2["sum"] / result2["n"]
     print("Active storage result (mean)", active_result)
 
-    if not USE_S3:
-        np.testing.assert_array_equal(numpy_mean, active_result)
-    else:
-        np.testing.assert_raises(AssertionError,
-                                 np.testing.assert_array_equal,
-                                 numpy_mean, active_result)
+    np.testing.assert_array_equal(numpy_mean, active_result)
     np.testing.assert_array_equal(mean_result, active_result)
