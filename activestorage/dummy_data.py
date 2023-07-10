@@ -49,7 +49,7 @@ def make_validmin_ncdata(filename='test_validmin.nc', chunksize=(3,3,1), n=10):
     Makes a test dataset based on the default vanilla dataset, but which includes
     missing values below min.
     """
-    return make_ncdata(filename, chunksize, n, compression=None, valid_min=-1.)
+    return make_ncdata(filename, chunksize, n, compression=None, valid_min=200.)
 
 def make_validmax_ncdata(filename='test_validmax.nc', chunksize=(3, 3, 1), n=10):
     """ 
