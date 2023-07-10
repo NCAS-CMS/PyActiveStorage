@@ -160,6 +160,7 @@ def test_validmin(tmp_path):
     # retrieve the actual numpy-ed result
     ds = Dataset(testfile)
     actual_data = ds["data"][:]
+    print(actual_data)
     ds.close()
     numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
     print("Numpy masked result (mean)", numpy_mean)
@@ -186,6 +187,7 @@ def test_validmin(tmp_path):
 
     np.testing.assert_array_equal(numpy_mean, active_result)
     np.testing.assert_array_equal(mean_result, active_result)
+    print(x)
 
 
 def test_validmax(tmp_path):
