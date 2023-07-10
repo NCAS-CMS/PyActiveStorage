@@ -6,6 +6,8 @@ import shutil
 import tempfile
 import unittest
 
+from netCDF4 import Dataset
+
 from activestorage.active import Active
 from activestorage.config import *
 from activestorage import dummy_data as dd
@@ -13,64 +15,231 @@ from activestorage import dummy_data as dd
 import utils
 
 
-def _doit(testfile):
-    """ 
-    Compare and contrast vanilla mean with actual means
-    """
+"""
+There is a high level of duplication in this test module:
+this is to avert any issues of I/O toestepping from h5netcdf
+when running with USE_S3=True; this will probably have to change
+when we start using netCDF4python with S3-enabled
+"""
+
+def test_partially_missing_data(tmp_path):
+    testfile = str(tmp_path / 'test_partially_missing_data.nc')
+    r = dd.make_partially_missing_ncdata(testfile)
+
+    # retrieve the actual numpy-ed result
+    actual_data = Dataset(testfile)["data"][:]
+    numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
+    print("Numpy masked result (mean)", numpy_mean)
+
+    # write file to storage
+    testfile = utils.write_to_storage(testfile)
+
+    # run the two Active instances: transfer data and do active storage
     active = Active(testfile, "data", utils.get_storage_type())
     active._version = 0
     d = active[0:2, 4:6, 7:9]
-    mean_result = np.ma.mean(d)
-    print("Bogstandard numpy mean", mean_result)
+
+    # NOT numpy masked to check for correct Active behaviour
+    mean_result = np.mean(d)
+    print("No active storage result (mean)", mean_result)
 
     active = Active(testfile, "data", utils.get_storage_type())
     active._version = 2
     active.method = "mean"
     active.components = True
     result2 = active[0:2, 4:6, 7:9]
-    print("Active result mean", result2["sum"]/result2["n"])
+    print("Active storage result (mean)", result2["sum"]/result2["n"])
+
+    if not USE_S3:
+        np.testing.assert_array_equal(numpy_mean, mean_result)
+    else:
+        np.testing.assert_raises(AssertionError,
+                                 np.testing.assert_array_equal,
+                                 numpy_mean, mean_result)
     np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
-    print(x)
-
-
-# @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
-def test_partially_missing_data(tmp_path):
-    testfile = str(tmp_path / 'test_partially_missing_data.nc')
-    r = dd.make_partially_missing_ncdata(testfile)
-    testfile = utils.write_to_storage(testfile)
-    _doit(testfile)
 
 # @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
 def test_missing(tmp_path):
     testfile = str(tmp_path / 'test_missing.nc')
     r = dd.make_missing_ncdata(testfile)
-    testfile = utils.write_to_storage(testfile)
-    _doit(testfile)
 
-# @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
+    # retrieve the actual numpy-ed result
+    actual_data = Dataset(testfile)["data"][:]
+    numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
+    print("Numpy masked result (mean)", numpy_mean)
+
+    # write file to storage
+    testfile = utils.write_to_storage(testfile)
+
+    # run the two Active instances: transfer data and do active storage
+    active = Active(testfile, "data", utils.get_storage_type())
+    active._version = 0
+    d = active[0:2, 4:6, 7:9]
+
+    # NOT numpy masked to check for correct Active behaviour
+    mean_result = np.mean(d)
+    print("No active storage result (mean)", mean_result)
+
+    active = Active(testfile, "data", utils.get_storage_type())
+    active._version = 2
+    active.method = "mean"
+    active.components = True
+    result2 = active[0:2, 4:6, 7:9]
+    print("Active storage result (mean)", result2["sum"]/result2["n"])
+
+    if not USE_S3:
+        np.testing.assert_array_equal(numpy_mean, mean_result)
+    else:
+        np.testing.assert_raises(AssertionError,
+                                 np.testing.assert_array_equal,
+                                 numpy_mean, mean_result)
+    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+
+
+
 def test_fillvalue(tmp_path):
     testfile = str(tmp_path / 'test_fillvalue.nc')
     r = dd.make_fillvalue_ncdata(testfile)
-    testfile = utils.write_to_storage(testfile)
-    _doit(testfile)
 
-# @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
+    # retrieve the actual numpy-ed result
+    actual_data = Dataset(testfile)["data"][:]
+    numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
+    print("Numpy masked result (mean)", numpy_mean)
+
+    # write file to storage
+    testfile = utils.write_to_storage(testfile)
+
+    # run the two Active instances: transfer data and do active storage
+    active = Active(testfile, "data", utils.get_storage_type())
+    active._version = 0
+    d = active[0:2, 4:6, 7:9]
+
+    # NOT numpy masked to check for correct Active behaviour
+    mean_result = np.mean(d)
+    print("No active storage result (mean)", mean_result)
+
+    active = Active(testfile, "data", utils.get_storage_type())
+    active._version = 2
+    active.method = "mean"
+    active.components = True
+    result2 = active[0:2, 4:6, 7:9]
+    print("Active storage result (mean)", result2["sum"]/result2["n"])
+
+    if not USE_S3:
+        np.testing.assert_array_equal(numpy_mean, mean_result)
+    else:
+        np.testing.assert_raises(AssertionError,
+                                 np.testing.assert_array_equal,
+                                 numpy_mean, mean_result)
+    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+
+
 def test_validmin(tmp_path):
     testfile = str(tmp_path / 'test_validmin.nc')
     r = dd.make_validmin_ncdata(testfile)
-    testfile = utils.write_to_storage(testfile)
-    _doit(testfile)
 
-# @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
+    # retrieve the actual numpy-ed result
+    actual_data = Dataset(testfile)["data"][:]
+    numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
+    print("Numpy masked result (mean)", numpy_mean)
+
+    # write file to storage
+    testfile = utils.write_to_storage(testfile)
+
+    # run the two Active instances: transfer data and do active storage
+    active = Active(testfile, "data", utils.get_storage_type())
+    active._version = 0
+    d = active[0:2, 4:6, 7:9]
+
+    # NOT numpy masked to check for correct Active behaviour
+    mean_result = np.mean(d)
+    print("No active storage result (mean)", mean_result)
+
+    active = Active(testfile, "data", utils.get_storage_type())
+    active._version = 2
+    active.method = "mean"
+    active.components = True
+    result2 = active[0:2, 4:6, 7:9]
+    print("Active storage result (mean)", result2["sum"]/result2["n"])
+
+    if not USE_S3:
+        np.testing.assert_array_equal(numpy_mean, mean_result)
+    else:
+        np.testing.assert_raises(AssertionError,
+                                 np.testing.assert_array_equal,
+                                 numpy_mean, mean_result)
+    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+
+
 def test_validmax(tmp_path):
     testfile = str(tmp_path / 'test_validmax.nc')
     r = dd.make_validmax_ncdata(testfile)
-    testfile = utils.write_to_storage(testfile)
-    _doit(testfile)
 
-# @pytest.mark.skipif(USE_S3, reason="Missing data not supported in S3 yet")
+    # retrieve the actual numpy-ed result
+    actual_data = Dataset(testfile)["data"][:]
+    numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
+    print("Numpy masked result (mean)", numpy_mean)
+
+    # write file to storage
+    testfile = utils.write_to_storage(testfile)
+
+    # run the two Active instances: transfer data and do active storage
+    active = Active(testfile, "data", utils.get_storage_type())
+    active._version = 0
+    d = active[0:2, 4:6, 7:9]
+
+    # NOT numpy masked to check for correct Active behaviour
+    mean_result = np.mean(d)
+    print("No active storage result (mean)", mean_result)
+
+    active = Active(testfile, "data", utils.get_storage_type())
+    active._version = 2
+    active.method = "mean"
+    active.components = True
+    result2 = active[0:2, 4:6, 7:9]
+    print("Active storage result (mean)", result2["sum"]/result2["n"])
+
+    if not USE_S3:
+        np.testing.assert_array_equal(numpy_mean, mean_result)
+    else:
+        np.testing.assert_raises(AssertionError,
+                                 np.testing.assert_array_equal,
+                                 numpy_mean, mean_result)
+    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+
+
 def test_validrange(tmp_path):
     testfile = str(tmp_path / 'test_validrange.nc')
     r = dd.make_validrange_ncdata(testfile)
+
+    # retrieve the actual numpy-ed result
+    actual_data = Dataset(testfile)["data"][:]
+    numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
+    print("Numpy masked result (mean)", numpy_mean)
+
+    # write file to storage
     testfile = utils.write_to_storage(testfile)
-    _doit(testfile)
+
+    # run the two Active instances: transfer data and do active storage
+    active = Active(testfile, "data", utils.get_storage_type())
+    active._version = 0
+    d = active[0:2, 4:6, 7:9]
+
+    # NOT numpy masked to check for correct Active behaviour
+    mean_result = np.mean(d)
+    print("No active storage result (mean)", mean_result)
+
+    active = Active(testfile, "data", utils.get_storage_type())
+    active._version = 2
+    active.method = "mean"
+    active.components = True
+    result2 = active[0:2, 4:6, 7:9]
+    print("Active storage result (mean)", result2["sum"]/result2["n"])
+
+    if not USE_S3:
+        np.testing.assert_array_equal(numpy_mean, mean_result)
+    else:
+        np.testing.assert_raises(AssertionError,
+                                 np.testing.assert_array_equal,
+                                 numpy_mean, mean_result)
+    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
