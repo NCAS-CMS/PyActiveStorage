@@ -154,14 +154,24 @@ def test_fillvalue(tmp_path):
 
 
 def test_validmin(tmp_path):
+    """
+    Validmin, validmax, and validrange cases apply the upper, lower,
+    or interval limits after chunk selection, and the application is
+    per chunk data, so it is important to have a test
+    that knows what is the min, max, and interval for the selected data,
+    otherwise the test is futile!
+
+    In this test data is constructed with a validmin of 200., but the selected
+    chunks all have data >=750., so we apply a validmin == 751.
+    """
     testfile = str(tmp_path / 'test_validmin.nc')
     r = dd.make_validmin_ncdata(testfile)
 
     # retrieve the actual numpy-ed result
     ds = Dataset(testfile)
     actual_data = ds["data"][:]
-    print(actual_data)
     ds.close()
+    actual_data = np.ma.masked_where(actual_data < 751., actual_data)
     numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
     print("Numpy masked result (mean)", numpy_mean)
 
@@ -169,15 +179,17 @@ def test_validmin(tmp_path):
     testfile = utils.write_to_storage(testfile)
 
     # run the two Active instances: transfer data and do active storage
-    active = Active(testfile, "data", utils.get_storage_type())
+    active = Active(testfile, "data", utils.get_storage_type(), valid_min=751.)
     active._version = 0
     d = active[0:2, 4:6, 7:9]
+    # d is masked but with valid vals also <751.
+    d = np.ma.masked_where(d < 751., d)
 
     # NOT numpy masked to check for correct Active behaviour
     mean_result = np.mean(d)
     print("No active storage result (mean)", mean_result)
 
-    active = Active(testfile, "data", utils.get_storage_type())
+    active = Active(testfile, "data", utils.get_storage_type(), valid_min=751.)
     active._version = 2
     active.method = "mean"
     active.components = True
@@ -185,12 +197,29 @@ def test_validmin(tmp_path):
     active_result = result2["sum"] / result2["n"]
     print("Active storage result (mean)", active_result)
 
-    np.testing.assert_array_equal(numpy_mean, active_result)
-    np.testing.assert_array_equal(mean_result, active_result)
-    print(x)
+    if not USE_S3:
+        np.testing.assert_array_equal(numpy_mean, active_result)
+        np.testing.assert_array_equal(mean_result, active_result)
+    else:
+        np.testing.assert_raises(AssertionError,
+                                 np.testing.assert_array_equal,
+                                 numpy_mean, active_result)
+        np.testing.assert_raises(AssertionError,
+                                 np.testing.assert_array_equal,
+                                 mean_result, active_result)
 
 
 def test_validmax(tmp_path):
+    """
+    Validmin, validmax, and validrange cases apply the upper, lower,
+    or interval limits after chunk selection, and the application is
+    per chunk data, so it is important to have a test
+    that knows what is the min, max, and interval for the selected data,
+    otherwise the test is futile!
+
+    In this test data is constructed with a validmin of 200., but the selected
+    chunks all have data >=750., so we apply a validmax == 850.
+    """
     testfile = str(tmp_path / 'test_validmax.nc')
     r = dd.make_validmax_ncdata(testfile)
 
@@ -198,6 +227,7 @@ def test_validmax(tmp_path):
     ds = Dataset(testfile)
     actual_data = ds["data"][:]
     ds.close()
+    actual_data = np.ma.masked_where(actual_data > 850., actual_data)
     numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
     print("Numpy masked result (mean)", numpy_mean)
 
@@ -205,15 +235,17 @@ def test_validmax(tmp_path):
     testfile = utils.write_to_storage(testfile)
 
     # run the two Active instances: transfer data and do active storage
-    active = Active(testfile, "data", utils.get_storage_type())
+    active = Active(testfile, "data", utils.get_storage_type(), valid_max=850.)
     active._version = 0
     d = active[0:2, 4:6, 7:9]
+    # d is masked but with valid vals also >800.
+    d = np.ma.masked_where(d > 850., d)
 
     # NOT numpy masked to check for correct Active behaviour
     mean_result = np.mean(d)
     print("No active storage result (mean)", mean_result)
 
-    active = Active(testfile, "data", utils.get_storage_type())
+    active = Active(testfile, "data", utils.get_storage_type(), valid_max=850.)
     active._version = 2
     active.method = "mean"
     active.components = True
@@ -221,11 +253,29 @@ def test_validmax(tmp_path):
     active_result = result2["sum"] / result2["n"]
     print("Active storage result (mean)", active_result)
 
-    np.testing.assert_array_equal(numpy_mean, active_result)
-    np.testing.assert_array_equal(mean_result, active_result)
+    if not USE_S3:
+        np.testing.assert_array_equal(numpy_mean, active_result)
+        np.testing.assert_array_equal(mean_result, active_result)
+    else:
+        np.testing.assert_raises(AssertionError,
+                                 np.testing.assert_array_equal,
+                                 numpy_mean, active_result)
+        np.testing.assert_raises(AssertionError,
+                                 np.testing.assert_array_equal,
+                                 mean_result, active_result)
 
 
 def test_validrange(tmp_path):
+    """
+    Validmin, validmax, and validrange cases apply the upper, lower,
+    or interval limits after chunk selection, and the application is
+    per chunk data, so it is important to have a test
+    that knows what is the min, max, and interval for the selected data,
+    otherwise the test is futile!
+
+    In this test data is constructed with a validmin of 200., but the selected
+    chunks all have data >=750. and <=851., so we apply a validrange == [750, 850.]
+    """
     testfile = str(tmp_path / 'test_validrange.nc')
     r = dd.make_validrange_ncdata(testfile)
 
@@ -233,6 +283,7 @@ def test_validrange(tmp_path):
     ds = Dataset(testfile)
     actual_data = ds["data"][:]
     ds.close()
+    actual_data = np.ma.masked_where(750 < actual_data.all() < 850., actual_data)
     numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
     print("Numpy masked result (mean)", numpy_mean)
 
@@ -243,6 +294,7 @@ def test_validrange(tmp_path):
     active = Active(testfile, "data", utils.get_storage_type())
     active._version = 0
     d = active[0:2, 4:6, 7:9]
+    d = np.ma.masked_where(750 < d.all() < 850., d)
 
     # NOT numpy masked to check for correct Active behaviour
     mean_result = np.mean(d)
@@ -256,5 +308,13 @@ def test_validrange(tmp_path):
     active_result = result2["sum"] / result2["n"]
     print("Active storage result (mean)", active_result)
 
-    np.testing.assert_array_equal(numpy_mean, active_result)
-    np.testing.assert_array_equal(mean_result, active_result)
+    if not USE_S3:
+        np.testing.assert_array_equal(numpy_mean, active_result)
+        np.testing.assert_array_equal(mean_result, active_result)
+    else:
+        np.testing.assert_raises(AssertionError,
+                                 np.testing.assert_array_equal,
+                                 numpy_mean, active_result)
+        np.testing.assert_raises(AssertionError,
+                                 np.testing.assert_array_equal,
+                                 mean_result, active_result)
