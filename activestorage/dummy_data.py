@@ -177,11 +177,11 @@ def make_ncdata(filename, chunksize, n, compression=None,
         for i,j,k in vrindices[2:]:
             dvar[i,j,k] = valid_range[1]*10
 
-    ds.close()
-    
-    ds = Dataset(filename,'r')
     var = ds.variables['data']
     print(f'\nCreated file "{filename}" with a variable called "data" with shape {var.shape} and chunking, compression {var.chunking()},{compression}\n')
+
+    # all important close at the end!!
+    ds.close()
 
     return mindices, findices, vrindices, vm1indices, vm2indices 
 
