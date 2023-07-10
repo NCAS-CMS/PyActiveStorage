@@ -48,15 +48,16 @@ def test_partially_missing_data(tmp_path):
     active.method = "mean"
     active.components = True
     result2 = active[0:2, 4:6, 7:9]
-    print("Active storage result (mean)", result2["sum"]/result2["n"])
+    active_result = result2["sum"] / result2["n"]
+    print("Active storage result (mean)", active_result)
 
     if not USE_S3:
-        np.testing.assert_array_equal(numpy_mean, mean_result)
+        np.testing.assert_array_equal(numpy_mean, active_result)
     else:
         np.testing.assert_raises(AssertionError,
                                  np.testing.assert_array_equal,
-                                 numpy_mean, mean_result)
-    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+                                 numpy_mean, active_result)
+    np.testing.assert_array_equal(mean_result, active_result)
 
 
 def test_missing(tmp_path):
@@ -85,15 +86,16 @@ def test_missing(tmp_path):
     active.method = "mean"
     active.components = True
     result2 = active[0:2, 4:6, 7:9]
-    print("Active storage result (mean)", result2["sum"]/result2["n"])
+    active_result = result2["sum"] / result2["n"]
+    print("Active storage result (mean)", active_result)
 
     if not USE_S3:
-        np.testing.assert_array_equal(numpy_mean, mean_result)
+        np.testing.assert_array_equal(numpy_mean, active_result)
     else:
         np.testing.assert_raises(AssertionError,
                                  np.testing.assert_array_equal,
-                                 numpy_mean, mean_result)
-    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+                                 numpy_mean, active_result)
+    np.testing.assert_array_equal(mean_result, active_result)
 
 
 
@@ -130,15 +132,16 @@ def test_fillvalue(tmp_path):
     active.method = "mean"
     active.components = True
     result2 = active[0:2, 4:6, 7:9]
-    print("Active storage result (mean)", result2["sum"]/result2["n"])
+    active_result = result2["sum"] / result2["n"]
+    print("Active storage result (mean)", active_result)
 
     if not USE_S3:
-        np.testing.assert_array_equal(numpy_mean, mean_result)
+        np.testing.assert_array_equal(numpy_mean, active_result)
     else:
         np.testing.assert_raises(AssertionError,
                                  np.testing.assert_array_equal,
-                                 numpy_mean, mean_result)
-    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+                                 numpy_mean, active_result)
+    np.testing.assert_array_equal(mean_result, active_result)
 
 
 def test_validmin(tmp_path):
@@ -167,15 +170,16 @@ def test_validmin(tmp_path):
     active.method = "mean"
     active.components = True
     result2 = active[0:2, 4:6, 7:9]
-    print("Active storage result (mean)", result2["sum"]/result2["n"])
+    active_result = result2["sum"] / result2["n"]
+    print("Active storage result (mean)", active_result)
 
     if not USE_S3:
-        np.testing.assert_array_equal(numpy_mean, mean_result)
+        np.testing.assert_array_equal(numpy_mean, active_result)
     else:
         np.testing.assert_raises(AssertionError,
                                  np.testing.assert_array_equal,
-                                 numpy_mean, mean_result)
-    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+                                 numpy_mean, active_result)
+    np.testing.assert_array_equal(mean_result, active_result)
 
 
 def test_validmax(tmp_path):
@@ -204,15 +208,16 @@ def test_validmax(tmp_path):
     active.method = "mean"
     active.components = True
     result2 = active[0:2, 4:6, 7:9]
-    print("Active storage result (mean)", result2["sum"]/result2["n"])
+    active_result = result2["sum"] / result2["n"]
+    print("Active storage result (mean)", active_result)
 
     if not USE_S3:
-        np.testing.assert_array_equal(numpy_mean, mean_result)
+        np.testing.assert_array_equal(numpy_mean, active_result)
     else:
         np.testing.assert_raises(AssertionError,
                                  np.testing.assert_array_equal,
-                                 numpy_mean, mean_result)
-    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+                                 numpy_mean, active_result)
+    np.testing.assert_array_equal(mean_result, active_result)
 
 
 def test_validrange(tmp_path):
@@ -241,12 +246,13 @@ def test_validrange(tmp_path):
     active.method = "mean"
     active.components = True
     result2 = active[0:2, 4:6, 7:9]
-    print("Active storage result (mean)", result2["sum"]/result2["n"])
+    active_result = result2["sum"] / result2["n"]
+    print("Active storage result (mean)", active_result)
 
     if not USE_S3:
-        np.testing.assert_array_equal(numpy_mean, mean_result)
+        np.testing.assert_array_equal(numpy_mean, active_result)
     else:
         np.testing.assert_raises(AssertionError,
                                  np.testing.assert_array_equal,
-                                 numpy_mean, mean_result)
-    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+                                 numpy_mean, active_result)
+    np.testing.assert_array_equal(mean_result, active_result)
