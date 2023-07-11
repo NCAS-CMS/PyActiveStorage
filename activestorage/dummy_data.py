@@ -129,7 +129,7 @@ def make_ncdata(filename, chunksize, n, compression=None,
         # we use the deprecated missing_value option
         if partially_missing_data:
             dvar[::2,:,:] = missing
-            dvar.missing_value = missing
+            setattr(dvar, "missing_value", missing)
         else:
             mindices = [(1,1,1),(n/2,1,1),(1,nm1,1),(nm1,1,n/2)]
             for ind in mindices:
