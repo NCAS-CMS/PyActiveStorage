@@ -32,6 +32,20 @@ def active_zero(testfile):
 
     return d
 
+
+def active_two(testfile, valid_min=None, valid_max=None):
+    """Run Active with active storage (version=2)."""
+    active = Active(testfile, "data", utils.get_storage_type(),
+                    valid_min=valid_min, valid_max=valid_max)
+    active._version = 2
+    active.method = "mean"
+    active.components = True
+    result2 = active[0:2, 4:6, 7:9]
+    active_mean = result2["sum"] / result2["n"]
+
+    return active_mean
+
+
 def test_partially_missing_data(tmp_path):
     testfile = str(tmp_path / 'test_partially_missing_data.nc')
     r = dd.make_partially_missing_ncdata(testfile)
@@ -48,12 +62,7 @@ def test_partially_missing_data(tmp_path):
     no_active_mean = np.mean(active_zero(testfile))
     print("No active storage result (mean)", no_active_mean)
 
-    active = Active(testfile, "data", utils.get_storage_type())
-    active._version = 2
-    active.method = "mean"
-    active.components = True
-    result2 = active[0:2, 4:6, 7:9]
-    active_mean = result2["sum"] / result2["n"]
+    active_mean = active_two(testfile)
     print("Active storage result (mean)", active_mean)
 
     if not USE_S3:
@@ -81,12 +90,7 @@ def test_missing(tmp_path):
     no_active_mean = np.mean(active_zero(testfile))
     print("No active storage result (mean)", no_active_mean)
 
-    active = Active(testfile, "data", utils.get_storage_type())
-    active._version = 2
-    active.method = "mean"
-    active.components = True
-    result2 = active[0:2, 4:6, 7:9]
-    active_mean = result2["sum"] / result2["n"]
+    active_mean = active_two(testfile)
     print("Active storage result (mean)", active_mean)
 
     if not USE_S3:
@@ -124,12 +128,7 @@ def test_fillvalue(tmp_path):
     no_active_mean = np.mean(d)
     print("No active storage result (mean)", no_active_mean)
 
-    active = Active(testfile, "data", utils.get_storage_type())
-    active._version = 2
-    active.method = "mean"
-    active.components = True
-    result2 = active[0:2, 4:6, 7:9]
-    active_mean = result2["sum"] / result2["n"]
+    active_mean = active_two(testfile)
     print("Active storage result (mean)", active_mean)
 
     if not USE_S3:
@@ -175,12 +174,7 @@ def test_validmin(tmp_path):
     no_active_mean = np.mean(d)
     print("No active storage result (mean)", no_active_mean)
 
-    active = Active(testfile, "data", utils.get_storage_type(), valid_min=751.)
-    active._version = 2
-    active.method = "mean"
-    active.components = True
-    result2 = active[0:2, 4:6, 7:9]
-    active_mean = result2["sum"] / result2["n"]
+    active_mean = active_two(testfile, valid_min=751.)
     print("Active storage result (mean)", active_mean)
 
     if not USE_S3:
@@ -226,12 +220,7 @@ def test_validmax(tmp_path):
     no_active_mean = np.mean(d)
     print("No active storage result (mean)", no_active_mean)
 
-    active = Active(testfile, "data", utils.get_storage_type(), valid_max=850.)
-    active._version = 2
-    active.method = "mean"
-    active.components = True
-    result2 = active[0:2, 4:6, 7:9]
-    active_mean = result2["sum"] / result2["n"]
+    active_mean = active_two(testfile, valid_min=None, valid_max=850.)
     print("Active storage result (mean)", active_mean)
 
     if not USE_S3:
@@ -264,7 +253,7 @@ def test_validrange(tmp_path):
     actual_data = load_dataset(testfile)
     actual_data = np.ma.masked_where(750. > actual_data, actual_data)
     actual_data = np.ma.masked_where(850. < actual_data, actual_data)
-    unmasked_numpy_mean = np.mean(actual_data[0:2, 4:6, 7:9])
+    unmasked_numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
     print("Numpy masked result (mean)", unmasked_numpy_mean)
 
     # write file to storage
@@ -273,17 +262,13 @@ def test_validrange(tmp_path):
     d = active_zero(testfile)
     d = np.ma.masked_where(750. > d, d)
     d = np.ma.masked_where(850. < d, d)
+    print(d)
 
     # NOT numpy masked to check for correct Active behaviour
     no_active_mean = np.mean(d)
     print("No active storage result (mean)", no_active_mean)
 
-    active = Active(testfile, "data", utils.get_storage_type(), valid_min=750., valid_max=850.)
-    active._version = 2
-    active.method = "mean"
-    active.components = True
-    result2 = active[0:2, 4:6, 7:9]
-    active_mean = result2["sum"] / result2["n"]
+    active_mean = active_two(testfile, valid_min=750., valid_max=850.)
     print("Active storage result (mean)", active_mean)
 
     if not USE_S3:
