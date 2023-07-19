@@ -128,10 +128,10 @@ class Active:
                         f"{valid_min}, {valid_max}, {valid_range}"
                     )                
                 valid_range = (valid_min, valid_max)
-            else:
+            elif valid_range is None:
                 valid_range = (None, None)
             self._valid_min, self._valid_max = valid_range
-            
+
             ds.close()
         else:
             self._missing = missing_value
