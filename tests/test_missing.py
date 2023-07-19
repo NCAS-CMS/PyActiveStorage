@@ -30,7 +30,7 @@ def active_zero(testfile):
     active._version = 0
     d = active[0:2, 4:6, 7:9]
 
-    return d
+    return np.mean(d)
 
 
 def active_two(testfile):
@@ -59,8 +59,8 @@ def test_partially_missing_data(tmp_path):
     # write file to storage
     testfile = utils.write_to_storage(testfile)
 
-    # NOT numpy masked to check for correct Active behaviour
-    no_active_mean = np.mean(active_zero(testfile))
+    # numpy masked to check for correct Active behaviour
+    no_active_mean = active_zero(testfile)
     print("No active storage result (mean)", no_active_mean)
 
     active_mean = active_two(testfile)
@@ -87,8 +87,8 @@ def test_missing(tmp_path):
     # write file to storage
     testfile = utils.write_to_storage(testfile)
 
-    # NOT numpy masked to check for correct Active behaviour
-    no_active_mean = np.mean(active_zero(testfile))
+    # numpy masked to check for correct Active behaviour
+    no_active_mean = active_zero(testfile)
     print("No active storage result (mean)", no_active_mean)
 
     active_mean = active_two(testfile)
@@ -120,10 +120,8 @@ def test_fillvalue(tmp_path):
     # write file to storage
     testfile = utils.write_to_storage(testfile)
 
-    d = active_zero(testfile)
-
-    # NOT masked
-    no_active_mean = np.mean(d)
+    # numpy masked to check for correct Active behaviour
+    no_active_mean = active_zero(testfile)
     print("No active storage result (mean)", no_active_mean)
 
     active_mean = active_two(testfile)
@@ -160,10 +158,8 @@ def test_validmin(tmp_path):
     # write file to storage
     testfile = utils.write_to_storage(testfile)
 
-    d = active_zero(testfile)
-
-    # NOT numpy masked to check for correct Active behaviour
-    no_active_mean = np.mean(d)
+    # numpy masked to check for correct Active behaviour
+    no_active_mean = active_zero(testfile)
     print("No active storage result (mean)", no_active_mean)
 
     active_mean = active_two(testfile)
@@ -202,10 +198,9 @@ def test_validmax(tmp_path):
     # write file to storage
     testfile = utils.write_to_storage(testfile)
 
-    d = active_zero(testfile)
+    # numpy masked to check for correct Active behaviour
+    no_active_mean = active_zero(testfile)
 
-    # NOT numpy masked to check for correct Active behaviour
-    no_active_mean = np.mean(d)
     print("No active storage result (mean)", no_active_mean)
 
     active_mean = active_two(testfile)
@@ -241,10 +236,8 @@ def test_validrange(tmp_path):
     # write file to storage
     testfile = utils.write_to_storage(testfile)
 
-    d = active_zero(testfile)
-
-    # NOT numpy masked to check for correct Active behaviour
-    no_active_mean = np.mean(d)
+    # numpy masked to check for correct Active behaviour
+    no_active_mean = active_zero(testfile)
     print("No active storage result (mean)", no_active_mean)
 
     active_mean = active_two(testfile)
