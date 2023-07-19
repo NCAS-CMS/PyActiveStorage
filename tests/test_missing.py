@@ -1,6 +1,7 @@
 import os
 from this import d
 import numpy as np
+import numpy.ma as ma
 import pytest
 import shutil
 import tempfile
@@ -21,6 +22,8 @@ def load_dataset(testfile):
     actual_data = ds["data"][:]
     ds.close()
 
+    assert ma.is_masked(actual_data)
+
     return actual_data
 
 
@@ -29,6 +32,11 @@ def active_zero(testfile):
     active = Active(testfile, "data", utils.get_storage_type())
     active._version = 0
     d = active[0:2, 4:6, 7:9]
+
+    # FIXME: For the S3 backend, h5netcdf is used to read the metadata. It does
+    # not seem to load the missing data attributes (missing_value, _FillValue,
+    # valid_min, valid_max, valid_range, etc).
+    assert ma.is_masked(d) == (not USE_S3)
 
     return np.mean(d)
 
@@ -40,6 +48,7 @@ def active_two(testfile):
     active.method = "mean"
     active.components = True
     result2 = active[0:2, 4:6, 7:9]
+
     active_mean = result2["sum"] / result2["n"]
 
     return active_mean
