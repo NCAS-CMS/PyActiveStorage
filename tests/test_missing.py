@@ -51,8 +51,10 @@ def test_partially_missing_data(tmp_path):
 
     # retrieve the actual numpy-ed result
     actual_data = load_dataset(testfile)
-    unmasked_numpy_mean = np.mean(actual_data[0:2, 4:6, 7:9])
-    print("Numpy masked result (mean)", unmasked_numpy_mean)
+    unmasked_numpy_mean = actual_data[0:2, 4:6, 7:9].data.mean()
+    masked_numpy_mean = actual_data[0:2, 4:6, 7:9].mean()
+    assert unmasked_numpy_mean != masked_numpy_mean
+    print("Numpy masked result (mean)", masked_numpy_mean)
 
     # write file to storage
     testfile = utils.write_to_storage(testfile)
@@ -65,11 +67,9 @@ def test_partially_missing_data(tmp_path):
     print("Active storage result (mean)", active_mean)
 
     if not USE_S3:
-        np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
+        np.testing.assert_array_equal(masked_numpy_mean, active_mean)
     else:
-        np.testing.assert_raises(AssertionError,
-                                 np.testing.assert_array_equal,
-                                 unmasked_numpy_mean, active_mean)
+        np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
     np.testing.assert_array_equal(no_active_mean, active_mean)
 
 
@@ -79,8 +79,10 @@ def test_missing(tmp_path):
 
     # retrieve the actual numpy-ed result
     actual_data = load_dataset(testfile)
-    unmasked_numpy_mean = np.mean(actual_data[0:2, 4:6, 7:9])
-    print("Numpy masked result (mean)", unmasked_numpy_mean)
+    unmasked_numpy_mean = actual_data[0:2, 4:6, 7:9].data.mean()
+    masked_numpy_mean = actual_data[0:2, 4:6, 7:9].mean()
+    assert unmasked_numpy_mean != masked_numpy_mean
+    print("Numpy masked result (mean)", masked_numpy_mean)
 
     # write file to storage
     testfile = utils.write_to_storage(testfile)
@@ -93,11 +95,9 @@ def test_missing(tmp_path):
     print("Active storage result (mean)", active_mean)
 
     if not USE_S3:
-        np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
+        np.testing.assert_array_equal(masked_numpy_mean, active_mean)
     else:
-        np.testing.assert_raises(AssertionError,
-                                 np.testing.assert_array_equal,
-                                 unmasked_numpy_mean, active_mean)
+        np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
     np.testing.assert_array_equal(no_active_mean, active_mean)
 
 
@@ -112,8 +112,10 @@ def test_fillvalue(tmp_path):
 
     # retrieve the actual numpy-ed result
     actual_data = load_dataset(testfile)
-    unmasked_numpy_mean = np.mean(actual_data[0:2, 4:6, 7:9])
-    print("Numpy masked result (mean)", unmasked_numpy_mean)
+    unmasked_numpy_mean = actual_data[0:2, 4:6, 7:9].data.mean()
+    masked_numpy_mean = actual_data[0:2, 4:6, 7:9].mean()
+    assert unmasked_numpy_mean != masked_numpy_mean
+    print("Numpy masked result (mean)", masked_numpy_mean)
 
     # write file to storage
     testfile = utils.write_to_storage(testfile)
@@ -128,11 +130,9 @@ def test_fillvalue(tmp_path):
     print("Active storage result (mean)", active_mean)
 
     if not USE_S3:
-        np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
+        np.testing.assert_array_equal(masked_numpy_mean, active_mean)
     else:
-        np.testing.assert_raises(AssertionError,
-                                 np.testing.assert_array_equal,
-                                 unmasked_numpy_mean, active_mean)
+        np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
     np.testing.assert_array_equal(no_active_mean, active_mean)
 
 
@@ -152,8 +152,10 @@ def test_validmin(tmp_path):
 
     # retrieve the actual numpy-ed result
     actual_data = load_dataset(testfile)
-    unmasked_numpy_mean = np.mean(actual_data[0:2, 4:6, 7:9])
-    print("Numpy masked result (mean)", unmasked_numpy_mean)
+    unmasked_numpy_mean = actual_data[0:2, 4:6, 7:9].data.mean()
+    masked_numpy_mean = actual_data[0:2, 4:6, 7:9].mean()
+    assert unmasked_numpy_mean != masked_numpy_mean
+    print("Numpy masked result (mean)", masked_numpy_mean)
 
     # write file to storage
     testfile = utils.write_to_storage(testfile)
@@ -168,11 +170,9 @@ def test_validmin(tmp_path):
     print("Active storage result (mean)", active_mean)
 
     if not USE_S3:
-        np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
+        np.testing.assert_array_equal(masked_numpy_mean, active_mean)
     else:
-        np.testing.assert_raises(AssertionError,
-                                 np.testing.assert_array_equal,
-                                 unmasked_numpy_mean, active_mean)
+        np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
     np.testing.assert_array_equal(no_active_mean, active_mean)
 
 
@@ -194,6 +194,10 @@ def test_validmax(tmp_path):
     actual_data = load_dataset(testfile)
     unmasked_numpy_mean = np.mean(actual_data[0:2, 4:6, 7:9])
     print("Numpy masked result (mean)", unmasked_numpy_mean)
+    unmasked_numpy_mean = actual_data[0:2, 4:6, 7:9].data.mean()
+    masked_numpy_mean = actual_data[0:2, 4:6, 7:9].mean()
+    assert unmasked_numpy_mean != masked_numpy_mean
+    print("Numpy masked result (mean)", masked_numpy_mean)
 
     # write file to storage
     testfile = utils.write_to_storage(testfile)
@@ -208,12 +212,9 @@ def test_validmax(tmp_path):
     print("Active storage result (mean)", active_mean)
 
     if not USE_S3:
-        np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
+        np.testing.assert_array_equal(masked_numpy_mean, active_mean)
     else:
-        np.testing.assert_raises(AssertionError,
-                                 np.testing.assert_array_equal,
-                                 unmasked_numpy_mean, active_mean)
-    np.testing.assert_array_equal(no_active_mean, active_mean)
+        np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
 
 
 def test_validrange(tmp_path):
@@ -232,8 +233,10 @@ def test_validrange(tmp_path):
 
     # retrieve the actual numpy-ed result
     actual_data = load_dataset(testfile)
-    unmasked_numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
-    print("Numpy masked result (mean)", unmasked_numpy_mean)
+    unmasked_numpy_mean = actual_data[0:2, 4:6, 7:9].data.mean()
+    masked_numpy_mean = actual_data[0:2, 4:6, 7:9].mean()
+    assert unmasked_numpy_mean != masked_numpy_mean
+    print("Numpy masked result (mean)", masked_numpy_mean)
 
     # write file to storage
     testfile = utils.write_to_storage(testfile)
@@ -248,9 +251,6 @@ def test_validrange(tmp_path):
     print("Active storage result (mean)", active_mean)
 
     if not USE_S3:
-        np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
+        np.testing.assert_array_equal(masked_numpy_mean, active_mean)
     else:
-        np.testing.assert_raises(AssertionError,
-                                 np.testing.assert_array_equal,
-                                 unmasked_numpy_mean, active_mean)
-    np.testing.assert_array_equal(no_active_mean, active_mean)
+        np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
