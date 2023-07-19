@@ -138,10 +138,9 @@ def make_ncdata(filename, chunksize, n, compression=None,
 
     if fillvalue:
         # note we use a different set of indices for 
-        findices = [(nm1,nm1,nm1),(n/2,n/2,1),(1,1,n/2),(nm1,nm1,n/2)]
+        findices = [1, n/2, nm1]
         for ind in findices:
-            for tup in ind:
-                dvar[tup] = fillvalue
+            dvar[ind] = fillvalue
         setattr(dvar, "fill_value", fillvalue)
         
     if valid_range and valid_min or valid_range and valid_max:
@@ -150,19 +149,17 @@ def make_ncdata(filename, chunksize, n, compression=None,
     if valid_min:
         if valid_min == 0.0:
             raise ValueError('Dummy data needs a non-zero valid min')
-        vm1indices = [(2,2,2),(n/2,2,2),(2,nm1,2),(nm1,2,nm1/2)]
+        vm1indices = [2, nm1/2, n/2, nm1]
         for ind in vm1indices:
-            for tup in ind:
-                dvar[tup] = valid_min-abs(0.1*valid_min)
+            dvar[ind] = valid_min-abs(0.1*valid_min)
         setattr(dvar, "valid_min", valid_min)
     
     if valid_max:
         if valid_min == 0.0:
             raise ValueError('Dummy data needs a non-zero valid max')
-        vm2indices = [(2,nm1,2),(2,2,nm1),(nm2,nm2,nm1),(nm1,nm2,n/2)]
+        vm2indices = [2, n/2, nm2, nm1]
         for ind in vm2indices:
-            for tup in ind:
-                dvar[tup] = valid_max*10
+            dvar[ind] = valid_max*10
         setattr(dvar, "valid_max", valid_max)
 
     if valid_range:
