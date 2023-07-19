@@ -44,27 +44,27 @@ def make_fillvalue_ncdata(filename='test_fillvalue.nc', chunksize=(3,3,1), n=10)
     ncdat = make_ncdata(filename, chunksize, n, compression=None, fillvalue=-999.)
     return ncdat
 
-def make_validmin_ncdata(filename='test_validmin.nc', chunksize=(3,3,1), n=10):
+def make_validmin_ncdata(filename='test_validmin.nc', chunksize=(3,3,1), n=10, valid_min=200.):
     """ 
     Makes a test dataset based on the default vanilla dataset, but which includes
     missing values below min.
     """
-    return make_ncdata(filename, chunksize, n, compression=None, valid_min=200.)
+    return make_ncdata(filename, chunksize, n, compression=None, valid_min=valid_min)
 
-def make_validmax_ncdata(filename='test_validmax.nc', chunksize=(3, 3, 1), n=10):
+def make_validmax_ncdata(filename='test_validmax.nc', chunksize=(3, 3, 1), n=10, valid_max=1.2 * 10 ** 3):
     """ 
     Makes a test dataset based on the default vanilla dataset, but which includes
     missing values above max
     """
-    return make_ncdata(filename, chunksize, n, compression=None, valid_max=1.2 * n ** 3)
+    return make_ncdata(filename, chunksize, n, compression=None, valid_max=valid_max)
 
 
-def make_validrange_ncdata(filename='test_validrange.nc', chunksize=(3, 3, 1), n=10):
+def make_validrange_ncdata(filename='test_validrange.nc', chunksize=(3, 3, 1), n=10, valid_range=[-1.0, 1.2 * 10 **3]):
     """ 
     Makes a test dataset based on the default vanilla dataset, but which includes
     missing values outside range
     """
-    return make_ncdata(filename, chunksize, n, compression=None, valid_range=[-1.0, 1.2 * n ** 3])
+    return make_ncdata(filename, chunksize, n, compression=None, valid_range=valid_range)
 
 
 def make_vanilla_ncdata(filename='test_vanilla.nc', chunksize=(3, 3, 1), n=10):
@@ -72,8 +72,7 @@ def make_vanilla_ncdata(filename='test_vanilla.nc', chunksize=(3, 3, 1), n=10):
     Make a vanilla test dataset which is three dimensional with indices and values that
     aid in testing data extraction.
     """
-    r = make_ncdata(filename, chunksize, n, None, False)
-    return
+    return make_ncdata(filename, chunksize, n, None, False)
 
 
 def make_ncdata(filename, chunksize, n, compression=None, 
@@ -171,11 +170,11 @@ def make_ncdata(filename, chunksize, n, compression=None,
         if valid_range[0] == 0.0 or valid_range[1] == 0.0:
             raise ValueError('Dummy data needs non-zero range bounds')
         vrindices = [(2,nm1,nm2),(2,nm2,nm1),(nm1,nm2,nm1),(n/2,n/2+1,n/2)]
-        dvar.valid_range=valid_range
         for i,j,k in vrindices[0:2]:
             dvar[i,j,k]= valid_range[0]-abs(0.1*valid_range[0])
         for i,j,k in vrindices[2:]:
             dvar[i,j,k] = valid_range[1]*10
+        setattr(dvar, "valid_range", valid_range)
 
     var = ds.variables['data']
     print(f'\nCreated file "{filename}" with a variable called "data" with shape {var.shape} and chunking, compression {var.chunking()},{compression}\n')

@@ -33,10 +33,9 @@ def active_zero(testfile):
     return d
 
 
-def active_two(testfile, valid_min=None, valid_max=None):
+def active_two(testfile):
     """Run Active with active storage (version=2)."""
-    active = Active(testfile, "data", utils.get_storage_type(),
-                    valid_min=valid_min, valid_max=valid_max)
+    active = Active(testfile, "data", utils.get_storage_type())
     active._version = 2
     active.method = "mean"
     active.components = True
@@ -113,7 +112,6 @@ def test_fillvalue(tmp_path):
 
     # retrieve the actual numpy-ed result
     actual_data = load_dataset(testfile)
-    actual_data = np.ma.masked_where(actual_data == -999., actual_data)
     unmasked_numpy_mean = np.mean(actual_data[0:2, 4:6, 7:9])
     print("Numpy masked result (mean)", unmasked_numpy_mean)
 
@@ -121,8 +119,6 @@ def test_fillvalue(tmp_path):
     testfile = utils.write_to_storage(testfile)
 
     d = active_zero(testfile)
-    # d is unmasked, contains fill_values=-999 just like any other data points
-    d = np.ma.masked_where(d == -999., d)
 
     # NOT masked
     no_active_mean = np.mean(d)
@@ -133,14 +129,11 @@ def test_fillvalue(tmp_path):
 
     if not USE_S3:
         np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
-        np.testing.assert_array_equal(no_active_mean, active_mean)
     else:
         np.testing.assert_raises(AssertionError,
                                  np.testing.assert_array_equal,
                                  unmasked_numpy_mean, active_mean)
-        np.testing.assert_raises(AssertionError,
-                                 np.testing.assert_array_equal,
-                                 no_active_mean, active_mean)
+    np.testing.assert_array_equal(no_active_mean, active_mean)
 
 
 def test_validmin(tmp_path):
@@ -155,11 +148,10 @@ def test_validmin(tmp_path):
     chunks all have data >=750., so we apply a validmin == 751.
     """
     testfile = str(tmp_path / 'test_validmin.nc')
-    r = dd.make_validmin_ncdata(testfile)
+    r = dd.make_validmin_ncdata(testfile, valid_min=751.)
 
     # retrieve the actual numpy-ed result
     actual_data = load_dataset(testfile)
-    actual_data = np.ma.masked_where(actual_data < 751., actual_data)
     unmasked_numpy_mean = np.mean(actual_data[0:2, 4:6, 7:9])
     print("Numpy masked result (mean)", unmasked_numpy_mean)
 
@@ -167,26 +159,21 @@ def test_validmin(tmp_path):
     testfile = utils.write_to_storage(testfile)
 
     d = active_zero(testfile)
-    # d is masked but with valid vals also <751.
-    d = np.ma.masked_where(d < 751., d)
 
     # NOT numpy masked to check for correct Active behaviour
     no_active_mean = np.mean(d)
     print("No active storage result (mean)", no_active_mean)
 
-    active_mean = active_two(testfile, valid_min=751.)
+    active_mean = active_two(testfile)
     print("Active storage result (mean)", active_mean)
 
     if not USE_S3:
         np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
-        np.testing.assert_array_equal(no_active_mean, active_mean)
     else:
         np.testing.assert_raises(AssertionError,
                                  np.testing.assert_array_equal,
                                  unmasked_numpy_mean, active_mean)
-        np.testing.assert_raises(AssertionError,
-                                 np.testing.assert_array_equal,
-                                 no_active_mean, active_mean)
+    np.testing.assert_array_equal(no_active_mean, active_mean)
 
 
 def test_validmax(tmp_path):
@@ -201,11 +188,10 @@ def test_validmax(tmp_path):
     chunks all have data >=750., so we apply a validmax == 850.
     """
     testfile = str(tmp_path / 'test_validmax.nc')
-    r = dd.make_validmax_ncdata(testfile)
+    r = dd.make_validmax_ncdata(testfile, valid_max=850.)
 
     # retrieve the actual numpy-ed result
     actual_data = load_dataset(testfile)
-    actual_data = np.ma.masked_where(actual_data > 850., actual_data)
     unmasked_numpy_mean = np.mean(actual_data[0:2, 4:6, 7:9])
     print("Numpy masked result (mean)", unmasked_numpy_mean)
 
@@ -213,26 +199,21 @@ def test_validmax(tmp_path):
     testfile = utils.write_to_storage(testfile)
 
     d = active_zero(testfile)
-    # d is masked but with valid vals also >800.
-    d = np.ma.masked_where(d > 850., d)
 
     # NOT numpy masked to check for correct Active behaviour
     no_active_mean = np.mean(d)
     print("No active storage result (mean)", no_active_mean)
 
-    active_mean = active_two(testfile, valid_min=None, valid_max=850.)
+    active_mean = active_two(testfile)
     print("Active storage result (mean)", active_mean)
 
     if not USE_S3:
         np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
-        np.testing.assert_array_equal(no_active_mean, active_mean)
     else:
         np.testing.assert_raises(AssertionError,
                                  np.testing.assert_array_equal,
                                  unmasked_numpy_mean, active_mean)
-        np.testing.assert_raises(AssertionError,
-                                 np.testing.assert_array_equal,
-                                 no_active_mean, active_mean)
+    np.testing.assert_array_equal(no_active_mean, active_mean)
 
 
 def test_validrange(tmp_path):
@@ -247,12 +228,10 @@ def test_validrange(tmp_path):
     chunks all have data >=750. and <=851., so we apply a validrange == [750, 850.]
     """
     testfile = str(tmp_path / 'test_validrange.nc')
-    r = dd.make_validrange_ncdata(testfile)
+    r = dd.make_validrange_ncdata(testfile, valid_range=[750., 850.])
 
     # retrieve the actual numpy-ed result
     actual_data = load_dataset(testfile)
-    actual_data = np.ma.masked_where(750. > actual_data, actual_data)
-    actual_data = np.ma.masked_where(850. < actual_data, actual_data)
     unmasked_numpy_mean = np.ma.mean(actual_data[0:2, 4:6, 7:9])
     print("Numpy masked result (mean)", unmasked_numpy_mean)
 
@@ -260,24 +239,18 @@ def test_validrange(tmp_path):
     testfile = utils.write_to_storage(testfile)
 
     d = active_zero(testfile)
-    d = np.ma.masked_where(750. > d, d)
-    d = np.ma.masked_where(850. < d, d)
-    print(d)
 
     # NOT numpy masked to check for correct Active behaviour
     no_active_mean = np.mean(d)
     print("No active storage result (mean)", no_active_mean)
 
-    active_mean = active_two(testfile, valid_min=750., valid_max=850.)
+    active_mean = active_two(testfile)
     print("Active storage result (mean)", active_mean)
 
     if not USE_S3:
         np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
-        np.testing.assert_array_equal(no_active_mean, active_mean)
     else:
         np.testing.assert_raises(AssertionError,
                                  np.testing.assert_array_equal,
                                  unmasked_numpy_mean, active_mean)
-        np.testing.assert_raises(AssertionError,
-                                 np.testing.assert_array_equal,
-                                 no_active_mean, active_mean)
+    np.testing.assert_array_equal(no_active_mean, active_mean)
