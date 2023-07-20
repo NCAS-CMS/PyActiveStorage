@@ -8,6 +8,8 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
     
     rfile - the actual file with the data 
     offset, size - where and what we want ...
+    compression - optional `numcodecs.abc.Codec` compression codec
+    filters - optional list of `numcodecs.abc.Codec` filter codecs
     dtype - likely float32 in most cases. 
     shape - will be a tuple, something like (3,3,1), this is the dimensionality of the 
             chunk itself
@@ -22,15 +24,12 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
                     
     """
     
-    if compression is not None:
-        raise NotImplementedError("Compression is not yet supported!")
-    if filters is not None:
-        raise NotImplementedError("Filters are not yet supported!")
-
     #FIXME: for the moment, open the file every time ... we might want to do that, or not
     with open(rfile,'rb') as open_file:
         # get the data
         chunk = read_block(open_file, offset, size)
+        # reverse any compression and filters
+        chunk = filter_pipeline(chunk, compression, filters)
         # make it a numpy array of bytes
         chunk = ensure_ndarray(chunk)
         # convert to the appropriate data type
@@ -50,6 +49,26 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
             return tmp, None
     else:
         return tmp, None
+
+
+def filter_pipeline(chunk, compression, filters):
+    """
+    Reverse any compression and filters applied to the chunk.
+
+    When a chunk is written, the filters are applied in order, then compression
+    is applied. For reading, we must reverse this pipeline.
+
+    :param chunk: possibly filtered and compressed bytes
+    :param compression: optional `numcodecs.abc.Codec` compression codec
+    :param filters: optional list of `numcodecs.abc.Codec` filter codecs
+    :returns: decompressed and defiltered chunk bytes
+    """
+    if compression is not None:
+        chunk = compression.decode(chunk)
+    for filter in reversed(filters or []):
+        chunk = filter.decode(chunk)
+    return chunk
+
 
 def remove_missing(data, missing):
     """ 
