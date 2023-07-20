@@ -60,3 +60,19 @@ def test_compression_and_filters_cmip6_data():
     active._method = "min"
     result = active[0:2,4:6,7:9]
     assert result == 239.25946044921875
+
+
+pytest.mark.skipif(USE_S3, reason="Compression and filtering not supported in S3 yet")
+def test_compression_and_filters_obs4mips_data():
+    """
+    Test use of datasets with compression and filters applied for a real
+    obs4mips dataset (obs4MIPS_CERES-EBAF_L3B_Ed2-8_rlut.nc) at CMIP5 MIP standard
+    but with CMIP6-standard file packaging.
+    """
+    test_file = str(Path(__file__).resolve().parent / 'test_data' / 'obs4MIPS_CERES-EBAF_L3B_Ed2-8_rlut.nc')
+
+    active = Active(test_file, 'rlut', utils.get_storage_type())
+    active._version = 1
+    active._method = "min"
+    result = active[0:2,4:6,7:9]
+    assert result == 124.0
