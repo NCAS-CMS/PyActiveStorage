@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - compression
   schedule:
     - cron: '0 0 * * *'  # nightly
 
