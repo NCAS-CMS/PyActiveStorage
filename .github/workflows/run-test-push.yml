@@ -8,7 +8,7 @@ jobs:
     runs-on: "ubuntu-latest"
     strategy:
       matrix:
-        python-version: ["3.11"]  # latest only
+        python-version: ["3.9", "3.10", "3.11"]  # latest only
       fail-fast: false
     name: Linux Python ${{ matrix.python-version }}
     steps:
