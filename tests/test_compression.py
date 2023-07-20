@@ -11,6 +11,15 @@ from activestorage.dummy_data import make_compressed_ncdata
 import utils
 
 
+def check_dataset_filters(temp_file: str, ncvar: str, compression: str, shuffle: bool):
+    # Sanity check that test data is compressed and filtered as expected.
+    with Dataset(temp_file) as test_data:
+        test_data_filters = test_data.variables[ncvar].filters()
+        print(test_data_filters)
+        assert test_data_filters[compression]
+        assert test_data_filters['shuffle'] == shuffle
+
+
 def create_compressed_dataset(tmp_path: str, compression: str, shuffle: bool):
     """
     Make a vanilla test dataset which is compressed and optionally shuffled.
@@ -18,12 +27,7 @@ def create_compressed_dataset(tmp_path: str, compression: str, shuffle: bool):
     temp_file = str(tmp_path / "test_compression.nc")
     test_data = make_compressed_ncdata(filename=temp_file, compression=compression, shuffle=shuffle)
 
-    # Sanity check that test data is compressed and filtered as expected.
-    test_data = Dataset(temp_file)
-    test_data_filters = test_data.variables['data'].filters()
-    assert test_data_filters[compression]
-    assert test_data_filters['shuffle'] == shuffle
-    test_data.close()
+    check_dataset_filters(temp_file, "data", compression, shuffle)
 
     test_file = utils.write_to_storage(temp_file)
     if USE_S3:
@@ -55,6 +59,8 @@ def test_compression_and_filters_cmip6_data():
     """
     test_file = str(Path(__file__).resolve().parent / 'test_data' / 'CMIP6_IPSL-CM6A-LR_tas.nc')
 
+    check_dataset_filters(test_file, "tas", "zlib", False)
+
     active = Active(test_file, 'tas', utils.get_storage_type())
     active._version = 1
     active._method = "min"
@@ -70,6 +76,8 @@ def test_compression_and_filters_obs4mips_data():
     but with CMIP6-standard file packaging.
     """
     test_file = str(Path(__file__).resolve().parent / 'test_data' / 'obs4MIPS_CERES-EBAF_L3B_Ed2-8_rlut.nc')
+
+    check_dataset_filters(test_file, "rlut", "zlib", False)
 
     active = Active(test_file, 'rlut', utils.get_storage_type())
     active._version = 1
