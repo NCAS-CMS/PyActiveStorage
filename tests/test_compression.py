@@ -62,7 +62,7 @@ def test_compression_and_filters_cmip6_data():
     assert result == 239.25946044921875
 
 
-pytest.mark.skipif(USE_S3, reason="Compression and filtering not supported in S3 yet")
+@pytest.mark.skipif(USE_S3, reason="Compression and filtering not supported in S3 yet")
 def test_compression_and_filters_obs4mips_data():
     """
     Test use of datasets with compression and filters applied for a real
