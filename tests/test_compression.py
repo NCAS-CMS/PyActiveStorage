@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import pytest
 
 from netCDF4 import Dataset
@@ -60,6 +61,9 @@ def test_compression_and_filters_cmip6_data():
     test_file = str(Path(__file__).resolve().parent / 'test_data' / 'CMIP6_IPSL-CM6A-LR_tas.nc')
 
     check_dataset_filters(test_file, "tas", "zlib", False)
+    with Dataset(test_file) as nc_data:
+        nc_min = np.min(nc_data["tas"][0:2,4:6,7:9])
+    print("Numpy mean from compressed data %s", nc_min)
 
     active = Active(test_file, 'tas', utils.get_storage_type())
     active._version = 1
