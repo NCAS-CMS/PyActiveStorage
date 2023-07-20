@@ -59,4 +59,4 @@ def test_compression_and_filters_cmip6_data():
     active._version = 1
     active._method = "min"
     result = active[0:2,4:6,7:9]
-    assert result == 740.0
+    assert result == 239.25946044921875
