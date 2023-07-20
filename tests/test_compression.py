@@ -61,14 +61,16 @@ def test_compression_and_filters_cmip6_data():
     test_file = str(Path(__file__).resolve().parent / 'test_data' / 'CMIP6_IPSL-CM6A-LR_tas.nc')
 
     check_dataset_filters(test_file, "tas", "zlib", False)
+
     with Dataset(test_file) as nc_data:
         nc_min = np.min(nc_data["tas"][0:2,4:6,7:9])
-    print("Numpy mean from compressed data %s", nc_min)
+    print(f"Numpy min from compressed file {nc_min}")
 
     active = Active(test_file, 'tas', utils.get_storage_type())
     active._version = 1
     active._method = "min"
     result = active[0:2,4:6,7:9]
+    assert nc_min == result
     assert result == 239.25946044921875
 
 
@@ -83,8 +85,14 @@ def test_compression_and_filters_obs4mips_data():
 
     check_dataset_filters(test_file, "rlut", "zlib", False)
 
+    with Dataset(test_file) as nc_data:
+        nc_min = np.min(nc_data["rlut"][0:2,4:6,7:9])
+    print(f"Numpy min from compressed file {nc_min}")
+
     active = Active(test_file, 'rlut', utils.get_storage_type())
     active._version = 1
     active._method = "min"
     result = active[0:2,4:6,7:9]
+    print(nc_min)
+    assert nc_min == result
     assert result == 124.0
