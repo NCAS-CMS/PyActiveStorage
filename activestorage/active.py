@@ -114,6 +114,9 @@ class Active:
                 self._filters = None
             self._missing = getattr(ds_var, 'missing_value', None)
             self._fillvalue = getattr(ds_var, '_FillValue', None)
+            # could be fill_value set as netCDF4 attr
+            if self._fillvalue is None:
+                self._fillvalue = getattr(ds_var, 'fill_value', None)
             valid_min = getattr(ds_var, 'valid_min', None)
             valid_max = getattr(ds_var, 'valid_max', None)
             valid_range = getattr(ds_var, 'valid_range', None)
@@ -125,10 +128,10 @@ class Active:
                         f"{valid_min}, {valid_max}, {valid_range}"
                     )                
                 valid_range = (valid_min, valid_max)
-            else:
+            elif valid_range is None:
                 valid_range = (None, None)
             self._valid_min, self._valid_max = valid_range
-            
+
             ds.close()
         else:
             self._missing = missing_value
