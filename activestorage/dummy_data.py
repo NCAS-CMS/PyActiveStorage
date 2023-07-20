@@ -194,7 +194,7 @@ def make_ncdata(filename, chunksize, n, compression=None,
     # all important close at the end!!
     ds.close()
 
-    return ds, mindices, findices, vrindices, vm1indices, vm2indices
+    return mindices, findices, vrindices, vm1indices, vm2indices
 
 
 if __name__=="__main__":
