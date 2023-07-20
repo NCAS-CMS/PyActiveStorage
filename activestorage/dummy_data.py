@@ -129,7 +129,9 @@ def make_ncdata(filename, chunksize, n, compression=None,
         a[:] = dd * s
     
     dvar = ds.createVariable("data","f8", ("xdim","ydim","zdim"),
-                             chunksizes=chunksize, compression=compression,
+                             chunksizes=chunksize,
+                             compression=compression,
+                             shuffle=shuffle,
                              fill_value=fillvalue)
 
     dvar[:] = data
@@ -192,7 +194,7 @@ def make_ncdata(filename, chunksize, n, compression=None,
     # all important close at the end!!
     ds.close()
 
-    return mindices, findices, vrindices, vm1indices, vm2indices
+    return ds, mindices, findices, vrindices, vm1indices, vm2indices
 
 
 if __name__=="__main__":
