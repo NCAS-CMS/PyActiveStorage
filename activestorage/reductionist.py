@@ -1,5 +1,6 @@
 """Reductionist S3 Active Storage server storage interface module."""
 
+import collections.abc
 import http.client
 import json
 import requests
@@ -22,7 +23,7 @@ def reduce_chunk(server, username, password, source, bucket, object, offset,
     :param size: size of data in object
     :param compression: name of compression, unsupported
     :param filters: name of filters, unsupported
-    :param missing: 4-tuple describing missing data, unsupported
+    :param missing: optional 4-tuple describing missing data
     :param dtype: data type name
     :param shape: will be a tuple, something like (3,3,1), this is the
                   dimensionality of the chunk itself
@@ -65,11 +66,38 @@ def encode_selection(selection):
     return [encode_slice(s) for s in selection]
 
 
+def encode_dvalue(value):
+    """Encode a data value in a JSON-compatible format."""
+    if isinstance(value, np.float32):
+        # numpy cannot encode float32, so convert it to a float64.
+        return np.float64(value)
+    return value
+
+
+def encode_missing(missing):
+    """Encode missing data in a JSON-compatible format."""
+    fill_value, missing_value, valid_min, valid_max = missing
+    # fill_value and missing_value are effectively the same when reading data.
+    missing_value = fill_value or missing_value
+    if missing_value:
+        if isinstance(missing_value, collections.abc.Sequence):
+            return {"missing_values": [encode_dvalue(v) for v in missing_value]}
+        else:
+            return {"missing_value": encode_dvalue(missing_value)}
+    if valid_min and valid_max:
+        return {"valid_range": [encode_dvalue(valid_min), encode_dvalue(valid_max)]}
+    if valid_min:
+        return {"valid_min": encode_dvalue(valid_min)}
+    if valid_max:
+        return {"valid_max": encode_dvalue(valid_max)}
+    assert False, "Expected missing values not found"
+
+
 def build_request_data(source: str, bucket: str, object: str, offset: int,
                        size: int, compression, filters, missing, dtype, shape,
                        order, selection) -> dict:
     """Build request data for Reductionist API."""
-    # TODO: compression, filters, missing
+    # TODO: compression, filters
     request_data = {
         'source': source,
         'bucket': bucket,
@@ -83,6 +111,8 @@ def build_request_data(source: str, bucket: str, object: str, offset: int,
         request_data["shape"] = shape
     if selection:
         request_data["selection"] = encode_selection(selection)
+    if any(missing):
+        request_data["missing"] = encode_missing(missing)
     return {k: v for k, v in request_data.items() if v is not None}
 
 

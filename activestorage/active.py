@@ -112,14 +112,25 @@ class Active:
             # ds from h5netcdf may not have _filters and other such metadata
             except AttributeError:
                 self._filters = None
-            self._missing = getattr(ds_var, 'missing_value', None)
-            self._fillvalue = getattr(ds_var, '_FillValue', None)
-            # could be fill_value set as netCDF4 attr
-            if self._fillvalue is None:
-                self._fillvalue = getattr(ds_var, 'fill_value', None)
-            valid_min = getattr(ds_var, 'valid_min', None)
-            valid_max = getattr(ds_var, 'valid_max', None)
-            valid_range = getattr(ds_var, 'valid_range', None)
+            if isinstance(ds, Dataset):
+                self._missing = getattr(ds_var, 'missing_value', None)
+                self._fillvalue = getattr(ds_var, '_FillValue', None)
+                # could be fill_value set as netCDF4 attr
+                if self._fillvalue is None:
+                    self._fillvalue = getattr(ds_var, 'fill_value', None)
+                valid_min = getattr(ds_var, 'valid_min', None)
+                valid_max = getattr(ds_var, 'valid_max', None)
+                valid_range = getattr(ds_var, 'valid_range', None)
+            elif storage_type == "s3":
+                self._missing = ds_var.attrs.get('missing_value')
+                self._fillvalue = ds_var.attrs.get('_FillValue')
+                # could be fill_value set as netCDF4 attr
+                if self._fillvalue is None:
+                    self._fillvalue = ds_var.attrs.get('fill_value')
+                valid_min = ds_var.attrs.get('valid_min')
+                valid_max = ds_var.attrs.get('valid_max')
+                valid_range = ds_var.attrs.get('valid_range')
+
             if valid_max is not None or valid_min is not None:
                 if valid_range is not None:
                     raise ValueError(
@@ -161,6 +172,15 @@ class Active:
             elif self.storage_type == "s3":
                 with load_from_s3(self.uri) as nc:
                     data = nc[ncvar][index]
+                    # h5netcdf doesn't return masked arrays.
+                    if self._fillvalue:
+                        data = np.ma.masked_equal(data, self._fillvalue)
+                    if self._missing:
+                        data = np.ma.masked_equal(data, self._missing)
+                    if self._valid_max:
+                        data = np.ma.masked_greater(data, self._valid_max)
+                    if self._valid_min:
+                        data = np.ma.masked_less(data, self._valid_min)
 
             if lock:
                 lock.release()

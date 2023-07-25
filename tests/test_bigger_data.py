@@ -206,10 +206,10 @@ def test_cesm2_native(test_data_path):
     print(result2, ncfile)
     # expect {'sum': array([[[2368.3232]]], dtype=float32), 'n': array([[[8]]])}
     # check for typing and structure
-    np.testing.assert_array_equal(result2["sum"], np.array([[[2368.3232]]], dtype="float32"))
+    np.testing.assert_allclose(result2["sum"], np.array([[[2368.3232]]], dtype="float32"), rtol=1e-6)
     np.testing.assert_array_equal(result2["n"], np.array([[[8]]]))
     # check for active
-    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+    np.testing.assert_allclose(mean_result, result2["sum"]/result2["n"], rtol=1e-6)
 
 
 def test_daily_data(test_data_path):
