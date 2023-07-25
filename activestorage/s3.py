@@ -48,13 +48,7 @@ def reduce_chunk(server, username, password, source, bucket, object, offset,
     response = request(url, username, password, request_data)
 
     if response.ok:
-        # FIXME: Return count from mean
-        result = decode_result(response)
-        if operation == "mean":
-            count = reduce_chunk(server, username, password, source, bucket, object, offset, size, compression, filters, missing, dtype, shape, order, chunk_selection, "count")[0]
-        else:
-            count = None
-        return result, count
+        return decode_result(response)
     else:
         decode_and_raise_error(response)
 
@@ -103,12 +97,13 @@ def request(url: str, username: str, password: str, request_data: dict):
 
 
 def decode_result(response):
-    """Decode a successful response, return as a numpy array or scalar."""
+    """Decode a successful response, return as a 2-tuple of (numpy array or scalar, count)."""
     dtype = response.headers['x-activestorage-dtype']
     shape = json.loads(response.headers['x-activestorage-shape'])
     result = np.frombuffer(response.content, dtype=dtype)
     result = result.reshape(shape)
-    return result
+    count = json.loads(response.headers['x-activestorage-count'])
+    return result, count
 
 
 class S3ActiveStorageError(Exception):

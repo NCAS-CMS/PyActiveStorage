@@ -149,4 +149,4 @@ def test_s3_reduce_chunk():
                                  "C", [slice(0, 2, 1), ],
                                  "min")
     assert tmp == 134351386
-    assert count == None
+    assert count == 2
