@@ -7,7 +7,7 @@ from unittest import mock
 from activestorage import s3
 
 
-def make_response(content, status_code, dtype=None, shape=None):
+def make_response(content, status_code, dtype=None, shape=None, count=None):
     response = requests.Response()
     response._content = content
     response.status_code = status_code
@@ -15,6 +15,8 @@ def make_response(content, status_code, dtype=None, shape=None):
         response.headers["x-activestorage-dtype"] = dtype
     if shape:
         response.headers["x-activestorage-shape"] = shape
+    if count:
+        response.headers["x-activestorage-count"] = count
     return response
 
 
@@ -22,7 +24,7 @@ def make_response(content, status_code, dtype=None, shape=None):
 def test_s3_reduce_chunk(mock_request):
     """Unit test for s3_reduce_chunk."""
     result = np.int32(134351386)
-    response = make_response(result.tobytes(), 200, "int32", "[]")
+    response = make_response(result.tobytes(), 200, "int32", "[]", "2")
     mock_request.return_value = response
 
     active_url = "https://s3.example.com"
@@ -50,8 +52,7 @@ def test_s3_reduce_chunk(mock_request):
                                  chunk_selection, operation)
 
     assert tmp == result
-    # count is None; no missing data yet in S3
-    assert count is None
+    assert count == 2
 
     expected_url = f"{active_url}/v1/{operation}/"
     expected_data = {
