@@ -1,4 +1,4 @@
-"""S3 active storage module."""
+"""Reductionist S3 Active Storage server storage interface module."""
 
 import http.client
 import json
@@ -10,9 +10,9 @@ import sys
 def reduce_chunk(server, username, password, source, bucket, object, offset,
                  size, compression, filters, missing, dtype, shape, order,
                  chunk_selection, operation):
-    """Perform a reduction on a chunk using S3 Active Storage.
+    """Perform a reduction on a chunk using Reductionist.
 
-    :param server: S3 active storage server URL
+    :param server: Reductionist server URL
     :param username: S3 username / access key
     :param password: S3 password / secret key
     :param source: S3 URL
@@ -34,7 +34,7 @@ def reduce_chunk(server, username, password, source, bucket, object, offset,
                             obtained or operated upon.
     :param operation: name of operation to perform
     :returns: the reduced data as a numpy array or scalar
-    :raises S3ActiveStorageError: if the request to S3 active storage fails
+    :raises ReductionistError: if the request to Reductionist fails
     """
 
     if compression is not None:
@@ -68,7 +68,7 @@ def encode_selection(selection):
 def build_request_data(source: str, bucket: str, object: str, offset: int,
                        size: int, compression, filters, missing, dtype, shape,
                        order, selection) -> dict:
-    """Build request data for S3 active storage API."""
+    """Build request data for Reductionist API."""
     # TODO: compression, filters, missing
     request_data = {
         'source': source,
@@ -87,7 +87,7 @@ def build_request_data(source: str, bucket: str, object: str, offset: int,
 
 
 def request(url: str, username: str, password: str, request_data: dict):
-    """Make a request to an S3 active storage API."""
+    """Make a request to a Reductionist API."""
     response = requests.post(
         url,
         json=request_data,
@@ -106,17 +106,17 @@ def decode_result(response):
     return result, count
 
 
-class S3ActiveStorageError(Exception):
-    """Exception for S3 Active Storage failures."""
+class ReductionistError(Exception):
+    """Exception for Reductionist failures."""
 
     def __init__(self, status_code, error):
-        super(S3ActiveStorageError, self).__init__(f"S3 Active Storage error: HTTP {status_code}: {error}")
+        super(ReductionistError, self).__init__(f"Reductionist error: HTTP {status_code}: {error}")
 
 
 def decode_and_raise_error(response):
-    """Decode an error response and raise S3ActiveStorageError."""
+    """Decode an error response and raise ReductionistError."""
     try:
         error = json.dumps(response.json())
-        raise S3ActiveStorageError(response.status_code, error)
+        raise ReductionistError(response.status_code, error)
     except requests.exceptions.JSONDecodeError as exc:
-        raise S3ActiveStorageError(response.status_code, "-") from exc
+        raise ReductionistError(response.status_code, "-") from exc

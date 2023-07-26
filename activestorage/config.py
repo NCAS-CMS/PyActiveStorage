@@ -1,9 +1,9 @@
 # This file contains configuration for PyActiveStorage.
 
-# Whether to use the S3 Active Storage interface.
+# Whether to use the Reductionist Active Storage server interface.
 USE_S3 = False
 
-# URL of S3 Active Storage server.
+# URL of Reductionist server.
 S3_ACTIVE_STORAGE_URL = "http://localhost:8080"
 
 # URL of S3 object store.

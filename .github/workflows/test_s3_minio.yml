@@ -1,4 +1,4 @@
-# adapted GA workflow from https://github.com/stackhpc/s3-active-storage-rs
+# adapted GA workflow from https://github.com/stackhpc/reductionist-rs
 ---
 name: S3/Minio Test
 
@@ -47,8 +47,8 @@ jobs:
           until curl -if http://localhost:9001; do
             sleep 1;
           done
-      - name: Run S3ActiveStorage container
-        run: docker run -it --detach --rm --net=host --name s3-active-storage ghcr.io/stackhpc/s3-active-storage-rs:latest
+      - name: Run Reductionist container
+        run: docker run -it --detach --rm --net=host --name reductionist ghcr.io/stackhpc/reductionist-rs:latest
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: activestorage-minio

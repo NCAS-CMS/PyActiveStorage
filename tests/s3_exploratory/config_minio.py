@@ -3,7 +3,7 @@
 # Force True for S3 exploratory tests
 USE_S3 = True
 
-# URL of S3 Active Storage server.
+# URL of Reductionist S3 Active Storage server.
 S3_ACTIVE_STORAGE_URL = "http://localhost:8080"
 
 # URL of S3 object store.

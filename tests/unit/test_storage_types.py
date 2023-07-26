@@ -17,7 +17,7 @@ from activestorage.active import Active
 from activestorage.config import *
 from activestorage.dummy_data import make_vanilla_ncdata
 from activestorage import netcdf_to_zarr
-import activestorage.s3
+import activestorage.reductionist
 import activestorage.storage
 
 
@@ -27,7 +27,7 @@ old_netcdf_to_zarr = netcdf_to_zarr.load_netcdf_zarr_generic
 
 @mock.patch.object(activestorage.active, "load_from_s3")
 @mock.patch.object(activestorage.netcdf_to_zarr, "load_netcdf_zarr_generic")
-@mock.patch.object(activestorage.active, "s3_reduce_chunk")
+@mock.patch.object(activestorage.active, "reductionist_reduce_chunk")
 def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3."""
 
@@ -127,8 +127,8 @@ def test_s3_load_failure(mock_load):
 
 @mock.patch.object(activestorage.active, "load_from_s3")
 @mock.patch.object(activestorage.netcdf_to_zarr, "load_netcdf_zarr_generic")
-@mock.patch.object(activestorage.active, "s3_reduce_chunk")
-def test_s3_active_storage_connection(mock_reduce, mock_nz, mock_load, tmp_path):
+@mock.patch.object(activestorage.active, "reductionist_reduce_chunk")
+def test_reductionist_connection(mock_reduce, mock_nz, mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3."""
 
     @contextlib.contextmanager
@@ -156,8 +156,8 @@ def test_s3_active_storage_connection(mock_reduce, mock_nz, mock_load, tmp_path)
 
 @mock.patch.object(activestorage.active, "load_from_s3")
 @mock.patch.object(activestorage.netcdf_to_zarr, "load_netcdf_zarr_generic")
-@mock.patch.object(activestorage.active, "s3_reduce_chunk")
-def test_s3_active_storage_bad_request(mock_reduce, mock_nz, mock_load, tmp_path):
+@mock.patch.object(activestorage.active, "reductionist_reduce_chunk")
+def test_reductionist_bad_request(mock_reduce, mock_nz, mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3."""
 
     @contextlib.contextmanager
@@ -169,7 +169,7 @@ def test_s3_active_storage_bad_request(mock_reduce, mock_nz, mock_load, tmp_path
 
     mock_load.side_effect = load_from_s3
     mock_nz.side_effect = load_netcdf_zarr_generic
-    mock_reduce.side_effect = activestorage.s3.S3ActiveStorageError(400, "Bad request")
+    mock_reduce.side_effect = activestorage.reductionist.ReductionistError(400, "Bad request")
 
     uri = "s3://fake-bucket/fake-object"
     test_file = str(tmp_path / "test.nc")
@@ -179,5 +179,5 @@ def test_s3_active_storage_bad_request(mock_reduce, mock_nz, mock_load, tmp_path
     active._version = 1
     active._method = "max"
 
-    with pytest.raises(activestorage.s3.S3ActiveStorageError):
+    with pytest.raises(activestorage.reductionist.ReductionistError):
         assert active[::]
