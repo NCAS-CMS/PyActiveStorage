@@ -4,7 +4,7 @@ import pytest
 import requests
 from unittest import mock
 
-from activestorage import s3
+from activestorage import reductionist
 
 
 def make_response(content, status_code, dtype=None, shape=None, count=None):
@@ -20,9 +20,9 @@ def make_response(content, status_code, dtype=None, shape=None, count=None):
     return response
 
 
-@mock.patch.object(s3, 'request')
-def test_s3_reduce_chunk(mock_request):
-    """Unit test for s3_reduce_chunk."""
+@mock.patch.object(reductionist, 'request')
+def test_reduce_chunk(mock_request):
+    """Unit test for reduce_chunk."""
     result = np.int32(134351386)
     response = make_response(result.tobytes(), 200, "int32", "[]", "2")
     mock_request.return_value = response
@@ -46,10 +46,11 @@ def test_s3_reduce_chunk(mock_request):
 
     # no compression, filters, missing
 
-    tmp, count = s3.reduce_chunk(active_url, access_key, secret_key, s3_url,
-                                 bucket, object, offset, size, compression,
-                                 filters, missing, dtype, shape, order,
-                                 chunk_selection, operation)
+    tmp, count = reductionist.reduce_chunk(active_url, access_key, secret_key, s3_url,
+                                           bucket, object, offset, size,
+                                           compression, filters, missing,
+                                           dtype, shape, order,
+                                           chunk_selection, operation)
 
     assert tmp == result
     assert count == 2
@@ -72,9 +73,9 @@ def test_s3_reduce_chunk(mock_request):
                                          expected_data)
 
 
-@mock.patch.object(s3, 'request')
-def test_s3_reduce_chunk_not_found(mock_request):
-    """Unit test for s3_reduce_chunk testing 404 response."""
+@mock.patch.object(reductionist, 'request')
+def test_reduce_chunk_not_found(mock_request):
+    """Unit test for reduce_chunk testing 404 response."""
     result = b'"Not found"'
     response = make_response(result, 404)
     mock_request.return_value = response
@@ -96,10 +97,11 @@ def test_s3_reduce_chunk_not_found(mock_request):
     chunk_selection = [slice(0, 2, 1)]
     operation = "min"
 
-    with pytest.raises(s3.S3ActiveStorageError) as exc:
-        s3.reduce_chunk(active_url, access_key, secret_key, s3_url, bucket,
-                object, offset, size, compression, filters, missing, dtype,
-                shape, order, chunk_selection, operation)
+    with pytest.raises(reductionist.ReductionistError) as exc:
+        reductionist.reduce_chunk(active_url, access_key, secret_key, s3_url, bucket,
+                                  object, offset, size, compression, filters,
+                                  missing, dtype, shape, order,
+                                  chunk_selection, operation)
 
 
-    assert str(exc.value) == 'S3 Active Storage error: HTTP 404: "Not found"'
+    assert str(exc.value) == 'Reductionist error: HTTP 404: "Not found"'

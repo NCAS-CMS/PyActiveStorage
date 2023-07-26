@@ -7,7 +7,7 @@ import tempfile
 from activestorage.active import Active
 from activestorage.dummy_data import make_vanilla_ncdata
 import activestorage.storage as st
-from activestorage.s3 import reduce_chunk as s3_reduce_chunk
+from activestorage.reductionist import reduce_chunk as reductionist_reduce_chunk
 from numpy.testing import assert_array_equal
 from pathlib import Path
 
@@ -49,7 +49,7 @@ def upload_to_s3(server, username, password, bucket, object, rfile):
 def test_Active():
     """
     Shows what we expect an active example test to achieve and provides "the right answer"
-    Done twice: POSIX active and S3 active; we compare results.
+    Done twice: POSIX active and Reductionist; we compare results.
 
     identical to tests/test_harness.py::testActive()
 
@@ -129,7 +129,7 @@ def test_with_valid_netCDF_file(test_data_path):
     assert_array_equal(result1, result2)
 
 
-def test_s3_reduce_chunk():
+def test_reductionist_reduce_chunk():
     """Unit test for s3_reduce_chunk."""
     rfile = "tests/test_data/cesm2_native.nc"
     offset = 2
@@ -140,13 +140,11 @@ def test_s3_reduce_chunk():
     upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY,
                  S3_BUCKET, object, rfile)
     
-    # call s3_reduce_chunk
-    tmp, count = s3_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
-                                 S3_SECRET_KEY, S3_URL, S3_BUCKET,
-                                 object, offset, size,
-                                 None, None, [],
-                                 np.dtype("int32"), (32, ),
-                                 "C", [slice(0, 2, 1), ],
-                                 "min")
+    # call reductionist_reduce_chunk
+    tmp, count = reductionist_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
+                                           S3_SECRET_KEY, S3_URL, S3_BUCKET,
+                                           object, offset, size, None, None,
+                                           [], np.dtype("int32"), (32, ), "C",
+                                           [slice(0, 2, 1), ], "min")
     assert tmp == 134351386
     assert count == 2

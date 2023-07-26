@@ -13,7 +13,7 @@ from zarr.indexing import (
     OrthogonalIndexer,
 )
 from activestorage.config import *
-from activestorage.s3 import reduce_chunk as s3_reduce_chunk
+from activestorage.reductionist import reduce_chunk as reductionist_reduce_chunk
 from activestorage.storage import reduce_chunk
 from activestorage import netcdf_to_zarr as nz
 
@@ -390,13 +390,15 @@ class Active:
             parsed_url = urllib.parse.urlparse(rfile)
             bucket = parsed_url.netloc
             object = parsed_url.path
-            tmp, count = s3_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
-                                         S3_SECRET_KEY, S3_URL, bucket,
-                                         object, offset, size,
-                                         compressor, filters, missing,
-                                         self.zds._dtype, self.zds._chunks,
-                                         self.zds._order, chunk_selection,
-                                         operation=self._method)
+            tmp, count = reductionist_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
+                                                   S3_SECRET_KEY, S3_URL,
+                                                   bucket, object, offset,
+                                                   size, compressor, filters,
+                                                   missing, self.zds._dtype,
+                                                   self.zds._chunks,
+                                                   self.zds._order,
+                                                   chunk_selection,
+                                                   operation=self._method)
         else:
             # note there is an ongoing discussion about this interface, and what it returns
             # see https://github.com/valeriupredoi/PyActiveStorage/issues/33
