@@ -76,6 +76,15 @@ def make_compressed_ncdata(filename='test_vanilla.nc', chunksize=(3, 3, 1), n=10
     return make_ncdata(filename, chunksize, n, compression=compression, shuffle=shuffle)
 
 
+def make_byte_order_ncdata(filename='test_vanilla.nc', chunksize=(3, 3, 1), n=10, byte_order='native'):
+    """
+    Make a vanilla dataset with the specified byte order (endianness) which is
+    three dimensional with indices and values that aid in testing data
+    extraction.
+    """
+    return make_ncdata(filename, chunksize, n, byte_order=byte_order)
+
+
 def make_vanilla_ncdata(filename='test_vanilla.nc', chunksize=(3, 3, 1), n=10):
     """
     Make a vanilla test dataset which is three dimensional with indices and values that
@@ -91,7 +100,8 @@ def make_ncdata(filename, chunksize, n, compression=None,
                 valid_min=None,
                 valid_max=None,
                 partially_missing_data=False,
-                shuffle=False):
+                shuffle=False,
+                byte_order='native'):
     """ 
     If compression is required, it can be passed in via keyword
     and is applied to all variables.
@@ -108,6 +118,9 @@ def make_ncdata(filename, chunksize, n, compression=None,
     only be used in combination with a missing value.
 
     shuffle: if True, apply the HDF5 shuffle filter before compression.
+
+    byte_order: Byte order (endianness) of the data. Must be 'big', 'little',
+                or 'native'.
     """
     if partially_missing_data and not missing:
         raise ValueError(f'Missing data value keyword provided and set to {missing} '
@@ -120,19 +133,24 @@ def make_ncdata(filename, chunksize, n, compression=None,
     xdim = ds.createDimension("xdim", n)
     ydim = ds.createDimension("ydim", n)
     zdim = ds.createDimension("zdim", n)
-    
-    x = ds.createVariable("x","i4",("xdim",), fill_value=fillvalue, compression=compression, shuffle=shuffle)
-    y = ds.createVariable("y","i4",("ydim",), fill_value=fillvalue, compression=compression, shuffle=shuffle)
-    z = ds.createVariable("z","i4",("zdim",), fill_value=fillvalue, compression=compression, shuffle=shuffle)
+
+    dtype_prefix = "<" if byte_order == "little" else ">" if byte_order == "big" else ""
+    dim_dtype = dtype_prefix + "i4"
+    var_dtype = dtype_prefix + "f8"
+
+    x = ds.createVariable("x",dim_dtype,("xdim",), fill_value=fillvalue, compression=compression, shuffle=shuffle, endian=byte_order)
+    y = ds.createVariable("y",dim_dtype,("ydim",), fill_value=fillvalue, compression=compression, shuffle=shuffle, endian=byte_order)
+    z = ds.createVariable("z",dim_dtype,("zdim",), fill_value=fillvalue, compression=compression, shuffle=shuffle, endian=byte_order)
 
     for a,s in zip([x, y, z],[1, n, n * n]):
         a[:] = dd * s
-    
-    dvar = ds.createVariable("data","f8", ("xdim","ydim","zdim"),
+
+    dvar = ds.createVariable("data",var_dtype, ("xdim","ydim","zdim"),
                              chunksizes=chunksize,
                              compression=compression,
                              shuffle=shuffle,
-                             fill_value=fillvalue)
+                             fill_value=fillvalue,
+                             endian=byte_order)
 
     dvar[:] = data
 

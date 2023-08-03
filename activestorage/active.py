@@ -107,6 +107,9 @@ class Active:
                 print(f"Dataset {ds} does not contain ncvar {ncvar!r}.")
                 raise exc
 
+            # FIXME: We do not get the correct byte order on the Zarr Array's dtype
+            # when using S3, so capture it here.
+            self._dtype = ds_var.dtype
             try:
                 self._filters = ds_var.filters()
             # ds from h5netcdf may not have _filters and other such metadata
@@ -410,11 +413,14 @@ class Active:
             parsed_url = urllib.parse.urlparse(rfile)
             bucket = parsed_url.netloc
             object = parsed_url.path
+            # FIXME: We do not get the correct byte order on the Zarr Array's dtype
+            # when using S3, so use the value captured earlier.
+            dtype = self._dtype
             tmp, count = reductionist_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
                                                    S3_SECRET_KEY, S3_URL,
                                                    bucket, object, offset,
                                                    size, compressor, filters,
-                                                   missing, self.zds._dtype,
+                                                   missing, dtype,
                                                    self.zds._chunks,
                                                    self.zds._order,
                                                    chunk_selection,
