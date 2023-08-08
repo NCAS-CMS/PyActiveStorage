@@ -83,16 +83,16 @@ def test_reduce_chunk_defaults(mock_request):
             {"missing_values": [np.float64(42.), np.float64(-42.)]},
         ),
         (
-            (None, None, np.float32(1e20), None),
-            {"valid_min": np.float64(np.float32(1e20))},
+            (None, None, np.float32(-1e6), None),
+            {"valid_min": np.float64(np.float32(-1e6))},
         ),
         (
-            (None, None, None, np.float32(1e-20)),
-            {"valid_max": np.float64(np.float32(1e-20))},
+            (None, None, None, np.float32(1e6)),
+            {"valid_max": np.float64(np.float32(1e6))},
         ),
         (
-            (None, None, np.float32(1e-20), np.float32(1e20)),
-            {"valid_range": [np.float64(np.float32(1e-20)), np.float64(np.float32(1e20))]},
+            (None, None, np.float32(-1e6), np.float32(1e6)),
+            {"valid_range": [np.float64(np.float32(-1e6)), np.float64(np.float32(1e6))]},
         ),
     ]
 )
