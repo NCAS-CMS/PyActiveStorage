@@ -5,7 +5,7 @@
 import botocore
 import contextlib
 import os
-from netCDF4 import Dataset
+import h5netcdf
 import numpy as np
 import pytest
 import requests.exceptions
@@ -37,7 +37,7 @@ def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
 
     @contextlib.contextmanager
     def load_from_s3(uri):
-        yield Dataset(test_file)
+        yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
 
     def load_netcdf_zarr_generic(uri, ncvar, storage_type):
         return old_netcdf_to_zarr(test_file, ncvar, None)
@@ -115,6 +115,28 @@ def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
 
 
 @mock.patch.object(activestorage.active, "load_from_s3")
+def test_reductionist_version_0(mock_load, tmp_path):
+    """Test stack when call to Active contains storage_type == s3 using version 0."""
+
+    @contextlib.contextmanager
+    def load_from_s3(uri):
+        yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
+
+    mock_load.side_effect = load_from_s3
+
+    uri = "s3://fake-bucket/fake-object"
+    test_file = str(tmp_path / "test.nc")
+    make_vanilla_ncdata(test_file)
+
+    active = Active(uri, "data", "s3")
+    active._version = 0
+
+    result = active[::]
+
+    assert np.max(result) == 999.0
+
+
+@mock.patch.object(activestorage.active, "load_from_s3")
 def test_s3_load_failure(mock_load):
     """Test when an S3 object doesn't exist."""
     uri = "s3://fake-bucket/fake-object"
@@ -133,7 +155,7 @@ def test_reductionist_connection(mock_reduce, mock_nz, mock_load, tmp_path):
 
     @contextlib.contextmanager
     def load_from_s3(uri):
-        yield Dataset(test_file)
+        yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
 
     def load_netcdf_zarr_generic(uri, ncvar, storage_type):
         return old_netcdf_to_zarr(test_file, ncvar, None)
@@ -162,7 +184,7 @@ def test_reductionist_bad_request(mock_reduce, mock_nz, mock_load, tmp_path):
 
     @contextlib.contextmanager
     def load_from_s3(uri):
-        yield Dataset(test_file)
+        yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
 
     def load_netcdf_zarr_generic(uri, ncvar, storage_type):
         return old_netcdf_to_zarr(test_file, ncvar, None)

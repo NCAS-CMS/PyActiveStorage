@@ -36,7 +36,7 @@ def active_zero(testfile):
     # FIXME: For the S3 backend, h5netcdf is used to read the metadata. It does
     # not seem to load the missing data attributes (missing_value, _FillValue,
     # valid_min, valid_max, valid_range, etc).
-    assert ma.is_masked(d) == (not USE_S3)
+    assert ma.is_masked(d)
 
     return np.mean(d)
 
@@ -75,10 +75,7 @@ def test_partially_missing_data(tmp_path):
     active_mean = active_two(testfile)
     print("Active storage result (mean)", active_mean)
 
-    if not USE_S3:
-        np.testing.assert_array_equal(masked_numpy_mean, active_mean)
-    else:
-        np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
+    np.testing.assert_array_equal(masked_numpy_mean, active_mean)
     np.testing.assert_array_equal(no_active_mean, active_mean)
 
 
@@ -103,10 +100,7 @@ def test_missing(tmp_path):
     active_mean = active_two(testfile)
     print("Active storage result (mean)", active_mean)
 
-    if not USE_S3:
-        np.testing.assert_array_equal(masked_numpy_mean, active_mean)
-    else:
-        np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
+    np.testing.assert_array_equal(masked_numpy_mean, active_mean)
     np.testing.assert_array_equal(no_active_mean, active_mean)
 
 
@@ -136,10 +130,7 @@ def test_fillvalue(tmp_path):
     active_mean = active_two(testfile)
     print("Active storage result (mean)", active_mean)
 
-    if not USE_S3:
-        np.testing.assert_array_equal(masked_numpy_mean, active_mean)
-    else:
-        np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
+    np.testing.assert_array_equal(masked_numpy_mean, active_mean)
     np.testing.assert_array_equal(no_active_mean, active_mean)
 
 
@@ -174,10 +165,7 @@ def test_validmin(tmp_path):
     active_mean = active_two(testfile)
     print("Active storage result (mean)", active_mean)
 
-    if not USE_S3:
-        np.testing.assert_array_equal(masked_numpy_mean, active_mean)
-    else:
-        np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
+    np.testing.assert_array_equal(masked_numpy_mean, active_mean)
     np.testing.assert_array_equal(no_active_mean, active_mean)
 
 
@@ -215,10 +203,8 @@ def test_validmax(tmp_path):
     active_mean = active_two(testfile)
     print("Active storage result (mean)", active_mean)
 
-    if not USE_S3:
-        np.testing.assert_array_equal(masked_numpy_mean, active_mean)
-    else:
-        np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
+    np.testing.assert_array_equal(masked_numpy_mean, active_mean)
+    np.testing.assert_array_equal(no_active_mean, active_mean)
 
 
 def test_validrange(tmp_path):
@@ -252,7 +238,5 @@ def test_validrange(tmp_path):
     active_mean = active_two(testfile)
     print("Active storage result (mean)", active_mean)
 
-    if not USE_S3:
-        np.testing.assert_array_equal(masked_numpy_mean, active_mean)
-    else:
-        np.testing.assert_array_equal(unmasked_numpy_mean, active_mean)
+    np.testing.assert_array_equal(masked_numpy_mean, active_mean)
+    np.testing.assert_array_equal(no_active_mean, active_mean)

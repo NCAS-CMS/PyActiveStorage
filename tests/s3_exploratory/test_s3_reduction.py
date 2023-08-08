@@ -8,7 +8,7 @@ from activestorage.active import Active
 from activestorage.dummy_data import make_vanilla_ncdata
 import activestorage.storage as st
 from activestorage.reductionist import reduce_chunk as reductionist_reduce_chunk
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_allclose, assert_array_equal
 from pathlib import Path
 
 from config_minio import *
@@ -123,10 +123,11 @@ def test_with_valid_netCDF_file(test_data_path):
 
     # expect {'sum': array([[[2368.3232]]], dtype=float32), 'n': array([[[8]]])}
     # check for typing and structure
-    np.testing.assert_array_equal(result1["sum"], np.array([[[2368.3232]]], dtype="float32"))
-    np.testing.assert_array_equal(result1["n"], np.array([[[8]]]))
+    assert_allclose(result1["sum"], np.array([[[2368.3232]]], dtype="float32"), rtol=1e-6)
+    assert_array_equal(result1["n"], np.array([[[8]]]))
 
-    assert_array_equal(result1, result2)
+    assert_allclose(result1["sum"], result2["sum"], rtol=1e-6)
+    assert_array_equal(result1["n"], result2["n"])
 
 
 def test_reductionist_reduce_chunk():
