@@ -24,7 +24,7 @@ def reduce_chunk(server, username, password, source, bucket, object, offset,
     :param compression: name of compression, unsupported
     :param filters: name of filters, unsupported
     :param missing: optional 4-tuple describing missing data
-    :param dtype: data type name
+    :param dtype: numpy data type
     :param shape: will be a tuple, something like (3,3,1), this is the
                   dimensionality of the chunk itself
     :param order: typically 'C' for c-type ordering
@@ -52,6 +52,17 @@ def reduce_chunk(server, username, password, source, bucket, object, offset,
         return decode_result(response)
     else:
         decode_and_raise_error(response)
+
+
+def encode_byte_order(dtype):
+    """Encode the byte order (endianness) of a dtype in a JSON-compatible format."""
+    if dtype.byteorder == '=':
+        return sys.byteorder
+    elif dtype.byteorder == '<':
+        return 'little'
+    elif dtype.byteorder == '>':
+        return 'big'
+    assert False, "Unexpected byte order {dtype.byteorder}"
 
 
 def encode_selection(selection):
@@ -103,6 +114,7 @@ def build_request_data(source: str, bucket: str, object: str, offset: int,
         'bucket': bucket,
         'object': object,
         'dtype': dtype.name,
+        'byte_order': encode_byte_order(dtype),
         'offset': offset,
         'size': size,
         'order': order,

@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pytest
 import requests
+import sys
 from unittest import mock
 
 from activestorage import reductionist
@@ -61,6 +62,7 @@ def test_reduce_chunk_defaults(mock_request):
         "bucket": bucket,
         "object": object,
         "dtype": "int32",
+        "byte_order": sys.byteorder,
     }
     mock_request.assert_called_once_with(expected_url, access_key, secret_key,
                                          expected_data)
@@ -116,7 +118,7 @@ def test_reduce_chunk_missing(mock_request, missing):
     compression = None
     filters = None
     missing = reduce_arg
-    dtype = np.dtype("float32")
+    dtype = np.dtype("float32").newbyteorder()
     shape = (32, )
     order = "C"
     chunk_selection = [slice(0, 2, 1)]
@@ -139,6 +141,7 @@ def test_reduce_chunk_missing(mock_request, missing):
         "bucket": bucket,
         "object": object,
         "dtype": "float32",
+        "byte_order": "little" if sys.byteorder == "big" else "big",
         "offset": offset,
         "size": size,
         "order": order,
