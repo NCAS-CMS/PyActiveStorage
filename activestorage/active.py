@@ -1,3 +1,4 @@
+import concurrent.futures
 import contextlib
 import os
 import numpy as np
@@ -13,7 +14,7 @@ from zarr.indexing import (
     OrthogonalIndexer,
 )
 from activestorage.config import *
-from activestorage.reductionist import reduce_chunk as reductionist_reduce_chunk
+from activestorage import reductionist
 from activestorage.storage import reduce_chunk
 from activestorage import netcdf_to_zarr as nz
 
@@ -67,7 +68,7 @@ class Active:
         }
         return instance
 
-    def __init__(self, uri, ncvar, storage_type=None, missing_value=None, _FillValue=None, valid_min=None, valid_max=None):
+    def __init__(self, uri, ncvar, storage_type=None, missing_value=None, _FillValue=None, valid_min=None, valid_max=None, max_threads=100):
         """
         Instantiate with a NetCDF4 dataset and the variable of interest within that file.
         (We need the variable, because we need variable specific metadata from within that
@@ -90,6 +91,7 @@ class Active:
         self._components = False
         self._method = None
         self._lock = False
+        self._max_threads = max_threads
       
         # obtain metadata, using netcdf4_python for now
         # FIXME: There is an outstanding issue with ._FilLValue to be handled.
@@ -343,11 +345,40 @@ class Active:
             out = np.empty(out_shape, dtype=out_dtype, order=self.zds._order)
             counts = None  # should never get touched with no method!
 
-        for chunk_coords, chunk_selection, out_selection in stripped_indexer:
-            self._process_chunk(fsref, chunk_coords,chunk_selection,
-                                out, counts, out_selection,
-                                compressor, filters, missing,
-                                drop_axes=drop_axes)
+        # Create a shared session object.
+        if self.storage_type == "s3":
+            session = reductionist.get_session(S3_ACCESS_KEY, S3_SECRET_KEY,
+                                               S3_ACTIVE_STORAGE_CACERT)
+        else:
+            session = None
+
+        # Process storage chunks using a thread pool.
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_threads) as executor:
+            futures = []
+            # Submit chunks for processing.
+            for chunk_coords, chunk_selection, out_selection in stripped_indexer:
+                future = executor.submit(
+                    self._process_chunk,
+                    session, fsref, chunk_coords, chunk_selection,
+                    counts, out_selection,
+                    compressor, filters, missing,
+                    drop_axes=drop_axes)
+                futures.append(future)
+            # Wait for completion.
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    result = future.result()
+                except Exception as exc:
+                    raise
+                else:
+                    if method is not None:
+                        result, count = result
+                        out.append(result)
+                        counts.append(count)
+                    else:
+                        # store selected data in output
+                        result, selection = result
+                        out[selection] = result
 
         if method is not None:
             # Apply the method (again) to aggregate the result
@@ -388,7 +419,7 @@ class Active:
 
         return out
 
-    def _process_chunk(self, fsref, chunk_coords, chunk_selection, out, counts,
+    def _process_chunk(self, session, fsref, chunk_coords, chunk_selection, counts,
                        out_selection, compressor, filters, missing, 
                        drop_axes=None):
         """
@@ -411,8 +442,8 @@ class Active:
             # FIXME: We do not get the correct byte order on the Zarr Array's dtype
             # when using S3, so use the value captured earlier.
             dtype = self._dtype
-            tmp, count = reductionist_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
-                                                   S3_SECRET_KEY, S3_URL,
+            tmp, count = reductionist.reduce_chunk(session, S3_ACTIVE_STORAGE_URL,
+                                                   S3_URL,
                                                    bucket, object, offset,
                                                    size, compressor, filters,
                                                    missing, dtype,
@@ -431,12 +462,8 @@ class Active:
                                       chunk_selection, method=self.method)
 
         if self.method is not None:
-            out.append(tmp)
-            counts.append(count)
+            return tmp, count
         else:
-
             if drop_axes:
                 tmp = np.squeeze(tmp, axis=drop_axes)
-
-            # store selected data in output
-            out[out_selection] = tmp
+            return tmp, out_selection

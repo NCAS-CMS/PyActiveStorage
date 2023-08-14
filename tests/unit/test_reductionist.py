@@ -32,6 +32,7 @@ def test_reduce_chunk_defaults(mock_request):
     active_url = "https://s3.example.com"
     access_key = "fake-access"
     secret_key = "fake-secret"
+    cacert = None
     s3_url = "https://active.example.com"
     bucket = "fake-bucket"
     object = "fake-object"
@@ -46,7 +47,11 @@ def test_reduce_chunk_defaults(mock_request):
     chunk_selection = None
     operation = "min"
 
-    tmp, count = reductionist.reduce_chunk(active_url, access_key, secret_key,
+    session = reductionist.get_session(access_key, secret_key, cacert)
+    assert session.auth == (access_key, secret_key)
+    assert session.verify
+
+    tmp, count = reductionist.reduce_chunk(session, active_url,
                                            s3_url, bucket, object, offset,
                                            size, compression, filters, missing,
                                            dtype, shape, order,
@@ -63,8 +68,7 @@ def test_reduce_chunk_defaults(mock_request):
         "dtype": "int32",
         "byte_order": sys.byteorder,
     }
-    mock_request.assert_called_once_with(expected_url, access_key, secret_key,
-                                         expected_data)
+    mock_request.assert_called_once_with(session, expected_url, expected_data)
 
 
 @pytest.mark.parametrize(
@@ -86,6 +90,7 @@ def test_reduce_chunk_compression(mock_request, compression, filters):
     active_url = "https://s3.example.com"
     access_key = "fake-access"
     secret_key = "fake-secret"
+    cacert = "/path/to/cacert"
     s3_url = "https://active.example.com"
     bucket = "fake-bucket"
     object = "fake-object"
@@ -98,7 +103,10 @@ def test_reduce_chunk_compression(mock_request, compression, filters):
     chunk_selection = [slice(0, 2, 1)]
     operation = "min"
 
-    tmp, count = reductionist.reduce_chunk(active_url, access_key, secret_key,
+    session = reductionist.get_session(access_key, secret_key, cacert)
+    assert session.verify == cacert
+
+    tmp, count = reductionist.reduce_chunk(session, active_url,
                                            s3_url, bucket, object, offset,
                                            size, compression, filters, missing,
                                            dtype, shape, order,
@@ -125,8 +133,7 @@ def test_reduce_chunk_compression(mock_request, compression, filters):
         "filters": [{"id": filter.codec_id, "element_size": filter.elementsize}
                     for filter in filters],
     }
-    mock_request.assert_called_once_with(expected_url, access_key, secret_key,
-                                         expected_data)
+    mock_request.assert_called_once_with(session, expected_url, expected_data)
 
 
 @pytest.mark.parametrize(
@@ -170,6 +177,7 @@ def test_reduce_chunk_missing(mock_request, missing):
     active_url = "https://s3.example.com"
     access_key = "fake-access"
     secret_key = "fake-secret"
+    cacert = None
     s3_url = "https://active.example.com"
     bucket = "fake-bucket"
     object = "fake-object"
@@ -184,7 +192,8 @@ def test_reduce_chunk_missing(mock_request, missing):
     chunk_selection = [slice(0, 2, 1)]
     operation = "min"
 
-    tmp, count = reductionist.reduce_chunk(active_url, access_key, secret_key, s3_url,
+    session = reductionist.get_session(access_key, secret_key, cacert)
+    tmp, count = reductionist.reduce_chunk(session, active_url, s3_url,
                                            bucket, object, offset, size,
                                            compression, filters, missing,
                                            dtype, shape, order,
@@ -209,8 +218,7 @@ def test_reduce_chunk_missing(mock_request, missing):
                        chunk_selection[0].step]],
         "missing": api_arg,
     }
-    mock_request.assert_called_once_with(expected_url, access_key, secret_key,
-                                         expected_data)
+    mock_request.assert_called_once_with(session, expected_url, expected_data)
 
 
 @mock.patch.object(reductionist, 'request')
@@ -223,6 +231,7 @@ def test_reduce_chunk_not_found(mock_request):
     active_url = "https://s3.example.com"
     access_key = "fake-access"
     secret_key = "fake-secret"
+    cacert = None
     s3_url = "https://active.example.com"
     bucket = "fake-bucket"
     object = "fake-object"
@@ -237,8 +246,9 @@ def test_reduce_chunk_not_found(mock_request):
     chunk_selection = [slice(0, 2, 1)]
     operation = "min"
 
+    session = reductionist.get_session(access_key, secret_key, cacert)
     with pytest.raises(reductionist.ReductionistError) as exc:
-        reductionist.reduce_chunk(active_url, access_key, secret_key, s3_url, bucket,
+        reductionist.reduce_chunk(session, active_url, s3_url, bucket,
                                   object, offset, size, compression, filters,
                                   missing, dtype, shape, order,
                                   chunk_selection, operation)

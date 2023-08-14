@@ -8,6 +8,7 @@ from activestorage.active import Active
 from activestorage.dummy_data import make_vanilla_ncdata
 import activestorage.storage as st
 from activestorage.reductionist import reduce_chunk as reductionist_reduce_chunk
+from activestorage.reductionist import get_session
 from numpy.testing import assert_allclose, assert_array_equal
 from pathlib import Path
 
@@ -142,8 +143,9 @@ def test_reductionist_reduce_chunk():
                  S3_BUCKET, object, rfile)
     
     # call reductionist_reduce_chunk
-    tmp, count = reductionist_reduce_chunk(S3_ACTIVE_STORAGE_URL, S3_ACCESS_KEY,
-                                           S3_SECRET_KEY, S3_URL, S3_BUCKET,
+    session = get_session(S3_ACCESS_KEY, S3_SECRET_KEY, S3_ACTIVE_STORAGE_CACERT)
+    tmp, count = reductionist_reduce_chunk(session, S3_ACTIVE_STORAGE_URL,
+                                           S3_URL, S3_BUCKET,
                                            object, offset, size, None, None,
                                            [], np.dtype("int32"), (32, ), "C",
                                            [slice(0, 2, 1), ], "min")
