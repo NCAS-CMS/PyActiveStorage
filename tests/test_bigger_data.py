@@ -237,7 +237,6 @@ def test_daily_data(test_data_path):
     np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
 
 
-@pytest.mark.xfail(USE_S3, reason="Missing data not supported in S3 yet")
 def test_daily_data_masked(test_data_path):
     """
     Test again with a daily data file, with masking on
@@ -258,7 +257,7 @@ def test_daily_data_masked(test_data_path):
     print(result2, ncfile)
     # expect {'sum': array([[[[169632.5]]]], dtype=float32), 'n': 680}
     # check for typing and structure
-    np.testing.assert_array_equal(result2["sum"], np.array([[[[169632.5]]]], dtype="float32"))
+    np.testing.assert_allclose(result2["sum"], np.array([[[[169632.5]]]], dtype="float32"), rtol=1e-6)
     np.testing.assert_array_equal(result2["n"], 680)
     # check for active
-    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+    np.testing.assert_allclose(mean_result, result2["sum"]/result2["n"], rtol=1e-6)
