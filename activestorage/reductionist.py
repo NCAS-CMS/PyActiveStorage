@@ -4,6 +4,7 @@ import collections.abc
 import http.client
 import json
 import requests
+import numcodecs
 import numpy as np
 import sys
 
@@ -21,8 +22,8 @@ def reduce_chunk(server, username, password, source, bucket, object, offset,
     :param object: S3 object
     :param offset: offset of data in object
     :param size: size of data in object
-    :param compression: name of compression, unsupported
-    :param filters: name of filters, unsupported
+    :param compression: optional `numcodecs.abc.Codec` compression codec
+    :param filters: optional list of `numcodecs.abc.Codec` filter codecs
     :param missing: optional 4-tuple describing missing data
     :param dtype: numpy data type
     :param shape: will be a tuple, something like (3,3,1), this is the
@@ -37,11 +38,6 @@ def reduce_chunk(server, username, password, source, bucket, object, offset,
     :returns: the reduced data as a numpy array or scalar
     :raises ReductionistError: if the request to Reductionist fails
     """
-
-    if compression is not None:
-        raise NotImplementedError("Compression is not yet supported!")
-    if filters is not None:
-        raise NotImplementedError("Filters are not yet supported!")
 
     request_data = build_request_data(source, bucket, object, offset, size, compression, filters, missing, dtype, shape, order, chunk_selection)
     api_operation = "sum" if operation == "mean" else operation or "select"
@@ -77,6 +73,19 @@ def encode_selection(selection):
     return [encode_slice(s) for s in selection]
 
 
+def encode_filter(filter):
+    """Encode a filter algorithm in a JSON-compatible format."""
+    if filter.codec_id == "shuffle":
+        return {"id": filter.codec_id, "element_size": filter.elementsize}
+    else:
+        raise ValueError(f"Unsupported filter {filter})")
+
+
+def encode_filters(filters):
+    """Encode the list of filter algorithms in a JSON-compatible format."""
+    return [encode_filter(filter) for filter in filters or []]
+
+
 def encode_dvalue(value):
     """Encode a data value in a JSON-compatible format."""
     if isinstance(value, np.float32):
@@ -108,7 +117,6 @@ def build_request_data(source: str, bucket: str, object: str, offset: int,
                        size: int, compression, filters, missing, dtype, shape,
                        order, selection) -> dict:
     """Build request data for Reductionist API."""
-    # TODO: compression, filters
     request_data = {
         'source': source,
         'bucket': bucket,
@@ -123,8 +131,16 @@ def build_request_data(source: str, bucket: str, object: str, offset: int,
         request_data["shape"] = shape
     if selection:
         request_data["selection"] = encode_selection(selection)
+    if compression:
+        # Currently the numcodecs codec IDs map to the supported compression
+        # algorithm names in the active storage server. If that changes we may
+        # need to maintain a mapping here.
+        request_data["compression"] = {"id": compression.codec_id}
+    if filters:
+        request_data["filters"] = encode_filters(filters)
     if any(missing):
         request_data["missing"] = encode_missing(missing)
+
     return {k: v for k, v in request_data.items() if v is not None}
 
 
