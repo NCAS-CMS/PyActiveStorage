@@ -62,9 +62,9 @@ def load_s3_file():
     s3_testfile, local_testfile = make_tempfile()
 
     # put s3 dummy data onto S3. then rm from local
-    object = os.path.basename(s3_testfile)
+    object = os.path.basename(s3_testfile + '#mode=bytes')
     bucket_file = upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY,
-                               S3_BUCKET, object, s3_testfile)
+                               S3_BUCKET, object, s3_testfile  + '#mode=bytes')
     os.remove(s3_testfile)
     s3_testfile_uri = os.path.join("s3://", bucket_file)
 
@@ -74,7 +74,7 @@ def load_s3_file():
 
     print(f"S3 file URI: {s3_testfile_uri}")
     with fs.open(s3_testfile_uri, 'rb') as s3file:
-        ds = netCDF4.Dataset(s3file + '#mode=bytes', 'r')
+        ds = netCDF4.Dataset(s3file, 'r')
 
     return ds
 
