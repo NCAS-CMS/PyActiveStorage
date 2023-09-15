@@ -72,6 +72,7 @@ def load_s3_file():
                            secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
                            client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
 
+    print(f"S3 file URI: {s3_testfile_uri}")
     with fs.open(s3_testfile_uri, 'rb') as s3file:
         ds = netCDF4.Dataset(s3file, 'r')
 
