@@ -66,15 +66,15 @@ def load_s3_file():
     bucket_file = upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY,
                                S3_BUCKET, object, s3_testfile)
     os.remove(s3_testfile)
-    s3_testfile_uri = os.path.join("s3://", bucket_file + '#mode=bytes')
+    s3_testfile_uri = os.path.join("s3://", bucket_file)
 
     fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
                            secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
                            client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
 
     print(f"S3 file URI: {s3_testfile_uri}")
-    # with fs.open(s3_testfile_uri, 'rb') as s3file:
-    ds = netCDF4.Dataset(s3_testfile_uri, 'r')
+    with fs.open(s3_testfile_uri, 'rb') as s3file:
+        ds = netCDF4.Dataset(s3file + '#mode=bytes', 'r')
 
     return ds
 
