@@ -30,13 +30,13 @@ def make_tempfile():
     """Make dummy data."""
     temp_folder = tempfile.mkdtemp()
     s3_testfile = os.path.join(temp_folder,
-                               's3_test_bizarre.nc')  # Bryan likes this name
+                               's3_test_bizarre.nc#mode=bytes')
     print(f"S3 Test file is {s3_testfile}")
     if not os.path.exists(s3_testfile):
         make_vanilla_ncdata(filename=s3_testfile)
 
     local_testfile = os.path.join(temp_folder,
-                                  'local_test_bizarre.nc')  # Bryan again
+                                  'local_test_bizarre.nc')
     print(f"Local Test file is {local_testfile}")
     if not os.path.exists(local_testfile):
         make_vanilla_ncdata(filename=local_testfile)
@@ -62,9 +62,9 @@ def load_s3_file():
     s3_testfile, local_testfile = make_tempfile()
 
     # put s3 dummy data onto S3. then rm from local
-    object = os.path.basename(s3_testfile + '#mode=bytes')
+    object = os.path.basename(s3_testfile)
     bucket_file = upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY,
-                               S3_BUCKET, object, s3_testfile  + '#mode=bytes')
+                               S3_BUCKET, object, s3_testfile)
     os.remove(s3_testfile)
     s3_testfile_uri = os.path.join("s3://", bucket_file)
 
