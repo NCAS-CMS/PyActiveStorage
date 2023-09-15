@@ -66,7 +66,7 @@ def load_s3_file():
     bucket_file = upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY,
                                S3_BUCKET, object, s3_testfile)
     os.remove(s3_testfile)
-    s3_testfile_uri = os.path.join("s3://", bucket_file)
+    s3_testfile_uri = os.path.join("s3://", bucket_file + '#mode=bytes')
 
     fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
                            secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
