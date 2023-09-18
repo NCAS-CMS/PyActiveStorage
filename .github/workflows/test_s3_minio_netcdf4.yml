@@ -79,6 +79,7 @@ jobs:
           # try ncdumping for now
           which ncdump
           ncdump -h s3://pyactivestorage/s3_test_bizarre.nc
+        if: always()
       - name: Stop minio object storage
         run: tests/s3_exploratory/minio_scripts/minio-stop
         if: always()
