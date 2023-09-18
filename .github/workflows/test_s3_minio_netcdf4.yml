@@ -87,8 +87,8 @@ jobs:
           # try ncdumping for now
           which ncdump
           # configure aws cli
-          aws configure set access_key_id minioadmin
-          aws configure set secret_access_key minioadmin
+          export ACCESS_KEY_ID=minioadmin
+          export SECRET_ACCESS_KEY=minioadmin
           aws configure set default.s3.signature_version s3v4
           # list current minio contents
           aws --endpoint-url http://localhost:8080 s3 ls --region us-east-1
