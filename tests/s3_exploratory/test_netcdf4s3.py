@@ -75,8 +75,15 @@ def test_load_s3_file():
     print(f"S3 file URI: {s3_testfile_uri}")
     print("Will attempt to ncdump for now")
     # not clear which is the loading procedure just yet
+    # one option is via s3fs straight to Dataset - not working
     # with fs.open(s3_testfile_uri + '#mode=bytes', 'rb') as s3file:
     # ds = netCDF4.Dataset(s3_testfile_uri + '#mode=bytes', 'r')
+    # another option is to get bytes in memory
+    with fs.open(s3_testfile_uri, 'rb') as s3f:
+        nc_bytes = s3f.read()
+
+    ds = netCDF4.Dataset(f'inmemory.nc', memory=nc_bytes)
+    print(ds)
 
 
 # def test_s3_load_via_netcdf4():
