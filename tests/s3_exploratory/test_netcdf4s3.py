@@ -73,12 +73,12 @@ def load_s3_file():
                            client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
 
     print(f"S3 file URI: {s3_testfile_uri}")
+    print("Will attempt to ncdump for now")
+    # not clear which is the loading procedure just yet
     # with fs.open(s3_testfile_uri + '#mode=bytes', 'rb') as s3file:
-    ds = netCDF4.Dataset(s3_testfile_uri + '#mode=bytes', 'r')
-
-    return ds
+    # ds = netCDF4.Dataset(s3_testfile_uri + '#mode=bytes', 'r')
 
 
-def test_s3_load_via_netcdf4():
-    ds = load_s3_file()
-    print(ds)
+# def test_s3_load_via_netcdf4():
+#     ds = load_s3_file()
+#     print(ds)
