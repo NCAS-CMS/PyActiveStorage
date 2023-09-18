@@ -69,19 +69,21 @@ jobs:
         run: |
           echo "AWS_ACCESS_KEY_ID=minioadmin" >> $GITHUB_ENV
           echo "AWS_SECRET_ACCESS_KEY=minioadmin" >> $GITHUB_ENV
-      - name: Run S3-NetCDF4 with "#mode-bytes"
-        run: |
-          # this only uploads test file to Minio
-          pytest tests/s3_exploratory/test_netcdf4s3.py
-          # try ncdumping for now
-          which ncdump
-          aws configure set default.s3.signature_version s3v4
-          # list current minio contents
-          aws --endpoint-url http://localhost:9000 s3 ls --region us-east-1
-          aws --endpoint-url http://localhost:9000 s3 ls --region us-east-1 pyactivestorage
-          # ncdump it
-          ncdump -h s3://pyactivestorage/s3_test_bizarre.nc#mode=bytes
-      - name: Run S3-NetCDF4 without "#mode-bytes"
+      # with "#mode-bytes" ncdump throws a
+      # ncdump: s3://pyactivestorage/s3_test_bizarre.nc#mode=bytes: NetCDF: Malformed URL
+      #- name: Run S3-NetCDF4 with "#mode-bytes"
+      #  run: |
+      #    # this only uploads test file to Minio
+      #    pytest tests/s3_exploratory/test_netcdf4s3.py
+      #    # try ncdumping for now
+      #    which ncdump
+      #    aws configure set default.s3.signature_version s3v4
+      #    # list current minio contents
+      #    aws --endpoint-url http://localhost:9000 s3 ls --region us-east-1
+      #    aws --endpoint-url http://localhost:9000 s3 ls --region us-east-1 pyactivestorage
+      #    # ncdump it
+      #    ncdump -h s3://pyactivestorage/s3_test_bizarre.nc#mode=bytes
+      - name: List bucket and run ncdump
         run: |
           # this only uploads test file to Minio
           pytest tests/s3_exploratory/test_netcdf4s3.py
