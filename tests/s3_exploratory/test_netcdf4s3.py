@@ -58,7 +58,7 @@ def upload_to_s3(server, username, password, bucket, object, rfile):
     return os.path.join(bucket, object)
 
 
-def load_s3_file():
+def test_load_s3_file():
     s3_testfile, local_testfile = make_tempfile()
 
     # put s3 dummy data onto S3. then rm from local
