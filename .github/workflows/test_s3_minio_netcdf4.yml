@@ -87,8 +87,8 @@ jobs:
           # try ncdumping for now
           which ncdump
           # configure aws cli
-          export ACCESS_KEY_ID=minioadmin
-          export SECRET_ACCESS_KEY=minioadmin
+          echo "AWS_ACCESS_KEY_ID=minioadmin" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=minioadmin" >> $GITHUB_ENV
           aws configure set default.s3.signature_version s3v4
           # list current minio contents
           aws --endpoint-url http://localhost:8080 s3 ls --region us-east-1
