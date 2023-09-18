@@ -83,7 +83,8 @@ def test_load_s3_file():
         nc_bytes = s3f.read()
 
     ds = netCDF4.Dataset(f'inmemory.nc', memory=nc_bytes)
-    print(ds)
+    print(f"netCDF4.Dataset loaded from memory: {ds}")
+    print(x)
 
 
 # def test_s3_load_via_netcdf4():
