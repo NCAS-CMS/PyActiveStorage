@@ -77,8 +77,8 @@ jobs:
           which ncdump
           aws configure set default.s3.signature_version s3v4
           # list current minio contents
-          aws --endpoint-url http://localhost:8080 s3 ls --region us-east-1
-          aws --endpoint-url http://localhost:8080 s3 ls --region us-east-1 pyactivestorage
+          aws --endpoint-url http://localhost:9000 s3 ls --region us-east-1
+          aws --endpoint-url http://localhost:9000 s3 ls --region us-east-1 pyactivestorage
           # ncdump it
           ncdump -h s3://pyactivestorage/s3_test_bizarre.nc#mode=bytes
       - name: Run S3-NetCDF4 without "#mode-bytes"
@@ -89,8 +89,8 @@ jobs:
           which ncdump
           aws configure set default.s3.signature_version s3v4
           # list current minio contents
-          aws --endpoint-url http://localhost:8080 s3 ls --region us-east-1
-          aws --endpoint-url http://localhost:8080 s3 ls --region us-east-1 pyactivestorage
+          aws --endpoint-url http://localhost:9000 s3 ls --region us-east-1
+          aws --endpoint-url http://localhost:9000 s3 ls --region us-east-1 pyactivestorage
           # ncdump it
           ncdump -h s3://pyactivestorage/s3_test_bizarre.nc
         if: always()
