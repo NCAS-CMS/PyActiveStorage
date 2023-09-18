@@ -28,3 +28,5 @@ dependencies:
   - autodocsumm >=0.2.2
   - sphinx >=5
   - sphinx_rtd_theme
+  # For mucking around S3 Minio
+  - awscli
