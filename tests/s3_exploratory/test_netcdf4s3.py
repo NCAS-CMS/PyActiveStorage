@@ -82,17 +82,17 @@ def test_load_s3_file():
     # another option is to get bytes in memory
     # this works but blows up the entire data into memory
     with fs.open(s3_testfile_uri, 'rb') as s3f:
-        print(s3f.metadata())
-        nc_bytes = s3f.read()
+        nc_bytes = s3f.read()[0:100]
     ds = netCDF4.Dataset(f'inmemory.nc', memory=nc_bytes)
     print(f"netCDF4.Dataset loaded from memory: {ds}")
     print("netCDF4.Dataset variable loaded from memory: ", ds["data"])
     print("check if data", ds["data"][:])
 
     # see what diskless do
-    with fs.open(s3_testfile_uri, 'rb') as s3f:
-        ds2 = netCDF4.Dataset(s3f, diskless=True)
-        print(ds2)
+    # it don't work
+    #with fs.open(s3_testfile_uri, 'rb') as s3f:
+    #    ds2 = netCDF4.Dataset(s3f, diskless=True)
+    #    print(ds2)
 
     print(x)
 
