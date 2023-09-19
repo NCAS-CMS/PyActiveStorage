@@ -82,7 +82,7 @@ def test_load_s3_file():
     # another option is to get bytes in memory
     # this works but blows up the entire data into memory
     with fs.open(s3_testfile_uri, 'rb') as s3f:
-        print(s3f.metadata)
+        print(s3f.metadata())
         nc_bytes = s3f.read()
     ds = netCDF4.Dataset(f'inmemory.nc', memory=nc_bytes)
     print(f"netCDF4.Dataset loaded from memory: {ds}")
