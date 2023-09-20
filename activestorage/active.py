@@ -97,21 +97,22 @@ class Active:
         # FIXME: There is an outstanding issue with ._FilLValue to be handled.
         # If the user actually wrote the data with no fill value, or the
         # default fill value is in play, then this might go wrong.
-        if (missing_value, _FillValue, valid_min, valid_max) == (None, None, None, None):
-            if storage_type is None:
-                ds = Dataset(uri)
-            elif storage_type == "s3":
-                with load_from_s3(uri) as _ds:
-                    ds = _ds
-            try:
-                ds_var = ds[ncvar]
-            except IndexError as exc:
-                print(f"Dataset {ds} does not contain ncvar {ncvar!r}.")
-                raise exc
+        if storage_type is None:
+            ds = Dataset(uri)
+        elif storage_type == "s3":
+            with load_from_s3(uri) as _ds:
+                ds = _ds
+        try:
+            ds_var = ds[ncvar]
+        except IndexError as exc:
+            print(f"Dataset {ds} does not contain ncvar {ncvar!r}.")
+            raise exc
 
-            # FIXME: We do not get the correct byte order on the Zarr Array's dtype
-            # when using S3, so capture it here.
-            self._dtype = ds_var.dtype
+        # FIXME: We do not get the correct byte order on the Zarr Array's dtype
+        # when using S3, so capture it here.
+        self._dtype = ds_var.dtype
+
+        if (missing_value, _FillValue, valid_min, valid_max) == (None, None, None, None):
             if isinstance(ds, Dataset):
                 self._missing = getattr(ds_var, 'missing_value', None)
                 self._fillvalue = getattr(ds_var, '_FillValue', None)
@@ -143,12 +144,13 @@ class Active:
                 valid_range = (None, None)
             self._valid_min, self._valid_max = valid_range
 
-            ds.close()
         else:
             self._missing = missing_value
             self._fillvalue = _FillValue
             self._valid_min = valid_min
             self._valid_max = valid_max
+
+        ds.close()
 
     def __getitem__(self, index):
         """ 
