@@ -10,12 +10,14 @@ from activestorage.config import *
 from kerchunk.hdf import SingleHdf5ToZarr
 
 
-def gen_json(file_url, fs, fs2, outf, **so):
+def gen_json(file_url, fs, fs2, outf, so):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
     with fs.open(file_url, **so) as infile:
         # FIXME need to disentangle HDF5 errors if not OSError (most are)
         try:
-            h5chunks = SingleHdf5ToZarr(infile, file_url, inline_threshold=0)
+            h5chunks = SingleHdf5ToZarr(infile, file_url,
+                                        storage_options=so,
+                                        inline_threshold=0)
         except OSError as exc:
             raiser_1 = f"Unable to open file {file_url}. "
             raiser_2 = "Check if file is netCDF3 or netCDF-classic"
@@ -73,13 +75,20 @@ def load_netcdf_zarr_generic(fileloc, varname, storage_type, build_dummy=True):
         fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
                                secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
                                client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
-        so = {}
+        so = {
+            "mode": 'rb',
+            "default_fill_cache": False,
+            "default_cache_type": 'first',
+            "key": S3_ACCESS_KEY,
+            "secret": S3_SECRET_KEY,
+            "client_kwargs": {'endpoint_url': S3_URL}
+        }
 
     fs2 = fsspec.filesystem('')  # local file system to save final json to
 
     # Write the Zarr group JSON to a temporary file.
     with tempfile.NamedTemporaryFile() as out_json:
-        gen_json(fileloc, fs, fs2, out_json.name)
+        gen_json(fileloc, fs, fs2, out_json.name, so)
 
         # open this monster
         print(f"Attempting to open and convert {fileloc}.")
