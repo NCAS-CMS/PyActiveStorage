@@ -78,7 +78,7 @@ def load_netcdf_zarr_generic(fileloc, varname, storage_type, build_dummy=True):
         so = {
             "mode": 'rb',
             "default_fill_cache": False,
-            "default_cache_type": 'first',
+            "default_cache_type": None,
             "key": S3_ACCESS_KEY,
             "secret": S3_SECRET_KEY,
             "client_kwargs": {'endpoint_url': S3_URL}
