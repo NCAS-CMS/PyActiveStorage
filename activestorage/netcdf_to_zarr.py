@@ -72,9 +72,13 @@ def load_netcdf_zarr_generic(fileloc, varname, storage_type, build_dummy=True):
         fs = fsspec.filesystem('')
     # open file in memory view mode straight from the S3 object storage
     elif storage_type == "s3":
+        # see https://s3fs.readthedocs.io/en/latest/api.html?highlight=default_fill_cache#s3fs.core.S3FileSystem
         fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
                                secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
-                               client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
+                               client_kwargs={'endpoint_url': S3_URL},  # eg "http://localhost:9000" for Minio
+                               default_fill_cache=False,  # for no caching
+                               default_cache_type="none"
+        )
         so = {
             "mode": 'rb',
             "default_fill_cache": False,
