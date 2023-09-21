@@ -21,7 +21,9 @@ def make_tempfile():
                                's3_test_bizarre.nc')  # Bryan likes this name
     print(f"S3 Test file is {s3_testfile}")
     if not os.path.exists(s3_testfile):
-        make_vanilla_ncdata(filename=s3_testfile)
+        make_vanilla_ncdata(filename=s3_testfile,
+                            chunksize=(3, 3, 1), n=300,
+                            byte_order='native')
 
     local_testfile = os.path.join(temp_folder,
                                   'local_test_bizarre.nc')  # Bryan again
@@ -62,18 +64,24 @@ def create_files():
     return s3_testfile_uri, local_testfile
 
 
-s3_file = create_files()[0]
-local_file = create_files()[1]
+@pytest.fixture
+def s3_file():
+    return create_files()[0]
 
 
-def test_Active(s3file):
+@pytest.fixture
+def local_file():
+    return create_files()[1]
+
+
+def test_Active(s3_file):
     """
     Test truly Active with an S3 file.
     """
-    print("S3 file uri", s3file)
+    print("S3 file uri", s3_file)
 
     # run Active on s3 file
-    active = Active(s3file, "data", "s3")
+    active = Active(s3_file, "data", "s3")
     active.method = "mean"
     result1 = active[0:2, 4:6, 7:9]
     print(result1)
