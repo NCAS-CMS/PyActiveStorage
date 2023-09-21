@@ -76,8 +76,12 @@ def load_netcdf_zarr_generic(fileloc, varname, storage_type, build_dummy=True):
         fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
                                secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
                                client_kwargs={'endpoint_url': S3_URL},  # eg "http://localhost:9000" for Minio
-                               default_fill_cache=False,  # for no caching
-                               default_cache_type="none"
+                               # caching stuff - unclear
+                               default_fill_cache=True,
+                               default_cache_type="readahead"
+                               # this combo produces factor 20x slower runs
+                               # default_fill_cache=False,  # for no caching
+                               # default_cache_type="none"
         )
         so = {
             "mode": 'rb',
