@@ -13,15 +13,11 @@ from operator import itemgetter
 def _get_big_mem_tests(cur):
     """Find out which tests are heavy on memory."""
     big_mem_tests = []
+    print("Test name / memory (MB)")
     for row in cur.execute('select ITEM, MEM_USAGE from TEST_METRICS;'):
         test_name, memory_used = row[0], row[1]
-        if memory_used > 1000.:  # test result in RES mem in MB
-            print("Test name / memory (MB)")
-            print(test_name, memory_used)
-        elif memory_used > 4000.:
-            big_mem_tests.append((test_name, memory_used))
-
-    return big_mem_tests
+        # print all tests with mem (RES mem)
+        print(test_name, memory_used)
 
 
 def _get_slow_tests(cur):
@@ -56,8 +52,7 @@ def _parse_pymon_database():
 
     # The result of a "cursor.execute" can be iterated over by row
     # first look at memory
-    print("Looking for tests that exceed 1GB resident memory.")
-    big_mem_tests = _get_big_mem_tests(cur)
+    _get_big_mem_tests(cur)
 
     # then look at total time (in seconds)
     # (user time is availbale too via USER_TIME, kernel time via KERNEL_TIME)
@@ -65,12 +60,6 @@ def _parse_pymon_database():
 
     # Be sure to close the connection
     con.close()
-
-    # Throw a sys exit so test fails if we have >4GB  tests
-    if big_mem_tests:
-        print("Some tests exceed 4GB of RES memory, look into them!")
-        print(big_mem_tests)
-        sys.exit(1)
 
 
 if __name__ == '__main__':
