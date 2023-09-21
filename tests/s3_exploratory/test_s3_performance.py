@@ -92,7 +92,7 @@ def test_no_Active(local_file):
     """
     # run Active on local file
     active = Active(local_file, "data")
-    active._version = 0
+    active._version = 1
     active.method = "mean"
     active.components = True
     result2 = active[0:2, 4:6, 7:9]
