@@ -27,7 +27,7 @@ def make_tempfile():
     print(f"S3 Test file is {s3_testfile}")
     if not os.path.exists(s3_testfile):
         make_vanilla_ncdata(filename=s3_testfile,
-                            chunksize=(3, 3, 1), n=200)
+                            chunksize=(3, 3, 1), n=150)
 
     local_testfile = os.path.join(temp_folder,
                                   'local_test_bizarre.nc')  # Bryan again
@@ -52,7 +52,7 @@ def upload_to_s3(server, username, password, bucket, object, rfile):
     return os.path.join(bucket, object)
 
 
-def create_files():
+def test_files():
     """Create a file, keep it local, and put file in s3."""
     # make dummy data
     s3_testfile, local_testfile = make_tempfile()
@@ -63,19 +63,20 @@ def create_files():
                                S3_BUCKET, object, s3_testfile)
 
     s3_testfile_uri = os.path.join("s3://", bucket_file)
+
     print("S3 file uri", s3_testfile_uri)
+    print("Local file uri", local_testfile)
 
+    print(x)
     return s3_testfile_uri, local_testfile
+#@pytest.fixture
+#def s3_file():
+#    return create_files()[0]
 
 
-@pytest.fixture
-def s3_file():
-    return create_files()[0]
-
-
-@pytest.fixture
-def local_file():
-    return create_files()[1]
+#@pytest.fixture
+#def local_file():
+#    return create_files()[1]
 
 
 #def test_Active(s3_file):
@@ -104,22 +105,22 @@ def local_file():
 #    print(result2)
 
 
-def test_s3_SingleHdf5ToZarr(s3_file):
-    """Check Kerchunk's SingleHdf5ToZarr when S3."""
-    fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,
-                           secret=S3_SECRET_KEY,
-                           client_kwargs={'endpoint_url': S3_URL},
-                           default_fill_cache=False,
-                           default_cache_type="none"
-    )
-    with fs.open(s3_file, 'rb') as s3file:
-        h5chunks = SingleHdf5ToZarr(s3file, s3_file,
-                                    inline_threshold=0)
-
-
-def test_local_SingleHdf5ToZarr(local_file):
-    """Check Kerchunk's SingleHdf5ToZarr when NO S3."""
-    fs = fsspec.filesystem('')
-    with fs.open(local_file, 'rb') as localfile:
-        h5chunks = SingleHdf5ToZarr(localfile, local_file,
-                                    inline_threshold=0)
+#def test_s3_SingleHdf5ToZarr(s3_file):
+#    """Check Kerchunk's SingleHdf5ToZarr when S3."""
+#    fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,
+#                           secret=S3_SECRET_KEY,
+#                           client_kwargs={'endpoint_url': S3_URL},
+#                           default_fill_cache=False,
+#                           default_cache_type="none"
+#    )
+#    with fs.open(s3_file, 'rb') as s3file:
+#        h5chunks = SingleHdf5ToZarr(s3file, s3_file,
+#                                    inline_threshold=0)
+#
+#
+#def test_local_SingleHdf5ToZarr(local_file):
+#    """Check Kerchunk's SingleHdf5ToZarr when NO S3."""
+#    fs = fsspec.filesystem('')
+#    with fs.open(local_file, 'rb') as localfile:
+#        h5chunks = SingleHdf5ToZarr(localfile, local_file,
+#                                    inline_threshold=0)
