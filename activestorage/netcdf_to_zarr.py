@@ -10,20 +10,26 @@ from activestorage.config import *
 from kerchunk.hdf import SingleHdf5ToZarr
 
 
-def gen_json(file_url, fs, fs2, outf, so, storage_type):
+def gen_json(file_url, outf, storage_type):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
     if storage_type == "s3":
-        h5chunks = SingleHdf5ToZarr(file_url,
-                                    storage_options=so,
-                                    inline_threshold=0)
-        with fs2.open(outf, 'wb') as f:
-            f.write(ujson.dumps(h5chunks.translate()).encode())
+        fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,
+                               secret=S3_SECRET_KEY,
+                               client_kwargs={'endpoint_url': S3_URL},
+                               default_fill_cache=False,
+                               default_cache_type="none"
+        )
+        fs2 = fsspec.filesystem('')
+        with fs.open(file_url, 'rb') as s3file:
+            h5chunks = SingleHdf5ToZarr(s3file, file_url,
+                                        inline_threshold=0)
+            with fs2.open(outf, 'wb') as f:
+                f.write(ujson.dumps(h5chunks.translate()).encode())
     else:
-        print("NOT S3!!!")
-        with fs.open(file_url) as infile:
-            # FIXME need to disentangle HDF5 errors if not OSError (most are)
+        fs = fsspec.filesystem('')
+        with fs.open(file_url, 'rb') as local_file:
             try:
-                h5chunks = SingleHdf5ToZarr(infile, file_url,
+                h5chunks = SingleHdf5ToZarr(local_file, file_url,
                                             inline_threshold=0)
             except OSError as exc:
                 raiser_1 = f"Unable to open file {file_url}. "
@@ -36,7 +42,7 @@ def gen_json(file_url, fs, fs2, outf, so, storage_type):
             # a higher inline threshold can result in a larger json file but
             # faster loading time
             # for active storage, we don't want anything inline
-            with fs2.open(outf, 'wb') as f:
+            with fs.open(outf, 'wb') as f:
                 f.write(ujson.dumps(h5chunks.translate()).encode())
 
     return outf
@@ -68,42 +74,10 @@ def open_zarr_group(out_json, varname):
 def load_netcdf_zarr_generic(fileloc, varname, storage_type, build_dummy=True):
     """Pass a netCDF4 file to be shaped as Zarr file by kerchunk."""
     print(f"Storage type {storage_type}")
-    object_filesystems = ["s3"]
-
-    # "local"/POSIX files; use a local FS with fsspec
-    if storage_type not in object_filesystems:
-        so = dict(mode='rb', anon=True, default_fill_cache=False,
-                  default_cache_type='first') # args to fs.open()
-        # default_fill_cache=False avoids caching data in between
-        # file chunks to lower memory usage
-        fs = fsspec.filesystem('')
-    # open file in memory view mode straight from the S3 object storage
-    elif storage_type == "s3":
-        # see https://s3fs.readthedocs.io/en/latest/api.html?highlight=default_fill_cache#s3fs.core.S3FileSystem
-        fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
-                               secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
-                               client_kwargs={'endpoint_url': S3_URL},  # eg "http://localhost:9000" for Minio
-                               # caching stuff - unclear
-                               default_fill_cache=True,
-                               default_cache_type="readahead"
-                               # this combo produces factor 20x slower runs
-                               # default_fill_cache=False,  # for no caching
-                               # default_cache_type="none"
-        )
-        so = {
-            "mode": 'rb',
-            "default_fill_cache": False,
-            "default_cache_type": "none",
-            "key": S3_ACCESS_KEY,
-            "secret": S3_SECRET_KEY,
-            "client_kwargs": {'endpoint_url': S3_URL}
-        }
-
-    fs2 = fsspec.filesystem('')  # local file system to save final json to
 
     # Write the Zarr group JSON to a temporary file.
     with tempfile.NamedTemporaryFile() as out_json:
-        gen_json(fileloc, fs, fs2, out_json.name, so, storage_type)
+        gen_json(fileloc, out_json.name, storage_type)
 
         # open this monster
         print(f"Attempting to open and convert {fileloc}.")
