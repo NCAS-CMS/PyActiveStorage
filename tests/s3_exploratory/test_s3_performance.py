@@ -1,4 +1,6 @@
 import os
+
+import fsspec
 import numpy as np
 import pytest
 import s3fs
