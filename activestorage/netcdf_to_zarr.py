@@ -10,27 +10,34 @@ from activestorage.config import *
 from kerchunk.hdf import SingleHdf5ToZarr
 
 
-def gen_json(file_url, fs, fs2, outf, so):
+def gen_json(file_url, fs, fs2, outf, so, storage_type):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
-    with fs.open(file_url, **so) as infile:
-        # FIXME need to disentangle HDF5 errors if not OSError (most are)
-        try:
-            h5chunks = SingleHdf5ToZarr(infile, file_url,
-                                        storage_options=so,
-                                        inline_threshold=0)
-        except OSError as exc:
-            raiser_1 = f"Unable to open file {file_url}. "
-            raiser_2 = "Check if file is netCDF3 or netCDF-classic"
-            print(raiser_1 + raiser_2)
-            raise exc
-
-        # inline threshold adjusts the Size below which binary blocks are
-        # included directly in the output
-        # a higher inline threshold can result in a larger json file but
-        # faster loading time
-        # for active storage, we don't want anything inline
+    if storage_type == "s3":
+        h5chunks = SingleHdf5ToZarr(file_url,
+                                    storage_options=so,
+                                    inline_threshold=0)
         with fs2.open(outf, 'wb') as f:
             f.write(ujson.dumps(h5chunks.translate()).encode())
+    else:
+        print("NOT S3!!!")
+        with fs.open(file_url) as infile:
+            # FIXME need to disentangle HDF5 errors if not OSError (most are)
+            try:
+                h5chunks = SingleHdf5ToZarr(infile, file_url,
+                                            inline_threshold=0)
+            except OSError as exc:
+                raiser_1 = f"Unable to open file {file_url}. "
+                raiser_2 = "Check if file is netCDF3 or netCDF-classic"
+                print(raiser_1 + raiser_2)
+                raise exc
+
+            # inline threshold adjusts the Size below which binary blocks are
+            # included directly in the output
+            # a higher inline threshold can result in a larger json file but
+            # faster loading time
+            # for active storage, we don't want anything inline
+            with fs2.open(outf, 'wb') as f:
+                f.write(ujson.dumps(h5chunks.translate()).encode())
 
     return outf
 
@@ -96,7 +103,7 @@ def load_netcdf_zarr_generic(fileloc, varname, storage_type, build_dummy=True):
 
     # Write the Zarr group JSON to a temporary file.
     with tempfile.NamedTemporaryFile() as out_json:
-        gen_json(fileloc, fs, fs2, out_json.name, so)
+        gen_json(fileloc, fs, fs2, out_json.name, so, storage_type)
 
         # open this monster
         print(f"Attempting to open and convert {fileloc}.")
