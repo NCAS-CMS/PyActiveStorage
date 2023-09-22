@@ -1,3 +1,4 @@
+import pytest
 import s3fs
 
 from pathlib import Path
