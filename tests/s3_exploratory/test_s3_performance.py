@@ -27,14 +27,14 @@ def make_tempfile():
     print(f"S3 Test file is {s3_testfile}")
     if not os.path.exists(s3_testfile):
         make_vanilla_ncdata(filename=s3_testfile,
-                            chunksize=(3, 3, 1), n=100)
+                            chunksize=(3, 3, 1), n=150)
 
     local_testfile = os.path.join(temp_folder,
                                   'local_test_bizarre.nc')  # Bryan again
     print(f"Local Test file is {local_testfile}")
     if not os.path.exists(local_testfile):
         make_vanilla_ncdata(filename=local_testfile,
-                            chunksize=(3, 3, 1), n=100)
+                            chunksize=(3, 3, 1), n=150)
 
     return s3_testfile, local_testfile
 
