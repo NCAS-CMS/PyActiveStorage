@@ -126,7 +126,7 @@ def test_s3_SingleHdf5ToZarr(s3_file):
 
     fs2 = fsspec.filesystem('')  # local file system to save final json to
     with tempfile.NamedTemporaryFile() as out_json:
-        gen_json(s3_file, fs, fs2, out_json.name, so)
+        gen_json(s3_file, fs, fs2, out_json.name, so, storage_type="s3")
 
 
 def test_local_SingleHdf5ToZarr(local_file):
@@ -138,5 +138,5 @@ def test_local_SingleHdf5ToZarr(local_file):
     fs = fsspec.filesystem('')
     fs2 = fsspec.filesystem('')
     with tempfile.NamedTemporaryFile() as out_json:
-        gen_json(local_file, fs, fs2, out_json.name, so)
+        gen_json(local_file, fs, fs2, out_json.name, so, storage_type="")
 
