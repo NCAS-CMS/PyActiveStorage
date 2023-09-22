@@ -49,6 +49,20 @@ def test_Active_s3_v0():
     active.components = True
     result1 = active[0:2, 4:6, 7:9]
 
+
+def test_Active_s3_v1():
+    """
+    Test truly Active with an S3 file.
+    """
+    # run Active on s3 file
+    s3_file = "s3://pyactivestorage/s3_test_bizarre_large.nc"
+    active = Active(s3_file, "data", "s3")
+    active._version = 1
+    active.method = "mean"
+    active.components = True
+    result1 = active[0:2, 4:6, 7:9]
+
+
 def test_Active_s3_v2():
     """
     Test truly Active with an S3 file.
