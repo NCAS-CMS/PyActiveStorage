@@ -52,7 +52,7 @@ def upload_to_s3(server, username, password, bucket, object, rfile):
     return os.path.join(bucket, object)
 
 
-def test_files():
+def test_create_files():
     """Create a file, keep it local, and put file in s3."""
     # make dummy data
     s3_testfile, local_testfile = make_tempfile()
@@ -67,8 +67,9 @@ def test_files():
     print("S3 file uri", s3_testfile_uri)
     print("Local file uri", local_testfile)
 
-    print(x)
     return s3_testfile_uri, local_testfile
+
+
 #@pytest.fixture
 #def s3_file():
 #    return create_files()[0]
