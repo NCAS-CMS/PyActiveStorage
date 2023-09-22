@@ -50,7 +50,19 @@ def test_Active():
     result1 = active[0:2, 4:6, 7:9]
 
 
-def test_no_Active(test_data_path):
+def test_Active_v0():
+    """
+    Test truly Active with an S3 file.
+    """
+    # run Active on s3 file
+    s3_file = "s3://pyactivestorage/s3_test_bizarre_large.nc"
+    active = Active(s3_file, "data", "s3")
+    active._version = 0
+    active.components = True
+    result1 = active[0:2, 4:6, 7:9]
+
+
+def test_Active_v1(test_data_path):
     """
     Test pulling the data locally.
     """
