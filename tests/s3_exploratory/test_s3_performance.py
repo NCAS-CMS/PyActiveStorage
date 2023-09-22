@@ -23,7 +23,7 @@ def make_tempfile():
     """Make dummy data."""
     temp_folder = tempfile.mkdtemp()
     s3_testfile = os.path.join(temp_folder,
-                               's3_test_bizarre.nc')  # Bryan likes this name
+                               's3_test_bizarre_large.nc')  # Bryan likes this name
     print(f"S3 Test file is {s3_testfile}")
     if not os.path.exists(s3_testfile):
         make_vanilla_ncdata(filename=s3_testfile,

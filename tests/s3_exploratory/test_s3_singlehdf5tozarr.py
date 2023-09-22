@@ -16,7 +16,7 @@ def test_data_path():
 
 def test_s3_SingleHdf5ToZarr():
     """Check Kerchunk's SingleHdf5ToZarr when S3."""
-    s3_file = "s3://pyactivestorage/s3_test_bizarre.nc"
+    s3_file = "s3://pyactivestorage/s3_test_bizarre_large.nc"
     fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,
                            secret=S3_SECRET_KEY,
                            client_kwargs={'endpoint_url': S3_URL},
