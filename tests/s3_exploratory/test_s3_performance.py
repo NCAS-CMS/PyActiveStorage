@@ -1,71 +1,114 @@
-import os
-
 import fsspec
-import numpy as np
 import pytest
 import s3fs
-import tempfile
 
-from activestorage.active import Active
-from activestorage.dummy_data import make_vanilla_ncdata
-import activestorage.storage as st
-from activestorage.reductionist import reduce_chunk as reductionist_reduce_chunk
-from activestorage.netcdf_to_zarr import gen_json
+from pathlib import Path
 from kerchunk.hdf import SingleHdf5ToZarr
 
-from numpy.testing import assert_allclose, assert_array_equal
-from pathlib import Path
-
+from activestorage.active import Active
 from config_minio import *
 
 
-def make_tempfile():
-    """Make dummy data."""
-    temp_folder = tempfile.mkdtemp()
-    s3_testfile = os.path.join(temp_folder,
-                               's3_test_bizarre_large.nc')  # Bryan likes this name
-    print(f"S3 Test file is {s3_testfile}")
-    if not os.path.exists(s3_testfile):
-        make_vanilla_ncdata(filename=s3_testfile,
-                            chunksize=(3, 3, 1), n=150)
-
-    local_testfile = os.path.join(temp_folder,
-                                  'local_test_bizarre.nc')  # Bryan again
-    print(f"Local Test file is {local_testfile}")
-    if not os.path.exists(local_testfile):
-        make_vanilla_ncdata(filename=local_testfile,
-                            chunksize=(3, 3, 1), n=150)
-
-    return s3_testfile, local_testfile
+@pytest.fixture
+def test_data_path():
+    """Path to test data."""
+    return Path(__file__).resolve().parent / 'test_data'
 
 
-def upload_to_s3(server, username, password, bucket, object, rfile):
-    """Upload a file to an S3 object store."""
-    s3_fs = s3fs.S3FileSystem(key=username, secret=password, client_kwargs={'endpoint_url': server})
-    # Make sure s3 bucket exists
-    try:
-        s3_fs.mkdir(bucket)
-    except FileExistsError:
-        pass
+def test_s3_SingleHdf5ToZarr():
+    """Check Kerchunk's SingleHdf5ToZarr when S3."""
+    s3_file = "s3://pyactivestorage/s3_test_bizarre_large.nc"
+    fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,
+                           secret=S3_SECRET_KEY,
+                           client_kwargs={'endpoint_url': S3_URL},
+                           default_fill_cache=False,
+                           default_cache_type="none"
+    )
+    with fs.open(s3_file, 'rb') as s3file:
+        h5chunks = SingleHdf5ToZarr(s3file, s3_file,
+                                    inline_threshold=0)
 
-    s3_fs.put_file(rfile, os.path.join(bucket, object))
 
-    return os.path.join(bucket, object)
+def test_local_SingleHdf5ToZarr(test_data_path):
+    """Check Kerchunk's SingleHdf5ToZarr when NO S3."""
+    local_file = str(test_data_path / "test_bizarre.nc")
+    fs = fsspec.filesystem('')
+    with fs.open(local_file, 'rb') as localfile:
+        h5chunks = SingleHdf5ToZarr(localfile, local_file,
+                                    inline_threshold=0)
 
 
-def test_create_files():
-    """Create a file, keep it local, and put file in s3."""
-    # make dummy data
-    s3_testfile, local_testfile = make_tempfile()
+def test_Active_s3_v0():
+    """
+    Test truly Active with an S3 file.
+    """
+    # run Active on s3 file
+    s3_file = "s3://pyactivestorage/s3_test_bizarre_large.nc"
+    active = Active(s3_file, "data", "s3")
+    active._version = 0
+    active.components = True
+    result1 = active[0:2, 4:6, 7:9]
 
-    # put s3 dummy data onto S3. then rm from local
-    object = os.path.basename(s3_testfile)
-    bucket_file = upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY,
-                               S3_BUCKET, object, s3_testfile)
 
-    s3_testfile_uri = os.path.join("s3://", bucket_file)
+def test_Active_s3_v1():
+    """
+    Test truly Active with an S3 file.
+    """
+    # run Active on s3 file
+    s3_file = "s3://pyactivestorage/s3_test_bizarre_large.nc"
+    active = Active(s3_file, "data", "s3")
+    active._version = 1
+    active.method = "mean"
+    active.components = True
+    result1 = active[0:2, 4:6, 7:9]
 
-    print("S3 file uri", s3_testfile_uri)
-    print("Local file uri", local_testfile)
 
-    return s3_testfile_uri, local_testfile
+def test_Active_s3_v2():
+    """
+    Test truly Active with an S3 file.
+    """
+    # run Active on s3 file
+    s3_file = "s3://pyactivestorage/s3_test_bizarre_large.nc"
+    active = Active(s3_file, "data", "s3")
+    active._version = 2
+    active.method = "mean"
+    active.components = True
+    result1 = active[0:2, 4:6, 7:9]
+
+
+def test_Active_local_v0(test_data_path):
+    """
+    Test pulling the data locally.
+    """
+    # run Active on local file
+    local_file = str(test_data_path / "test_bizarre.nc")
+    active = Active(local_file, "data")
+    active._version = 0
+    active.components = True
+    result2 = active[0:2, 4:6, 7:9]
+
+
+def test_Active_local_v1(test_data_path):
+    """
+    Test pulling the data locally.
+    """
+    # run Active on local file
+    local_file = str(test_data_path / "test_bizarre.nc")
+    active = Active(local_file, "data")
+    active._version = 1
+    active.method = "mean"
+    active.components = True
+    result2 = active[0:2, 4:6, 7:9]
+
+
+def test_Active_local_v2(test_data_path):
+    """
+    Test pulling the data locally.
+    """
+    # run Active on local file
+    local_file = str(test_data_path / "test_bizarre.nc")
+    active = Active(local_file, "data")
+    active._version = 2
+    active.method = "mean"
+    active.components = True
+    result2 = active[0:2, 4:6, 7:9]
