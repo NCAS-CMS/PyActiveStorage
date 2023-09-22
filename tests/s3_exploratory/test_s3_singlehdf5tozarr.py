@@ -1,8 +1,11 @@
+import fsspec
 import pytest
 import s3fs
 
 from pathlib import Path
 from kerchunk.hdf import SingleHdf5ToZarr
+
+from config_minio import *
 
 
 @pytest.fixture
