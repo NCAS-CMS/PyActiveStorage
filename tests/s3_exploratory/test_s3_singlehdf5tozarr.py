@@ -5,6 +5,7 @@ import s3fs
 from pathlib import Path
 from kerchunk.hdf import SingleHdf5ToZarr
 
+from activestorage.active import Active
 from config_minio import *
 
 
@@ -35,3 +36,28 @@ def test_local_SingleHdf5ToZarr(test_data_path):
     with fs.open(local_file, 'rb') as localfile:
         h5chunks = SingleHdf5ToZarr(localfile, local_file,
                                     inline_threshold=0)
+
+
+def test_Active():
+    """
+    Test truly Active with an S3 file.
+    """
+    # run Active on s3 file
+    s3_file = "s3://pyactivestorage/s3_test_bizarre_large.nc"
+    active = Active(s3_file, "data", "s3")
+    active.method = "mean"
+    active.components = True
+    result1 = active[0:2, 4:6, 7:9]
+
+
+def test_no_Active(test_data_path):
+    """
+    Test pulling the data locally.
+    """
+    # run Active on local file
+    local_file = str(test_data_path / "test_bizarre.nc")
+    active = Active(local_file, "data")
+    active._version = 1
+    active.method = "mean"
+    active.components = True
+    result2 = active[0:2, 4:6, 7:9]
