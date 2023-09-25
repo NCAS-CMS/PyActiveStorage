@@ -42,6 +42,7 @@ def test_local_SingleHdf5ToZarr(test_data_path):
 def test_s3_kerchunk_to_json():
     """Check Kerchunk's SingleHdf5ToZarr dumped to JSON, when S3."""
     s3_file = "s3://pyactivestorage/s3_test_bizarre_large.nc"
+    outf = "s3_dump.json"
     fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,
                            secret=S3_SECRET_KEY,
                            client_kwargs={'endpoint_url': S3_URL},
@@ -61,6 +62,7 @@ def test_s3_kerchunk_to_json():
 def test_local_kerchunk_to_json(test_data_path):
     """Check Kerchunk's SingleHdf5ToZarr dumped to JSON, when NO S3."""
     local_file = str(test_data_path / "test_bizarre.nc")
+    outf = "loocal_dump.json"
     fs = fsspec.filesystem('')
     with fs.open(local_file, 'rb') as localfile:
         h5chunks = SingleHdf5ToZarr(localfile, local_file,
