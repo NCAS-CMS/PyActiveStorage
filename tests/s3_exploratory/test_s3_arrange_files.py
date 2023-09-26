@@ -75,11 +75,11 @@ def upload_to_s3(server, username, password, bucket, object, rfile):
     return os.path.join(bucket, object)
 
 
-def test_create_files(test_data_path):
+def test_create_files(test_data_path, test_spec):
     """Create a file, keep it local, and put file in s3."""
     # make dummy data
-    s3_testfile  = make_s3_file()
-    local_testfile = make_local_file(test_data_path)
+    s3_testfile  = make_s3_file(test_spec)
+    local_testfile = make_local_file(test_data_path, test_spec)
 
     # put s3 dummy data onto S3
     object = os.path.basename(s3_testfile)
