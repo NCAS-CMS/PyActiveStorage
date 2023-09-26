@@ -19,24 +19,35 @@ from pathlib import Path
 from config_minio import *
 
 
-def make_tempfile():
+@pytest.fixture
+def test_data_path():
+    """Path to test data."""
+    return Path(__file__).resolve().parent / 'test_data'
+
+
+def make_s3_file():
     """Make dummy data."""
     temp_folder = tempfile.mkdtemp()
     s3_testfile = os.path.join(temp_folder,
-                               's3_test_bizarre_large.nc')  # Bryan likes this name
+                               's3_test_bizarre_large.nc')
     print(f"S3 Test file is {s3_testfile}")
     if not os.path.exists(s3_testfile):
         make_vanilla_ncdata(filename=s3_testfile,
                             chunksize=(3, 3, 1), n=150)
 
-    local_testfile = os.path.join(temp_folder,
-                                  'local_test_bizarre.nc')  # Bryan again
+    return s3_testfile
+
+
+def make_local_file(test_data_path):
+    """Create a vanilla nc file and store in test_data dir here."""
+    local_testfile = os.path.join(test_data_path,
+                                  'test_bizarre.nc')
     print(f"Local Test file is {local_testfile}")
     if not os.path.exists(local_testfile):
         make_vanilla_ncdata(filename=local_testfile,
                             chunksize=(3, 3, 1), n=150)
 
-    return s3_testfile, local_testfile
+    return local_testfile
 
 
 def upload_to_s3(server, username, password, bucket, object, rfile):
@@ -53,12 +64,13 @@ def upload_to_s3(server, username, password, bucket, object, rfile):
     return os.path.join(bucket, object)
 
 
-def test_create_files():
+def test_create_files(test_data_path):
     """Create a file, keep it local, and put file in s3."""
     # make dummy data
-    s3_testfile, local_testfile = make_tempfile()
+    s3_testfile  = make_s3_file()
+    local_testfile = make_local_file(test_data_path)
 
-    # put s3 dummy data onto S3. then rm from local
+    # put s3 dummy data onto S3
     object = os.path.basename(s3_testfile)
     bucket_file = upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY,
                                S3_BUCKET, object, s3_testfile)
@@ -67,5 +79,3 @@ def test_create_files():
 
     print("S3 file uri", s3_testfile_uri)
     print("Local file uri", local_testfile)
-
-    return s3_testfile_uri, local_testfile
