@@ -21,7 +21,7 @@ from config_minio import *
 
 @pytest.fixture
 def test_spec():
-    CHUNKS = (3, 3, 1)
+    CHUNKS = (10, 10, 10)  # (3, 3, 1)
     NSIZE = 150
 
     return CHUNKS, NSIZE
