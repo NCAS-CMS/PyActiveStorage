@@ -7,16 +7,29 @@ import requests
 import numcodecs
 import numpy as np
 import sys
+import typing
 
 
-def reduce_chunk(server, username, password, source, bucket, object, offset,
-                 size, compression, filters, missing, dtype, shape, order,
-                 chunk_selection, operation):
+def get_session(username: str, password: str, cacert: typing.Optional[str]) -> requests.Session:
+    """Create and return a client session object.
+
+    :param username: S3 username / access key
+    :param password: S3 password / secret key
+    :returns: a client session object.
+    """
+    session = requests.Session()
+    session.auth = (username, password)
+    session.verify = cacert or True
+    return session
+
+
+def reduce_chunk(session, server, source, bucket, object,
+                 offset, size, compression, filters, missing, dtype, shape,
+                 order, chunk_selection, operation):
     """Perform a reduction on a chunk using Reductionist.
 
     :param server: Reductionist server URL
-    :param username: S3 username / access key
-    :param password: S3 password / secret key
+    :param cacert: Reductionist CA certificate path
     :param source: S3 URL
     :param bucket: S3 bucket
     :param object: S3 object
@@ -42,7 +55,7 @@ def reduce_chunk(server, username, password, source, bucket, object, offset,
     request_data = build_request_data(source, bucket, object, offset, size, compression, filters, missing, dtype, shape, order, chunk_selection)
     api_operation = "sum" if operation == "mean" else operation or "select"
     url = f'{server}/v1/{api_operation}/'
-    response = request(url, username, password, request_data)
+    response = request(session, url, request_data)
 
     if response.ok:
         return decode_result(response)
@@ -144,12 +157,11 @@ def build_request_data(source: str, bucket: str, object: str, offset: int,
     return {k: v for k, v in request_data.items() if v is not None}
 
 
-def request(url: str, username: str, password: str, request_data: dict):
+def request(session: requests.Session, url: str, request_data: dict):
     """Make a request to a Reductionist API."""
-    response = requests.post(
+    response = session.post(
         url,
         json=request_data,
-        auth=(username, password)
     )
     return response
 

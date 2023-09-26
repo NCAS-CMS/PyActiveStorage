@@ -27,7 +27,7 @@ old_netcdf_to_zarr = netcdf_to_zarr.load_netcdf_zarr_generic
 
 @mock.patch.object(activestorage.active, "load_from_s3")
 @mock.patch.object(activestorage.netcdf_to_zarr, "load_netcdf_zarr_generic")
-@mock.patch.object(activestorage.active, "reductionist_reduce_chunk")
+@mock.patch.object(activestorage.active.reductionist, "reduce_chunk")
 def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3."""
 
@@ -43,9 +43,8 @@ def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
         return old_netcdf_to_zarr(test_file, ncvar, None)
 
     def reduce_chunk(
+        session,
         server,
-        username,
-        password,
         source,
         bucket,
         object,
@@ -95,9 +94,8 @@ def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
     # NOTE: This gets called multiple times with various arguments. Match on
     # the common ones.
     mock_reduce.assert_called_with(
+        mock.ANY,
         S3_ACTIVE_STORAGE_URL,
-        S3_ACCESS_KEY,
-        S3_SECRET_KEY,
         S3_URL,
         mock.ANY,
         mock.ANY,
@@ -149,7 +147,7 @@ def test_s3_load_failure(mock_load):
 
 @mock.patch.object(activestorage.active, "load_from_s3")
 @mock.patch.object(activestorage.netcdf_to_zarr, "load_netcdf_zarr_generic")
-@mock.patch.object(activestorage.active, "reductionist_reduce_chunk")
+@mock.patch.object(activestorage.active.reductionist, "reduce_chunk")
 def test_reductionist_connection(mock_reduce, mock_nz, mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3."""
 
@@ -178,7 +176,7 @@ def test_reductionist_connection(mock_reduce, mock_nz, mock_load, tmp_path):
 
 @mock.patch.object(activestorage.active, "load_from_s3")
 @mock.patch.object(activestorage.netcdf_to_zarr, "load_netcdf_zarr_generic")
-@mock.patch.object(activestorage.active, "reductionist_reduce_chunk")
+@mock.patch.object(activestorage.active.reductionist, "reduce_chunk")
 def test_reductionist_bad_request(mock_reduce, mock_nz, mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3."""
 

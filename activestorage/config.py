@@ -6,6 +6,9 @@ USE_S3 = False
 # URL of Reductionist server.
 S3_ACTIVE_STORAGE_URL = "http://localhost:8080"
 
+# Path to a CA certificate for Reductionist server.
+S3_ACTIVE_STORAGE_CACERT = None
+
 # URL of S3 object store.
 S3_URL = "http://localhost:9000"
 
