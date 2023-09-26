@@ -20,32 +20,43 @@ from config_minio import *
 
 
 @pytest.fixture
+def test_specs():
+    CHUNKS = (3, 3, 1)
+    NSIZE = 150
+
+    return CHUNKS, NSIZE
+
+
+@pytest.fixture
 def test_data_path():
     """Path to test data."""
     return Path(__file__).resolve().parent / 'test_data'
 
 
-def make_s3_file():
+def make_s3_file(test_spec):
     """Make dummy data."""
     temp_folder = tempfile.mkdtemp()
+    CHUNKS, NSIZE = test_spec
     s3_testfile = os.path.join(temp_folder,
                                's3_test_bizarre_large.nc')
     print(f"S3 Test file is {s3_testfile}")
     if not os.path.exists(s3_testfile):
         make_vanilla_ncdata(filename=s3_testfile,
-                            chunksize=(3, 3, 1), n=150)
+                            chunksize=CHUNKS, n=NSIZE)
 
     return s3_testfile
 
 
-def make_local_file(test_data_path):
+def make_local_file(test_data_path, test_spec):
     """Create a vanilla nc file and store in test_data dir here."""
     local_testfile = os.path.join(test_data_path,
                                   'test_bizarre.nc')
+    CHUNKS, NSIZE = test_spec
+
     print(f"Local Test file is {local_testfile}")
     if not os.path.exists(local_testfile):
         make_vanilla_ncdata(filename=local_testfile,
-                            chunksize=(3, 3, 1), n=150)
+                            chunksize=CHUNKS, n=NSIZE)
 
     return local_testfile
 
