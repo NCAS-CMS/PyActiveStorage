@@ -22,7 +22,7 @@ from config_minio import *
 @pytest.fixture
 def test_spec():
     CHUNKS = (75, 75, 75)  # (10, 10, 10) factor 300 speedup from  (3, 3, 1) for S3
-    NSIZE = 150
+    NSIZE = 300
 
     return CHUNKS, NSIZE
 
