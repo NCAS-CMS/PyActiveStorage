@@ -18,10 +18,17 @@ from pathlib import Path
 
 from config_minio import *
 
-
+# HDF5 chunking is paramount for performance
+# many small chunks slow down the process by factors of hundreds
 @pytest.fixture
 def test_spec():
-    CHUNKS = (75, 75, 75)  # (10, 10, 10) factor 300 speedup from  (3, 3, 1) for S3
+    # good HDF5 chunk size for a 500x500x500 data points
+    # uncompressed netCDF4 file
+    # this means: 75 data points per dimension per chunk
+    # test_harness.py uses very bad (3, 3, 1) chunks
+    # for a 150x150x150 data
+    # chunks=(10, 10, 10) offer factor 300 speedup from  (3, 3, 1) for S3
+    CHUNKS = (75, 75, 75)
     NSIZE = 500
 
     return CHUNKS, NSIZE
@@ -77,6 +84,8 @@ def upload_to_s3(server, username, password, bucket, object, rfile):
 
 def test_create_files(test_data_path, test_spec):
     """Create a file, keep it local, and put file in s3."""
+    # this runs as a simple pytest test ahead of the performance test
+
     # make dummy data
     s3_testfile  = make_s3_file(test_spec)
     local_testfile = make_local_file(test_data_path, test_spec)
