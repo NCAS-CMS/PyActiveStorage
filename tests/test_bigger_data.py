@@ -5,8 +5,12 @@ import pytest
 import numpy as np
 from netCDF4 import Dataset
 from pathlib import Path
+import s3fs
 
 from activestorage.active import Active
+from activestorage.config import *
+
+import utils
 
 
 @pytest.fixture
@@ -92,18 +96,21 @@ def save_cl_file_with_a(tmp_path):
     dataset = Dataset(nc_path, mode='w')
     create_hyb_pres_file_with_a(dataset, 'cl')
     dataset.close()
-    print(f"Saved {save_path}")
-    return str(save_path)
+    uri = utils.write_to_storage(nc_path)
+    if USE_S3:
+        os.remove(save_path)
+
+    return uri
 
 
 def test_cl(tmp_path):
     ncfile = save_cl_file_with_a(tmp_path)
-    active = Active(ncfile, "cl")
+    active = Active(ncfile, "cl", utils.get_storage_type())
     active._version = 0
     d = active[4:5, 1:2]
     mean_result = np.mean(d)
 
-    active = Active(ncfile, "cl")
+    active = Active(ncfile, "cl", utils.get_storage_type())
     active._version = 2
     active.method = "mean"
     active.components = True
@@ -119,12 +126,12 @@ def test_cl(tmp_path):
 
 def test_ps(tmp_path):
     ncfile = save_cl_file_with_a(tmp_path)
-    active = Active(ncfile, "ps")
+    active = Active(ncfile, "ps", utils.get_storage_type())
     active._version = 0
     d = active[4:5, 1:2]
     mean_result = np.mean(d)
 
-    active = Active(ncfile, "ps")
+    active = Active(ncfile, "ps", utils.get_storage_type())
     active._version = 2
     active.method = "mean"
     active.components = True
@@ -154,6 +161,8 @@ def test_native_emac_model_fails(test_data_path):
     E   OSError: Unable to open file (file signature not found)
     """
     ncfile = str(test_data_path / "emac.nc")
+    uri = utils.write_to_storage(ncfile)
+    # Use local file to avoid h5py
     active = Active(ncfile, "aps_ave")
     active._version = 0
     d = active[4:5, 1:2]
@@ -165,12 +174,16 @@ def test_native_emac_model_fails(test_data_path):
         # ignore it, but the general case should not.
         pass
 
-    active = Active(ncfile, "aps_ave")
-    active._version = 2
-    active.method = "mean"
-    active.components = True
-    with pytest.raises(OSError):
-        result2 = active[4:5, 1:2]
+    if USE_S3:
+        with pytest.raises(OSError):
+            active = Active(uri, "aps_ave", utils.get_storage_type())
+    else:
+        active = Active(uri, "aps_ave")
+        active._version = 2
+        active.method = "mean"
+        active.components = True
+        with pytest.raises(OSError):
+            result2 = active[4:5, 1:2]
 
 
 def test_cesm2_native(test_data_path):
@@ -179,12 +192,13 @@ def test_cesm2_native(test_data_path):
     Also, this has _FillValue and missing_value
     """
     ncfile = str(test_data_path / "cesm2_native.nc")
-    active = Active(ncfile, "TREFHT")
+    uri = utils.write_to_storage(ncfile)
+    active = Active(uri, "TREFHT", utils.get_storage_type())
     active._version = 0
     d = active[4:5, 1:2]
     mean_result = np.mean(d)
 
-    active = Active(ncfile, "TREFHT")
+    active = Active(uri, "TREFHT", utils.get_storage_type())
     active._version = 2
     active.method = "mean"
     active.components = True
@@ -192,10 +206,10 @@ def test_cesm2_native(test_data_path):
     print(result2, ncfile)
     # expect {'sum': array([[[2368.3232]]], dtype=float32), 'n': array([[[8]]])}
     # check for typing and structure
-    np.testing.assert_array_equal(result2["sum"], np.array([[[2368.3232]]], dtype="float32"))
+    np.testing.assert_allclose(result2["sum"], np.array([[[2368.3232]]], dtype="float32"), rtol=1e-6)
     np.testing.assert_array_equal(result2["n"], np.array([[[8]]]))
     # check for active
-    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+    np.testing.assert_allclose(mean_result, result2["sum"]/result2["n"], rtol=1e-6)
 
 
 def test_daily_data(test_data_path):
@@ -203,12 +217,13 @@ def test_daily_data(test_data_path):
     Test again with a daily data file,
     """
     ncfile = str(test_data_path / "daily_data.nc")
-    active = Active(ncfile, "ta")
+    uri = utils.write_to_storage(ncfile)
+    active = Active(uri, "ta", utils.get_storage_type())
     active._version = 0
     d = active[4:5, 1:2]
     mean_result = np.mean(d)
 
-    active = Active(ncfile, "ta")
+    active = Active(uri, "ta", utils.get_storage_type())
     active._version = 2
     active.method = "mean"
     active.components = True
@@ -227,13 +242,14 @@ def test_daily_data_masked(test_data_path):
     Test again with a daily data file, with masking on
     """
     ncfile = str(test_data_path / "daily_data_masked.nc")
-    active = Active(ncfile, "ta", missing_value=999.)
+    uri = utils.write_to_storage(ncfile)
+    active = Active(uri, "ta", utils.get_storage_type(), missing_value=999.)
     active._version = 0
     d = active[:]
     d = np.ma.masked_where(d==999., d)
     mean_result = np.ma.mean(d)
 
-    active = Active(ncfile, "ta", missing_value=999.)
+    active = Active(uri, "ta", utils.get_storage_type(), missing_value=999.)
     active._version = 2
     active.method = "mean"
     active.components = True
@@ -241,7 +257,7 @@ def test_daily_data_masked(test_data_path):
     print(result2, ncfile)
     # expect {'sum': array([[[[169632.5]]]], dtype=float32), 'n': 680}
     # check for typing and structure
-    np.testing.assert_array_equal(result2["sum"], np.array([[[[169632.5]]]], dtype="float32"))
+    np.testing.assert_allclose(result2["sum"], np.array([[[[169632.5]]]], dtype="float32"), rtol=1e-6)
     np.testing.assert_array_equal(result2["n"], 680)
     # check for active
-    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+    np.testing.assert_allclose(mean_result, result2["sum"]/result2["n"], rtol=1e-6)

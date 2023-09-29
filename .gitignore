@@ -21,6 +21,8 @@ tests/test_data/cesm2_native_TREFHT.json
 tests/test_data/daily_data_tas.json
 tests/test_data/daily_data_ta.json
 tests/test_data/daily_data_masked_ta.json
+tests/test_data/CMIP6_IPSL-CM6A-LR_tas_tas.json
+tests/test_data/obs4MIPS_CERES-EBAF_L3B_Ed2-8_rlut_rlut.json
 
 # test coverage
 .coverage

@@ -2,13 +2,29 @@
 name: activestorage
 channels:
   - conda-forge
+  - nodefaults
 
 dependencies:
+  - python >=3.9
   - dask
+  - fsspec
+  - h5netcdf
   - h5py  # needed by Kerchunk
   - kerchunk
   - netcdf4
+  - numpy !=1.24.3  # severe masking bug
   - pip !=21.3
+  - s3fs
+  # pin Zarr to avoid using old KVStore interface
+  # see github.com/zarr-developers/zarr-python/issues/1362
+  - zarr >=2.13.6  # KVStore to FSStore
+  # Python packages for testing
   - pytest
-  - xarray
-  - zarr
+  - pytest-cov >=2.10.1
+  - pytest-html !=2.1.0
+  - pytest-metadata >=1.5.1
+  - pytest-xdist
+  # Python packages needed for building docs
+  - autodocsumm >=0.2.2
+  - sphinx >=5
+  - sphinx_rtd_theme

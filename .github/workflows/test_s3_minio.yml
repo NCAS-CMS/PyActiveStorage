@@ -1,0 +1,88 @@
+# adapted GA workflow from https://github.com/stackhpc/reductionist-rs
+---
+name: S3/Minio Test
+
+on:
+  push:
+    branches:
+      - main  # keep this at all times
+  pull_request:
+  schedule:
+    - cron: '0 0 * * *'  # nightly
+
+# Required shell entrypoint to have properly configured bash shell
+defaults:
+  run:
+    shell: bash -l {0}
+
+jobs:
+  linux-test:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+      fail-fast: false
+    name: Linux Python ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          miniforge-version: "latest"
+          miniforge-variant: Mambaforge
+          use-mamba: true
+      - name: Get conda and Python versions
+        run: |
+          conda --version
+          python -V
+      - name: Export proxy
+        run: |
+          echo 'USE_S3 = True' >> activestorage/config.py
+      - name: Start minio object storage
+        run: tests/s3_exploratory/minio_scripts/minio-start
+      - name: Wait for minio object storage to start
+        run: |
+          until curl -if http://localhost:9001; do
+            sleep 1;
+          done
+      - name: Run Reductionist container
+        run: docker run -it --detach --rm --net=host --name reductionist ghcr.io/stackhpc/reductionist-rs:latest
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: activestorage-minio
+          environment-file: environment.yml
+          python-version: ${{ matrix.python-version }}
+          miniforge-version: "latest"
+          miniforge-variant: Mambaforge
+          use-mamba: true
+      - name: Install PyActiveStorage
+        run: |
+          conda --version
+          python -V
+          which python
+          pip install -e .
+      - name: Run tests
+        run: |
+          pytest
+      - name: Run S3 exploratory tests
+        run: |
+          pytest tests/s3_exploratory/test_s3_reduction.py --html=test-reports/s3-exploratory-report.html
+      - name: Install pytest-monitor
+        run: pip install pytest-monitor
+      - name: Run S3 performance tests
+        run: |
+          pytest tests/s3_exploratory/test_s3_arrange_files.py
+          pytest tests/s3_exploratory/test_s3_performance.py --db ../.pymon
+      - name: Analyze S3 and local test performance
+        run: python tests/s3_exploratory/parse_pymon.py
+      - name: Stop minio object storage
+        run: tests/s3_exploratory/minio_scripts/minio-stop
+        if: always()
+      - name: Upload HTML report artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: html-report
+          path: test-reports/
+        if: always()

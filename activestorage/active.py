@@ -1,13 +1,47 @@
+import concurrent.futures
+import contextlib
 import os
 import numpy as np
+import pathlib
+import urllib
+
+import h5netcdf
+import s3fs
 
 #FIXME: Consider using h5py throughout, for more generality
 from netCDF4 import Dataset
 from zarr.indexing import (
     OrthogonalIndexer,
 )
+from activestorage.config import *
+from activestorage import reductionist
 from activestorage.storage import reduce_chunk
 from activestorage import netcdf_to_zarr as nz
+
+
+@contextlib.contextmanager
+def load_from_s3(uri):
+    """
+    Load a netCDF4-like object from S3.
+
+    First, set up an S3 filesystem with s3fs.S3FileSystem.
+    Then open the uri with this FS -> s3file
+    s3file is a File-like object: a memory view but wih all the metadata
+    gubbins inside it (no data!)
+    calling >> ds = netCDF4.Dataset(s3file) <<
+    will throw a FileNotFoundError because the netCDF4 library is always looking for
+    a local file, resulting in [Errno 2] No such file or directory:
+    '<File-like object S3FileSystem, pyactivestorage/s3_test_bizarre.nc>'
+    instead, we use h5netcdf: https://github.com/h5netcdf/h5netcdf
+    a Python binder straight to HDF5-netCDF4 interface, that doesn't need a "local" file
+    """
+    fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
+                           secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
+                           client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
+    with fs.open(uri, 'rb') as s3file:
+        ds = h5netcdf.File(s3file, 'r', invalid_netcdf=True)
+        print(f"Dataset loaded from S3 via h5netcdf: {ds}")
+        yield ds
 
 
 class Active:
@@ -34,7 +68,7 @@ class Active:
         }
         return instance
 
-    def __init__(self, uri, ncvar, missing_value=None, fill_value=None, valid_min=None, valid_max=None):
+    def __init__(self, uri, ncvar, storage_type=None, missing_value=None, _FillValue=None, valid_min=None, valid_max=None, max_threads=100):
         """
         Instantiate with a NetCDF4 dataset and the variable of interest within that file.
         (We need the variable, because we need variable specific metadata from within that
@@ -45,7 +79,8 @@ class Active:
         self.uri = uri
         if self.uri is None:
             raise ValueError(f"Must use a valid file for uri. Got {self.uri}")
-        if not os.path.isfile(self.uri):
+        self.storage_type = storage_type
+        if not os.path.isfile(self.uri) and not self.storage_type:
             raise ValueError(f"Must use existing file for uri. {self.uri} not found")
         self.ncvar = ncvar
         if self.ncvar is None:
@@ -55,40 +90,67 @@ class Active:
         self._version = 1
         self._components = False
         self._method = None
-       
+        self._lock = False
+        self._max_threads = max_threads
+      
         # obtain metadata, using netcdf4_python for now
         # FIXME: There is an outstanding issue with ._FilLValue to be handled.
         # If the user actually wrote the data with no fill value, or the
         # default fill value is in play, then this might go wrong.
-        #
-        if (missing_value, fill_value, valid_min, valid_max) == (None, None, None, None):
+        if storage_type is None:
             ds = Dataset(uri)
-            try:
-                ds_var = ds[ncvar]
-            except IndexError as exc:
-                print(f"Dataset {ds} does not contain ncvar {ncvar}.")
-                raise exc
-            self._missing = getattr(ds[ncvar], 'missing_value', None)
-            self._fillvalue = getattr(ds[ncvar], '_FillValue', None)
-            self._filters = ds[ncvar].filters()
-            valid_min = getattr(ds[ncvar], 'valid_min', None)
-            valid_max = getattr(ds[ncvar], 'valid_max', None)
-            valid_range = getattr(ds[ncvar], 'valid_range', None)
-            if valid_range is not None and (valid_max or valid_min):
-                raise ValueError("Unexpected combination of missing value options ", valid_min, valid_max, valid_range)
-            if  valid_min or valid_max:
-                valid_range=[valid_min, valid_max]
-            if valid_range is not None:            
-                self._valid_min, self._valid_max = tuple(valid_range)
-            else:
-                self._valid_min, self._valid_max = None, None
+        elif storage_type == "s3":
+            with load_from_s3(uri) as _ds:
+                ds = _ds
+        try:
+            ds_var = ds[ncvar]
+        except IndexError as exc:
+            print(f"Dataset {ds} does not contain ncvar {ncvar!r}.")
+            raise exc
+
+        # FIXME: We do not get the correct byte order on the Zarr Array's dtype
+        # when using S3, so capture it here.
+        self._dtype = ds_var.dtype
+
+        if (missing_value, _FillValue, valid_min, valid_max) == (None, None, None, None):
+            if isinstance(ds, Dataset):
+                self._missing = getattr(ds_var, 'missing_value', None)
+                self._fillvalue = getattr(ds_var, '_FillValue', None)
+                # could be fill_value set as netCDF4 attr
+                if self._fillvalue is None:
+                    self._fillvalue = getattr(ds_var, 'fill_value', None)
+                valid_min = getattr(ds_var, 'valid_min', None)
+                valid_max = getattr(ds_var, 'valid_max', None)
+                valid_range = getattr(ds_var, 'valid_range', None)
+            elif storage_type == "s3":
+                self._missing = ds_var.attrs.get('missing_value')
+                self._fillvalue = ds_var.attrs.get('_FillValue')
+                # could be fill_value set as netCDF4 attr
+                if self._fillvalue is None:
+                    self._fillvalue = ds_var.attrs.get('fill_value')
+                valid_min = ds_var.attrs.get('valid_min')
+                valid_max = ds_var.attrs.get('valid_max')
+                valid_range = ds_var.attrs.get('valid_range')
+
+            if valid_max is not None or valid_min is not None:
+                if valid_range is not None:
+                    raise ValueError(
+                        "Invalid combination in the file of valid_min, "
+                        "valid_max, valid_range: "
+                        f"{valid_min}, {valid_max}, {valid_range}"
+                    )                
+                valid_range = (valid_min, valid_max)
+            elif valid_range is None:
+                valid_range = (None, None)
+            self._valid_min, self._valid_max = valid_range
+
         else:
             self._missing = missing_value
-            self._fillvalue = fill_value
+            self._fillvalue = _FillValue
             self._valid_min = valid_min
             self._valid_max = valid_max
 
-       
+        ds.close()
 
     def __getitem__(self, index):
         """ 
@@ -101,14 +163,45 @@ class Active:
 
         if self.method is None and self._version == 0:
             # No active operation
-            nc = Dataset(self.uri)
-            data = nc[ncvar][index]
-            nc.close()
+            lock = self.lock
+            if lock:
+                lock.acquire()
+                
+            if self.storage_type is None:
+                nc = Dataset(self.uri)
+                data = nc[ncvar][index]
+                nc.close()
+            elif self.storage_type == "s3":
+                with load_from_s3(self.uri) as nc:
+                    data = nc[ncvar][index]
+                    # h5netcdf doesn't return masked arrays.
+                    if self._fillvalue:
+                        data = np.ma.masked_equal(data, self._fillvalue)
+                    if self._missing:
+                        data = np.ma.masked_equal(data, self._missing)
+                    if self._valid_max:
+                        data = np.ma.masked_greater(data, self._valid_max)
+                    if self._valid_min:
+                        data = np.ma.masked_less(data, self._valid_min)
+
+            if lock:
+                lock.release()
+
             return data
         elif self._version == 1:
             return self._via_kerchunk(index)
         elif self._version  == 2:
-            return self._via_kerchunk(index)
+            # No active operation either
+            lock = self.lock
+            if lock:
+                lock.acquire()
+
+            data = self._via_kerchunk(index)
+
+            if lock:
+                lock.release()
+
+            return data
         else:
             raise ValueError(f'Version {self._version} not supported')
 
@@ -144,7 +237,7 @@ class Active:
 
         ``'mean'``  The unweighted mean
 
-        ``'sum'``   The sum
+        ``'sum'``   The unweighted sum
         ==========  ==================================================
 
         """
@@ -166,6 +259,28 @@ class Active:
     def ncvar(self, value):
         self._ncvar = value
 
+    @property
+    def lock(self):
+        """Return or set a lock that prevents concurrent file reads when accessing the data locally.
+
+        The lock is either a `threading.Lock` instance, an object with
+        same API and functionality (such as
+        `dask.utils.SerializableLock`), or is `False` if no lock is
+        required.
+
+        To be effective, the same lock instance must be used across
+        all process threads.
+
+        """
+        return self._lock
+
+    @lock.setter
+    def lock(self, value):
+        if not value:
+            value = False
+            
+        self._lock = value
+
     def _get_active(self, method, *args):
         """ 
         *args defines a slice of data. This method loops over each of the chunks
@@ -182,7 +297,11 @@ class Active:
         """
         # FIXME: Order of calls is hardcoded'
         if self.zds is None:
-            ds = nz.load_netcdf_zarr_generic(self.uri, self.ncvar)
+            print(f"Kerchunking file {self.uri} with variable "
+                  f"{self.ncvar} for storage type {self.storage_type}")
+            ds = nz.load_netcdf_zarr_generic(self.uri,
+                                             self.ncvar,
+                                             self.storage_type)
             # The following is a hangove from exploration
             # and is needed if using the original doing it ourselves
             # self.zds = make_an_array_instance_active(ds)
@@ -208,8 +327,12 @@ class Active:
         stripped_indexer = [(a, b, c) for a,b,c in indexer]
         drop_axes = indexer.drop_axes  # not sure what this does and why, yet.
 
-        # yes this next line is bordering on voodoo ... 
-        fsref = self.zds.chunk_store._mutable_mapping.fs.references
+        # yes this next line is bordering on voodoo ...
+        # this returns a nested dictionary with the full file FS reference
+        # ie all the gubbins: chunks, data structure, types, etc
+        # if using zarr<=2.13.3 call with _mutable_mapping ie
+        # fsref = self.zds.chunk_store._mutable_mapping.fs.references 
+        fsref = self.zds.chunk_store.fs.references
 
         return self._from_storage(stripped_indexer, drop_axes, out_shape,
                                   out_dtype, compressor, filters, missing, fsref)
@@ -224,11 +347,40 @@ class Active:
             out = np.empty(out_shape, dtype=out_dtype, order=self.zds._order)
             counts = None  # should never get touched with no method!
 
-        for chunk_coords, chunk_selection, out_selection in stripped_indexer:
-            self._process_chunk(fsref, chunk_coords,chunk_selection,
-                                out, counts, out_selection,
-                                compressor, filters, missing,
-                                drop_axes=drop_axes)
+        # Create a shared session object.
+        if self.storage_type == "s3":
+            session = reductionist.get_session(S3_ACCESS_KEY, S3_SECRET_KEY,
+                                               S3_ACTIVE_STORAGE_CACERT)
+        else:
+            session = None
+
+        # Process storage chunks using a thread pool.
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_threads) as executor:
+            futures = []
+            # Submit chunks for processing.
+            for chunk_coords, chunk_selection, out_selection in stripped_indexer:
+                future = executor.submit(
+                    self._process_chunk,
+                    session, fsref, chunk_coords, chunk_selection,
+                    counts, out_selection,
+                    compressor, filters, missing,
+                    drop_axes=drop_axes)
+                futures.append(future)
+            # Wait for completion.
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    result = future.result()
+                except Exception as exc:
+                    raise
+                else:
+                    if method is not None:
+                        result, count = result
+                        out.append(result)
+                        counts.append(count)
+                    else:
+                        # store selected data in output
+                        result, selection = result
+                        out[selection] = result
 
         if method is not None:
             # Apply the method (again) to aggregate the result
@@ -269,7 +421,7 @@ class Active:
 
         return out
 
-    def _process_chunk(self, fsref, chunk_coords, chunk_selection, out, counts,
+    def _process_chunk(self, session, fsref, chunk_coords, chunk_selection, counts,
                        out_selection, compressor, filters, missing, 
                        drop_axes=None):
         """
@@ -285,21 +437,35 @@ class Active:
         key = f"{self.ncvar}/{coord}"
         rfile, offset, size = tuple(fsref[key])
 
-        # note there is an ongoing discussion about this interface, and what it returns
-        # see https://github.com/valeriupredoi/PyActiveStorage/issues/33
-        # so neither the returned data or the interface should be considered stable
-        # although we will version changes.
-        tmp, count = reduce_chunk(rfile, offset, size, compressor, filters, missing,
-                           self.zds._dtype, self.zds._chunks, self.zds._order,
-                           chunk_selection, method=self.method)
+        if self.storage_type == "s3":
+            parsed_url = urllib.parse.urlparse(rfile)
+            bucket = parsed_url.netloc
+            object = parsed_url.path
+            # FIXME: We do not get the correct byte order on the Zarr Array's dtype
+            # when using S3, so use the value captured earlier.
+            dtype = self._dtype
+            tmp, count = reductionist.reduce_chunk(session, S3_ACTIVE_STORAGE_URL,
+                                                   S3_URL,
+                                                   bucket, object, offset,
+                                                   size, compressor, filters,
+                                                   missing, dtype,
+                                                   self.zds._chunks,
+                                                   self.zds._order,
+                                                   chunk_selection,
+                                                   operation=self._method)
+        else:
+            # note there is an ongoing discussion about this interface, and what it returns
+            # see https://github.com/valeriupredoi/PyActiveStorage/issues/33
+            # so neither the returned data or the interface should be considered stable
+            # although we will version changes.
+            tmp, count = reduce_chunk(rfile, offset, size, compressor, filters,
+                                      missing, self.zds._dtype,
+                                      self.zds._chunks, self.zds._order,
+                                      chunk_selection, method=self.method)
 
         if self.method is not None:
-            out.append(tmp)
-            counts.append(count)
+            return tmp, count
         else:
-
             if drop_axes:
                 tmp = np.squeeze(tmp, axis=drop_axes)
-
-            # store selected data in output
-            out[out_selection] = tmp
+            return tmp, out_selection

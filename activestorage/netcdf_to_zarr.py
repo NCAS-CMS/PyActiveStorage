@@ -3,22 +3,34 @@ import numpy as np
 import zarr
 import ujson
 import fsspec
+import s3fs
+import tempfile
 
+from activestorage.config import *
 from kerchunk.hdf import SingleHdf5ToZarr
 
 
-def gen_json(file_url, fs, fs2, varname, **so):
+def gen_json(file_url, outf, storage_type):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
-    # set some name for the output json file
-    fname = os.path.splitext(file_url)[0]
-    outf = f'{fname}_{varname}.json' # vanilla file name
-
-    # write it out if it's not there
-    if not os.path.isfile(outf):
-        with fs.open(file_url, **so) as infile:
-            # FIXME need to disentangle HDF5 errors if not OSError (most are)
+    if storage_type == "s3":
+        fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,
+                               secret=S3_SECRET_KEY,
+                               client_kwargs={'endpoint_url': S3_URL},
+                               default_fill_cache=False,
+                               default_cache_type="none"
+        )
+        fs2 = fsspec.filesystem('')
+        with fs.open(file_url, 'rb') as s3file:
+            h5chunks = SingleHdf5ToZarr(s3file, file_url,
+                                        inline_threshold=0)
+            with fs2.open(outf, 'wb') as f:
+                f.write(ujson.dumps(h5chunks.translate()).encode())
+    else:
+        fs = fsspec.filesystem('')
+        with fs.open(file_url, 'rb') as local_file:
             try:
-                h5chunks = SingleHdf5ToZarr(infile, file_url, inline_threshold=0)
+                h5chunks = SingleHdf5ToZarr(local_file, file_url,
+                                            inline_threshold=0)
             except OSError as exc:
                 raiser_1 = f"Unable to open file {file_url}. "
                 raiser_2 = "Check if file is netCDF3 or netCDF-classic"
@@ -30,9 +42,7 @@ def gen_json(file_url, fs, fs2, varname, **so):
             # a higher inline threshold can result in a larger json file but
             # faster loading time
             # for active storage, we don't want anything inline
-#            fname = os.path.splitext(file_url)[0]
-#            outf = f'{fname}_{varname}.json' # vanilla file name
-            with fs2.open(outf, 'wb') as f:
+            with fs.open(outf, 'wb') as f:
                 f.write(ujson.dumps(h5chunks.translate()).encode())
 
     return outf
@@ -61,20 +71,16 @@ def open_zarr_group(out_json, varname):
     return zarr_array
 
 
-def load_netcdf_zarr_generic(fileloc, varname, build_dummy=True):
+def load_netcdf_zarr_generic(fileloc, varname, storage_type, build_dummy=True):
     """Pass a netCDF4 file to be shaped as Zarr file by kerchunk."""
-    so = dict(mode='rb', anon=True, default_fill_cache=False,
-              default_cache_type='first') # args to fs.open()
-    # default_fill_cache=False avoids caching data in between
-    # file chunks to lower memory usage
-    fs = fsspec.filesystem('')  # local, for S3: ('s3', anon=True)
-    fs2 = fsspec.filesystem('')  # local file system to save final json to
-    out_json = gen_json(fileloc, fs, fs2, varname)
+    print(f"Storage type {storage_type}")
 
-    # open this monster
-    print(f"Attempting to open and convert {fileloc}.")
-    ref_ds = open_zarr_group(out_json, varname)
+    # Write the Zarr group JSON to a temporary file.
+    with tempfile.NamedTemporaryFile() as out_json:
+        gen_json(fileloc, out_json.name, storage_type)
+
+        # open this monster
+        print(f"Attempting to open and convert {fileloc}.")
+        ref_ds = open_zarr_group(out_json.name, varname)
 
     return ref_ds
-
-
