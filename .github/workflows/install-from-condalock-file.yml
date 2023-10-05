@@ -11,6 +11,11 @@ on:
   schedule:
     - cron: '0 0 * * *'
 
+# Required shell entrypoint to have properly configured bash shell
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
   linux:
     runs-on: "ubuntu-latest"
@@ -28,21 +33,12 @@ jobs:
           activate-environment: activestorage-fromlock
           python-version: ${{ matrix.python-version }}
           channels: conda-forge
-      - shell: bash -l {0}
-        run: conda --version
-      - shell: bash -l {0}
-        run: which python
-      - shell: bash -l {0}
-        run: python -V
-      - shell: bash -l {0}
-        run: conda create --name activestorage-fromlock --file conda-linux-64.lock
-      - shell: bash -l {0}
-        run: conda install pip
-      - shell: bash -l {0}
-        run: which python
-      - shell: bash -l {0}
-        run: pip --version
-      - shell: bash -l {0}
-        run: pip install -e .
-      - shell: bash -l {0}
-        run: pytest
+      - run: conda --version
+      - run: which python
+      - run: python -V
+      - run: conda create --name activestorage-fromlock --file conda-linux-64.lock
+      - run: conda install pip
+      - run: which python
+      - run: pip --version
+      - run: pip install -e .
+      - run: pytest
