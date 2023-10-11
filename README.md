@@ -29,7 +29,7 @@ pip install -e .
 pytest -n 2
 ```
 
-Python versions supported: 3.9, 3.10, 3.11.
+Python versions supported: 3.9, 3.10, 3.11, 3.12.
 
 ## Active Storage Data Interface
 
