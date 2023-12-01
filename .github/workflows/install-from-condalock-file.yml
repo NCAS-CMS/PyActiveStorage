@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - use_lock_pip
   # run the test only if the PR is to main
   # turn it on if required
   # pull_request:
@@ -37,7 +38,6 @@ jobs:
       - run: which python
       - run: python -V
       - run: conda create --name activestorage-fromlock --file conda-linux-64.lock
-      - run: conda install pip
       - run: which python
       - run: pip --version
       - run: pip install -e .
