@@ -37,7 +37,6 @@ jobs:
       - run: which python
       - run: python -V
       - run: conda create --name activestorage-fromlock --file conda-linux-64.lock
-      - run: conda install pip
       - run: which python
       - run: pip --version
       - run: pip install -e .
