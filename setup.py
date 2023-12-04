@@ -24,6 +24,7 @@ REQUIREMENTS = {
         'h5py',  # needed by Kerchunk
         'kerchunk',
         'netcdf4',
+        'numcodecs>=0.12',  # github/issues/162
         'numpy!=1.24.3',  # severe masking bug
         's3fs',
         # pin Zarr to use new FSStore instead of KVStore
