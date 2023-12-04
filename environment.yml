@@ -12,6 +12,7 @@ dependencies:
   - h5py  # needed by Kerchunk
   - kerchunk
   - netcdf4
+  - numcodecs >=0.12  # github.com/valeriupredoi/PyActiveStorage/issues/162
   - numpy !=1.24.3  # severe masking bug
   - pip !=21.3
   - s3fs
