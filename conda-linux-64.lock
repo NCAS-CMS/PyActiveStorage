@@ -86,7 +86,7 @@ https://conda.anaconda.org/conda-forge/linux-64/re2-2023.06.02-h2873b5e_0.conda#
 https://conda.anaconda.org/conda-forge/linux-64/ucx-1.15.0-h75e419f_2.conda#5798de4587dc70fa6db81663e79f176a
 https://conda.anaconda.org/conda-forge/noarch/alabaster-0.7.13-pyhd8ed1ab_0.conda#06006184e203b61d3525f90de394471e
 https://conda.anaconda.org/conda-forge/noarch/asciitree-0.3.3-py_2.tar.bz2#c0481c9de49f040272556e2cedf42816
-https://conda.anaconda.org/conda-forge/noarch/attrs-23.1.0-pyh71513ae_1.conda#3edfead7cedd1ab4400a6c588f3e75f8
+https://conda.anaconda.org/conda-forge/noarch/attrs-23.2.0-pyh71513ae_0.conda#5e4c0743c70186509d1412e03c2d8dfa
 https://conda.anaconda.org/conda-forge/linux-64/aws-c-event-stream-0.3.2-h0bcb0bb_8.conda#21dafb60b5854f82b196f32e5857dec6
 https://conda.anaconda.org/conda-forge/linux-64/aws-c-http-0.7.15-hd268abd_0.conda#7fe29e473e2d4491610ccb51285218c9
 https://conda.anaconda.org/conda-forge/linux-64/brotli-python-1.1.0-py312h30efb56_1.conda#45801a89533d3336a365284d93298e36
@@ -158,7 +158,7 @@ https://conda.anaconda.org/conda-forge/linux-64/liblapack-3.9.0-20_linux64_openb
 https://conda.anaconda.org/conda-forge/noarch/partd-1.4.1-pyhd8ed1ab_0.conda#acf4b7c0bcd5fa3b0e05801c4d2accd6
 https://conda.anaconda.org/conda-forge/linux-64/pillow-10.1.0-py312hf3581a9_0.conda#c04d3de9d831a69a5fdfab1413ec2fb6
 https://conda.anaconda.org/conda-forge/noarch/pip-23.3.2-pyhd8ed1ab_0.conda#8591c748f98dcc02253003533bc2e4b1
-https://conda.anaconda.org/conda-forge/noarch/pytest-7.4.3-pyhd8ed1ab_0.conda#5bdca0aca30b0ee62bb84854e027eae0
+https://conda.anaconda.org/conda-forge/noarch/pytest-7.4.4-pyhd8ed1ab_0.conda#a9d145de8c5f064b5fa68fb34725d9f4
 https://conda.anaconda.org/conda-forge/noarch/python-dateutil-2.8.2-pyhd8ed1ab_0.tar.bz2#dd999d1cc9f79e67dbb855c8924c7984
 https://conda.anaconda.org/conda-forge/noarch/urllib3-1.26.18-pyhd8ed1ab_0.conda#bf61cfd2a7f212efba378167a07d4a6a
 https://conda.anaconda.org/conda-forge/linux-64/yarl-1.9.3-py312h98912ed_0.conda#ded0d38467bf53e356bf4f772fccbbc0
