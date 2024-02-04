@@ -392,9 +392,9 @@ class Active:
                 # cf-python needs the sample size for all reductions;
                 # see the 'mtol' parameter of cf.Field.collapse.)
                 #
-                # Note that in this case the reduced data must always
-                # have the same number of dimensions as the original
-                # array, i.e. 'drop_axes' is always considered False,
+                # Note that in all components must always have the
+                # same number of dimensions as the original array,
+                # i.e. 'drop_axes' is always considered False,
                 # regardless of its setting. (Rationale: dask
                 # reductions require the per-dask-chunk partial
                 # reductions to retain these dimensions so that
@@ -404,12 +404,13 @@ class Active:
                 n = np.reshape(n, shape1)
                 out = out.reshape(shape1)
 
+                n = np.sum(counts).reshape(shape1)
                 if self._method == "mean":
                     # For the average, the returned component is
                     # "sum", not "mean"
-                    out = {"sum": out, "n": sum(counts)}
+                    out = {"sum": out, "n": n}
                 else:
-                    out = {self._method: out, "n": sum(counts)}
+                    out = {self._method: out, "n": n}
             else:
                 # Return the reduced data as a numpy array. For most
                 # methods the data is already in this form.
@@ -417,7 +418,7 @@ class Active:
                     # For the average, it is actually the sum that has
                     # been created, so we need to divide by the sample
                     # size.
-                    out = out / sum(counts)
+                    out = out / np.sum(counts).reshape(shape1)
 
         return out
 
