@@ -399,9 +399,7 @@ class Active:
                 # reductions require the per-dask-chunk partial
                 # reductions to retain these dimensions so that
                 # partial results can be concatenated correctly.)
-                n = np.prod(out_shape)
                 shape1 = (1,) * len(out_shape)
-                n = np.reshape(n, shape1)
                 out = out.reshape(shape1)
 
                 n = np.sum(counts).reshape(shape1)
