@@ -18,6 +18,7 @@ REQUIREMENTS = {
     # Installation dependencies
     # Use with pip install . to install from source
     'install': [
+        'aiobotocore>=2.11.0',
         'dask',
         'fsspec',
         'h5netcdf',
