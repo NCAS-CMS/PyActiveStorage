@@ -385,7 +385,8 @@ class Active:
         if method is not None:
             # Apply the method (again) to aggregate the result
             out = method(out)
-            
+            shape1 = (1,) * len(out_shape)
+                
             if self._components:
                 # Return a dictionary of components containing the
                 # reduced data and the sample size ('n'). (Rationale:
@@ -399,7 +400,6 @@ class Active:
                 # reductions require the per-dask-chunk partial
                 # reductions to retain these dimensions so that
                 # partial results can be concatenated correctly.)
-                shape1 = (1,) * len(out_shape)
                 out = out.reshape(shape1)
 
                 n = np.sum(counts).reshape(shape1)
