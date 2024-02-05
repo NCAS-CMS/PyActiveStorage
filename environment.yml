@@ -6,7 +6,6 @@ channels:
 
 dependencies:
   - python >=3.9
-  # - aiobotocore >=2.11.0
   - dask
   - fsspec
   - h5netcdf
@@ -16,7 +15,7 @@ dependencies:
   - numcodecs >=0.12  # github.com/valeriupredoi/PyActiveStorage/issues/162
   - numpy !=1.24.3  # severe masking bug
   - pip !=21.3
-  - s3fs >=2024.2.0  # loose s3fs deps leading to very old aiobotocore
+  - s3fs >=2024.2.0  # loose s3fs deps leading to old aiobotocore for <2024.2.0
   # pin Zarr to avoid using old KVStore interface
   # see github.com/zarr-developers/zarr-python/issues/1362
   - zarr >=2.13.6  # KVStore to FSStore
