@@ -9,7 +9,8 @@
     TASK [Ensure step RPM is installed] **************************************************************************************************** 
 fatal: [localhost]: FAILED! => {"changed": false, "msg": "Failed to validate GPG signature for step-cli-0.24.4-1.x86_64: Package step-cli_0.24.4_amd643z16ickc.rpm is not signed"}
 ```
-  - that's because, in our case, we missed the `step-cli` package, and a `dfn` install is not well liked by the system (it's not `mamba` heh)  - that gets sorted out via [Step's install docs](https://smallstep.com/docs/step-cli/installation):
+  - that's because, in our case, we missed the `step-cli` package, and a `dfn` install is not well liked by the system (it's not `mamba` heh)
+  - that gets sorted out via [Step's install docs](https://smallstep.com/docs/step-cli/installation):
 ```
     wget https://dl.smallstep.com/cli/docs-cli-install/latest/step-cli_amd64.rpm
     sudo rpm -i step-cli_amd64.rpm
