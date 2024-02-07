@@ -20,7 +20,7 @@ from activestorage import netcdf_to_zarr as nz
 
 
 @contextlib.contextmanager
-def load_from_s3(uri):
+def load_from_s3(uri, storage_options):
     """
     Load a netCDF4-like object from S3.
 
@@ -35,11 +35,9 @@ def load_from_s3(uri):
     instead, we use h5netcdf: https://github.com/h5netcdf/h5netcdf
     a Python binder straight to HDF5-netCDF4 interface, that doesn't need a "local" file
     """
-    fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
-                           secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
-                           client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
+    fs = s3fs.S3FileSystem(**storage_options)
     with fs.open(uri, 'rb') as s3file:
-        ds = h5netcdf.File(s3file, 'r', invalid_netcdf=True)
+        ds = h5netcdf.File(s3file, 'r')
         print(f"Dataset loaded from S3 via h5netcdf: {ds}")
         yield ds
 
@@ -68,7 +66,7 @@ class Active:
         }
         return instance
 
-    def __init__(self, uri, ncvar, storage_type=None, missing_value=None, _FillValue=None, valid_min=None, valid_max=None, max_threads=100):
+    def __init__(self, uri, ncvar, missing_value=None, _FillValue=None, valid_min=None, valid_max=None, max_threads=100, storage_options=None):
         """
         Instantiate with a NetCDF4 dataset and the variable of interest within that file.
         (We need the variable, because we need variable specific metadata from within that
@@ -79,9 +77,15 @@ class Active:
         self.uri = uri
         if self.uri is None:
             raise ValueError(f"Must use a valid file for uri. Got {self.uri}")
+        storage_type = urllib.parse.urlparse(uri).scheme
         self.storage_type = storage_type
         if not os.path.isfile(self.uri) and not self.storage_type:
             raise ValueError(f"Must use existing file for uri. {self.uri} not found")
+        if storage_options is None:
+            stroage_options = {}
+
+        self.storage_options = storage_options
+        
         self.ncvar = ncvar
         if self.ncvar is None:
             raise ValueError("Must set a netCDF variable name to slice")
@@ -92,16 +96,17 @@ class Active:
         self._method = None
         self._lock = False
         self._max_threads = max_threads
-      
+                   
         # obtain metadata, using netcdf4_python for now
         # FIXME: There is an outstanding issue with ._FilLValue to be handled.
         # If the user actually wrote the data with no fill value, or the
         # default fill value is in play, then this might go wrong.
-        if storage_type is None:
-            ds = Dataset(uri)
-        elif storage_type == "s3":
-            with load_from_s3(uri) as _ds:
+        if storage_type == "s3":
+            with load_from_s3(uri, storage_options) as _ds:
                 ds = _ds
+        else:
+            ds = Dataset(uri)
+            
         try:
             ds_var = ds[ncvar]
         except IndexError as exc:
@@ -122,6 +127,8 @@ class Active:
                 valid_min = getattr(ds_var, 'valid_min', None)
                 valid_max = getattr(ds_var, 'valid_max', None)
                 valid_range = getattr(ds_var, 'valid_range', None)
+                add_offset =  getattr(ds_var, 'add_offset', None)
+                scale_factor =  getattr(ds_var, 'scale_factor', None)
             elif storage_type == "s3":
                 self._missing = ds_var.attrs.get('missing_value')
                 self._fillvalue = ds_var.attrs.get('_FillValue')
@@ -131,6 +138,8 @@ class Active:
                 valid_min = ds_var.attrs.get('valid_min')
                 valid_max = ds_var.attrs.get('valid_max')
                 valid_range = ds_var.attrs.get('valid_range')
+                add_offset =  ds_var.attrs.get('add_offset')
+                scale_factor =  ds_var.attrs.get('scale_factor')
 
             if valid_max is not None or valid_min is not None:
                 if valid_range is not None:
@@ -142,6 +151,7 @@ class Active:
                 valid_range = (valid_min, valid_max)
             elif valid_range is None:
                 valid_range = (None, None)
+                
             self._valid_min, self._valid_max = valid_range
 
         else:
@@ -167,12 +177,9 @@ class Active:
             if lock:
                 lock.acquire()
                 
-            if self.storage_type is None:
-                nc = Dataset(self.uri)
-                data = nc[ncvar][index]
-                nc.close()
-            elif self.storage_type == "s3":
-                with load_from_s3(self.uri) as nc:
+           
+            if self.storage_type == "s3":
+                with load_from_s3(self.uri, storage_options) as nc:
                     data = nc[ncvar][index]
                     # h5netcdf doesn't return masked arrays.
                     if self._fillvalue:
@@ -183,7 +190,11 @@ class Active:
                         data = np.ma.masked_greater(data, self._valid_max)
                     if self._valid_min:
                         data = np.ma.masked_less(data, self._valid_min)
-
+            else:
+                nc = Dataset(self.uri)
+                data = nc[ncvar][index]
+                nc.close()
+                
             if lock:
                 lock.release()
 
@@ -301,7 +312,8 @@ class Active:
                   f"{self.ncvar} for storage type {self.storage_type}")
             ds = nz.load_netcdf_zarr_generic(self.uri,
                                              self.ncvar,
-                                             self.storage_type)
+                                             self.storage_type,
+                                             self.storage_options)
             # The following is a hangove from exploration
             # and is needed if using the original doing it ourselves
             # self.zds = make_an_array_instance_active(ds)

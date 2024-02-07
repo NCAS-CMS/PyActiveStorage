@@ -10,15 +10,13 @@ from activestorage.config import *
 from kerchunk.hdf import SingleHdf5ToZarr
 
 
-def gen_json(file_url, outf, storage_type):
+def gen_json(file_url, outf, storage_type, storage_options):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
     if storage_type == "s3":
-        fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,
-                               secret=S3_SECRET_KEY,
-                               client_kwargs={'endpoint_url': S3_URL},
-                               default_fill_cache=False,
-                               default_cache_type="none"
-        )
+        storage_options = storage_options.copy()
+        storage_options['default_fill_cache'] = False
+        storage_options['default_cache_type'] = "none"
+        fs = s3fs.S3FileSystem(**storage_options)
         fs2 = fsspec.filesystem('')
         with fs.open(file_url, 'rb') as s3file:
             h5chunks = SingleHdf5ToZarr(s3file, file_url,
@@ -71,13 +69,13 @@ def open_zarr_group(out_json, varname):
     return zarr_array
 
 
-def load_netcdf_zarr_generic(fileloc, varname, storage_type, build_dummy=True):
+def load_netcdf_zarr_generic(fileloc, varname, storage_type, storage_options, build_dummy=True):
     """Pass a netCDF4 file to be shaped as Zarr file by kerchunk."""
     print(f"Storage type {storage_type}")
 
     # Write the Zarr group JSON to a temporary file.
     with tempfile.NamedTemporaryFile() as out_json:
-        gen_json(fileloc, out_json.name, storage_type)
+        gen_json(fileloc, out_json.name, storage_type, storage_options)
 
         # open this monster
         print(f"Attempting to open and convert {fileloc}.")

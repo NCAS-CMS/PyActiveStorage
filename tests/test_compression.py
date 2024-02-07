@@ -15,7 +15,12 @@ import utils
 def check_dataset_filters(temp_file: str, ncvar: str, compression: str, shuffle: bool):
     # Sanity check that test data is compressed and filtered as expected.
     if USE_S3:
-        with load_from_s3(temp_file) as test_data:
+        storage_options = {
+            'key': S3_ACCESS_KEY,  # eg "minioadmin" for Minio
+            'secret': S3_SECRET_KEY,  # eg "minioadmin" for Minio
+            'client_kwargs': {'endpoint_url': S3_URL},  # eg "http://localhost:9000" for Minio          
+        }
+        with load_from_s3(temp_file, storage_options) as test_data:
             # NOTE: h5netcdf thinks zlib is gzip
             assert test_data.variables[ncvar].compression == "gzip"
             assert test_data.variables[ncvar].shuffle == shuffle
