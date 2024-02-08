@@ -243,13 +243,13 @@ def test_daily_data_masked(test_data_path):
     """
     ncfile = str(test_data_path / "daily_data_masked.nc")
     uri = utils.write_to_storage(ncfile)
-    active = Active(uri, "ta", utils.get_storage_type(), missing_value=999.)
+    active = Active(uri, "ta", utils.get_storage_type())
     active._version = 0
     d = active[:]
     d = np.ma.masked_where(d==999., d)
     mean_result = np.ma.mean(d)
 
-    active = Active(uri, "ta", utils.get_storage_type(), missing_value=999.)
+    active = Active(uri, "ta", utils.get_storage_type())
     active._version = 2
     active.method = "mean"
     active.components = True

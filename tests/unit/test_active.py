@@ -81,9 +81,7 @@ def test_active():
     uri = "tests/test_data/cesm2_native.nc"
     ncvar = "TREFHT"
     active = Active(uri, ncvar=ncvar)
-    init = active.__init__(uri=uri, ncvar=ncvar, missing_value=True,
-                           _FillValue=1e20, valid_min=-1,
-                           valid_max=1200)
+    init = active.__init__(uri=uri, ncvar=ncvar)
 
 
 def test_lock():
