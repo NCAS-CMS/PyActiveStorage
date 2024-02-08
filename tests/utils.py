@@ -29,7 +29,7 @@ def write_to_storage(ncfile):
     """Write a file to storage and return an appropriate URI or path to access it."""
     if USE_S3:
         object = os.path.basename(ncfile)
-        upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, object, ncfile)
-        return os.path.join("s3://", S3_BUCKET, object)
+        # upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, object, ncfile)
+        return os.path.join("s3://", S3_URL, S3_BUCKET, object)
     else:
         return ncfile
