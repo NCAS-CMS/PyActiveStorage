@@ -13,10 +13,10 @@ S3_ACTIVE_STORAGE_CACERT = None
 S3_URL = 'uor-aces-o.s3-ext.jc.rl.ac.uk'
 
 # S3 access key / username.
-S3_ACCESS_KEY = ""
+S3_ACCESS_KEY = None
 
 # S3 secret key / password.
-S3_SECRET_KEY = ""
+S3_SECRET_KEY = None
 
 # S3 bucket.
 S3_BUCKET = "bnl"
