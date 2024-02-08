@@ -41,7 +41,7 @@ def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
     # service interaction and replace with local file operations.
 
     @contextlib.contextmanager
-    def load_from_s3(uri):
+    def load_from_s3(uri, storage_options):
         yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
 
     def load_netcdf_zarr_generic(uri, ncvar, storage_type, storage_options):
@@ -87,9 +87,8 @@ def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
     make_vanilla_ncdata(test_file)
 
     active = Active(
-        uri, "data", storge_options=storage_options,
-        active_storage_url=S3_ACTIVE_STORAGE_URL
-    )
+        uri, "data", storage_options=storage_options,
+        active_storage_url=S3_ACTIVE_STORAGE_URL)
     active._version = 1
     active._method = "max"
 
@@ -129,7 +128,7 @@ def test_reductionist_version_0(mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3 using version 0."""
 
     @contextlib.contextmanager
-    def load_from_s3(uri):
+    def load_from_s3(uri, storage_options):
         yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
 
     mock_load.side_effect = load_from_s3
@@ -164,7 +163,7 @@ def test_reductionist_connection(mock_reduce, mock_nz, mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3."""
 
     @contextlib.contextmanager
-    def load_from_s3(uri):
+    def load_from_s3(uri, storage_options):
         yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
 
     def load_netcdf_zarr_generic(uri, ncvar, storage_type, storage_options):
@@ -178,7 +177,8 @@ def test_reductionist_connection(mock_reduce, mock_nz, mock_load, tmp_path):
     test_file = str(tmp_path / "test.nc")
     make_vanilla_ncdata(test_file)
 
-    active = Active(uri, "data", storage_options=storage_options)
+    active = Active(uri, "data", storage_options=storage_options,
+                    active_storage_url=S3_ACTIVE_STORAGE_URL)
     active._version = 1
     active._method = "max"
 
@@ -193,7 +193,7 @@ def test_reductionist_bad_request(mock_reduce, mock_nz, mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3."""
 
     @contextlib.contextmanager
-    def load_from_s3(uri):
+    def load_from_s3(uri, storage_options):
         yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
 
     def load_netcdf_zarr_generic(uri, ncvar, storage_type, storage_options):

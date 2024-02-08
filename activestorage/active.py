@@ -87,7 +87,7 @@ class Active:
             raise ValueError(f"Must use existing file for uri. {self.uri} not found")
 
         if storage_options is None:
-            stroage_options = {}
+            storage_options = {}
 
         self.storage_options = storage_options
         self.active_storage_url = active_storage_url
@@ -108,6 +108,7 @@ class Active:
         # If the user actually wrote the data with no fill value, or the
         # default fill value is in play, then this might go wrong.
         if storage_type == "s3":
+            print (storage_options)
             with load_from_s3(uri, storage_options) as _ds:
                 ds = _ds
         else:
@@ -185,7 +186,7 @@ class Active:
                 
            
             if self.storage_type == "s3":
-                with load_from_s3(self.uri, storage_options) as nc:
+                with load_from_s3(self.uri, self.storage_options) as nc:
                     data = nc[ncvar][index]
                     # h5netcdf doesn't return masked arrays.
                     if self._fillvalue:
