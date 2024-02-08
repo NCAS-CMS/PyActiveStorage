@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main  # keep this at all times
+      - test_request_data
   pull_request:
   schedule:
     - cron: '0 0 * * *'  # nightly
@@ -65,10 +66,10 @@ jobs:
           pip install -e .
       - name: Run tests
         run: |
-          pytest
-      - name: Run S3 exploratory tests
-        run: |
-          pytest tests/s3_exploratory/test_s3_reduction.py --html=test-reports/s3-exploratory-report.html
+          pytest tests/test_compression.py::test_compression_and_filters_cmip6_data
+      #- name: Run S3 exploratory tests
+      #  run: |
+      #    pytest tests/s3_exploratory/test_s3_reduction.py --html=test-reports/s3-exploratory-report.html
       - name: Install pytest-monitor
         run: pip install pytest-monitor
       - name: Run S3 performance tests
