@@ -454,7 +454,7 @@ class Active:
             print("bucket", bucket)  # wrong bloody bucket at JASMIN
             # bucket = "uor-aces-o.s3-ext.jc.rl.ac.uk"
             print("object", object)  # wrong bloody object file at JASMIN
-            print("S£_URL". S3_URL)
+            print("S3_URL", S3_URL)
             # object = os.path.basename(object)
             tmp, count = reductionist.reduce_chunk(session, S3_ACTIVE_STORAGE_URL,
                                                    S3_URL,
