@@ -449,13 +449,10 @@ class Active:
             # FIXME: We do not get the correct byte order on the Zarr Array's dtype
             # when using S3, so use the value captured earlier.
             dtype = self._dtype
-            # S3_URL = "https://uor-aces-o.s3-ext.jc.rl.ac.uk"
-            print("parsed_url", parsed_url)
-            print("bucket", bucket)  # wrong bloody bucket at JASMIN
-            # bucket = "uor-aces-o.s3-ext.jc.rl.ac.uk"
-            print("object", object)  # wrong bloody object file at JASMIN
-            print("S3_URL", S3_URL)
-            # object = os.path.basename(object)
+            S3_URL = "https://uor-aces-o.s3-ext.jc.rl.ac.uk"
+            bucket = "bnl"
+            object = "/" + os.path.basename(object)
+            print("Shoehorned args to Reductionist", S3_URL, bucket, object)
             tmp, count = reductionist.reduce_chunk(session, S3_ACTIVE_STORAGE_URL,
                                                    S3_URL,
                                                    bucket, object, offset,
