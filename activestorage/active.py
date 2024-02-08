@@ -35,9 +35,12 @@ def load_from_s3(uri):
     instead, we use h5netcdf: https://github.com/h5netcdf/h5netcdf
     a Python binder straight to HDF5-netCDF4 interface, that doesn't need a "local" file
     """
-    fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
-                           secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
-                           client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
+    #fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
+    #                       secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
+    #                       client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
+    fs = s3fs.S3FileSystem(anon=True,
+                           client_kwargs={'endpoint_url': "https://" + S3_URL})
+    print("S3 file URI:", uri)
     with fs.open(uri, 'rb') as s3file:
         ds = h5netcdf.File(s3file, 'r', invalid_netcdf=True)
         print(f"Dataset loaded from S3 via h5netcdf: {ds}")
