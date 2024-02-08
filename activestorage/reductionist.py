@@ -52,9 +52,12 @@ def reduce_chunk(session, server, source, bucket, object,
     :raises ReductionistError: if the request to Reductionist fails
     """
 
+    print("Reductionist stuffs:", source, bucket, object)
     request_data = build_request_data(source, bucket, object, offset, size, compression, filters, missing, dtype, shape, order, chunk_selection)
     api_operation = "sum" if operation == "mean" else operation or "select"
     url = f'{server}/v1/{api_operation}/'
+    print("Reductionist URL", url)
+    print(request_data)
     response = request(session, url, request_data)
 
     if response.ok:
