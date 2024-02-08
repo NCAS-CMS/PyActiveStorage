@@ -47,8 +47,10 @@ jobs:
           until curl -if http://localhost:9001; do
             sleep 1;
           done
-      - name: Run Reductionist container
-        run: docker run -it --detach --rm --net=host --name reductionist ghcr.io/stackhpc/reductionist-rs:latest
+      # - name: Run Reductionist container
+      #   run: docker run -it --detach --rm --net=host --name reductionist ghcr.io/stackhpc/reductionist-rs:latest
+      - name: Ping remote Reductionist
+        run: curl -k https://192.171.169.248:8080/.well-known/reductionist-schema
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: activestorage-minio
