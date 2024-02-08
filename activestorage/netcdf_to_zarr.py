@@ -13,14 +13,21 @@ from kerchunk.hdf import SingleHdf5ToZarr
 def gen_json(file_url, outf, storage_type):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
     if storage_type == "s3":
-        fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,
-                               secret=S3_SECRET_KEY,
-                               client_kwargs={'endpoint_url': S3_URL},
+        #fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,
+        #                       secret=S3_SECRET_KEY,
+        #                       client_kwargs={'endpoint_url': S3_URL},
+        #                       default_fill_cache=False,
+        #                       default_cache_type="none"
+        #)
+        fs = s3fs.S3FileSystem(anon=True,
+                               client_kwargs={'endpoint_url': "https://" + S3_URL},
                                default_fill_cache=False,
                                default_cache_type="none"
         )
         fs2 = fsspec.filesystem('')
-        with fs.open(file_url, 'rb') as s3file:
+        clip_url = os.path.join(S3_BUCKET, os.path.basename(file_url))
+        print("JASMIN S3-specific uri:", clip_url)
+        with fs.open(clip_url, 'rb') as s3file:
             h5chunks = SingleHdf5ToZarr(s3file, file_url,
                                         inline_threshold=0)
             with fs2.open(outf, 'wb') as f:
