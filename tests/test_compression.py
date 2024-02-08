@@ -66,6 +66,7 @@ def test_compression_and_filters_cmip6_data():
     print(f"Numpy min from compressed file {nc_min}")
 
     test_file = utils.write_to_storage(test_file)
+    print(test_file)
 
     check_dataset_filters(test_file, "tas", "zlib", False)
 
