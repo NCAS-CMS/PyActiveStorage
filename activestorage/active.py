@@ -451,7 +451,7 @@ class Active:
             dtype = self._dtype
             S3_URL = "https://uor-aces-o.s3-ext.jc.rl.ac.uk"
             bucket = "bnl"
-            object = "/" + os.path.basename(object)
+            object = os.path.basename(object)
             print("Shoehorned args to Reductionist", S3_URL, bucket, object)
             tmp, count = reductionist.reduce_chunk(session, S3_ACTIVE_STORAGE_URL,
                                                    S3_URL,
