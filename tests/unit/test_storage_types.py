@@ -86,7 +86,10 @@ def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
     test_file = str(tmp_path / "test.nc")
     make_vanilla_ncdata(test_file)
 
-    active = Active(uri, "data", storge_options=storage_options)
+    active = Active(
+        uri, "data", storge_options=storage_options,
+        active_storage_url=S3_ACTIVE_STORAGE_URL
+    )
     active._version = 1
     active._method = "max"
 
@@ -95,7 +98,11 @@ def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
     assert result == 999.0
 
     mock_load.assert_called_once_with(uri)
-    mock_nz.assert_called_once_with(uri, "data", storage_options=storage_options)
+    mock_nz.assert_called_once_with(
+        uri, "data",
+        storage_options=storage_options,
+        active_storage_url=S3_ACTIVE_STORAGE_URL
+    )
     # NOTE: This gets called multiple times with various arguments. Match on
     # the common ones.
     mock_reduce.assert_called_with(

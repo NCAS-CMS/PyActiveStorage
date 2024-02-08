@@ -41,7 +41,6 @@ def load_from_s3(uri, storage_options):
         print(f"Dataset loaded from S3 via h5netcdf: {ds}")
         yield ds
 
-
 class Active:
     """ 
     Instantiates an interface to active storage which contains either zarr files
@@ -66,12 +65,17 @@ class Active:
         }
         return instance
 
-    def __init__(self, uri, ncvar, missing_value=None, _FillValue=None, valid_min=None, valid_max=None, max_threads=100, storage_options=None):
+    def __init__(self, uri, ncvar, missing_value=None, _FillValue=None, valid_min=None, valid_max=None, max_threads=100,
+                 storage_options=None, active_storage_url=None):
         """
         Instantiate with a NetCDF4 dataset and the variable of interest within that file.
         (We need the variable, because we need variable specific metadata from within that
         file, however, if that information is available at instantiation, it can be provided
         using keywords and avoid a metadata read.)
+
+        :param storage_options: s3fs.S3FileSystem options
+        :param active_storage_url: Reductionist server URL
+          
         """
         # Assume NetCDF4 for now
         self.uri = uri
@@ -81,10 +85,12 @@ class Active:
         self.storage_type = storage_type
         if not os.path.isfile(self.uri) and not self.storage_type:
             raise ValueError(f"Must use existing file for uri. {self.uri} not found")
+
         if storage_options is None:
             stroage_options = {}
 
         self.storage_options = storage_options
+        self.active_storage_url = active_storage_url
         
         self.ncvar = ncvar
         if self.ncvar is None:
@@ -194,7 +200,7 @@ class Active:
                 nc = Dataset(self.uri)
                 data = nc[ncvar][index]
                 nc.close()
-                
+
             if lock:
                 lock.release()
 
@@ -455,15 +461,18 @@ class Active:
             # FIXME: We do not get the correct byte order on the Zarr Array's dtype
             # when using S3, so use the value captured earlier.
             dtype = self._dtype
-            tmp, count = reductionist.reduce_chunk(session, S3_ACTIVE_STORAGE_URL,
-                                                   S3_URL,
-                                                   bucket, object, offset,
-                                                   size, compressor, filters,
-                                                   missing, dtype,
-                                                   self.zds._chunks,
-                                                   self.zds._order,
-                                                   chunk_selection,
-                                                   operation=self._method)
+            tmp, count = reductionist.reduce_chunk(
+                session,
+                self.active_storage_url,
+                self._get_endpoint_url(),
+                bucket, object, offset,
+                size, compressor, filters,
+                missing, dtype,
+                self.zds._chunks,
+                self.zds._order,
+                chunk_selection,
+                operation=self._method
+            )
         else:
             # note there is an ongoing discussion about this interface, and what it returns
             # see https://github.com/valeriupredoi/PyActiveStorage/issues/33
@@ -480,3 +489,17 @@ class Active:
             if drop_axes:
                 tmp = np.squeeze(tmp, axis=drop_axes)
             return tmp, out_selection
+
+    def _get_endpoint_url(self):
+        """Return the endpoint_url of an S3 object store, or `None`"""
+        endpoint_url = self.storage_options.get('endpoint_url')
+        if endpoint_url is not None:
+            return endpoint_url
+
+        client_kwargs = self.storage_options.get('client_kwargs')
+        if client_kwargs:
+            endpoint_url = client_kwargs.get('endpoint_url')
+            if endpoint_url is not None:
+                return endpoint_url
+
+        return f"http://{urllib.parse.urlparse(self.filename).netloc}"
