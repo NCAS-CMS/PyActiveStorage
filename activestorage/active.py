@@ -40,8 +40,10 @@ def load_from_s3(uri):
     #                       client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
     fs = s3fs.S3FileSystem(anon=True,
                            client_kwargs={'endpoint_url': "https://" + S3_URL})
-    print("S3 file URI:", uri)
-    with fs.open(uri, 'rb') as s3file:
+    print("Complete S3 file URI:", uri)
+    clip_uri = os.path.join(S3_BUCKET, os.path.basename(uri))
+    print("JASMIN S3-specific uri:", clip_uri)
+    with fs.open(clip_uri, 'rb') as s3file:
         ds = h5netcdf.File(s3file, 'r', invalid_netcdf=True)
         print(f"Dataset loaded from S3 via h5netcdf: {ds}")
         yield ds
