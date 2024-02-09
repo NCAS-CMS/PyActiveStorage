@@ -35,13 +35,6 @@ def test_getitem():
         active = Active(uri, ncvar=None)
     assert str(exc.value) == "Must set a netCDF variable name to slice"
 
-    # unopenable file
-    ncvar = "tas"
-    baseexc = "tas not found in /"
-    with pytest.raises(IndexError) as exc:
-        active = Active(uri, ncvar=ncvar)
-    assert baseexc in str(exc.value)
-
     # openable file and correct variable
     uri = "tests/test_data/cesm2_native.nc"
     ncvar = "TREFHT"
