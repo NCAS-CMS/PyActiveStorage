@@ -53,6 +53,7 @@ def active_two(testfile):
 
     return active_mean
 
+
 def test_partially_missing_data(tmp_path):
     testfile = str(tmp_path / 'test_partially_missing_data.nc')
     r = dd.make_partially_missing_ncdata(testfile)

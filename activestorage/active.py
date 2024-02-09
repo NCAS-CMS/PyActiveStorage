@@ -456,7 +456,7 @@ class Active:
                     "valid_max, valid_range: "
                     f"{valid_min}, {valid_max}, {valid_range}"
                 )
-        elif valid_range:
+        elif valid_range is not None:
             valid_min, valid_max = valid_range
         
         if _FillValue is not None:
