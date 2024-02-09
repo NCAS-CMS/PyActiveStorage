@@ -463,7 +463,7 @@ class Active:
             data = np.ma.masked_equal(data, _FillValue)
 
         if missing_value is not None:
-            data = np.ma.masked_equal(data, missing)
+            data = np.ma.masked_equal(data, missing_value)
 
         if valid_max is not None:
             data = np.ma.masked_greater(data, valid_max)
