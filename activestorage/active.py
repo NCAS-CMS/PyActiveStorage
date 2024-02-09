@@ -460,7 +460,7 @@ class Active:
             valid_min, valid_max = valid_range
         
         if _FillValue is not None:
-            data = np.ma.masked_equal(data, fillvalue)
+            data = np.ma.masked_equal(data, _FillValue)
 
         if missing_value is not None:
             data = np.ma.masked_equal(data, missing)
