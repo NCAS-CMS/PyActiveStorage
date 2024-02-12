@@ -149,7 +149,7 @@ def test_native_emac_model_fails(test_data_path):
     """
     An example of netCDF file that doesn't work
 
-    The actual issue  is with h5py - it can't read it (netCDF classic)
+    The actual issue  is with h5py - it can't read it (netCDF3 classic)
 
     h5py/_objects.pyx:54: in h5py._objects.with_phil.wrapper
         ???
@@ -175,8 +175,9 @@ def test_native_emac_model_fails(test_data_path):
         pass
 
     if USE_S3:
+        active = Active(uri, "aps_ave", utils.get_storage_type())
         with pytest.raises(OSError):
-            active = Active(uri, "aps_ave", utils.get_storage_type())
+            active[...]
     else:
         active = Active(uri, "aps_ave")
         active._version = 2
@@ -243,13 +244,13 @@ def test_daily_data_masked(test_data_path):
     """
     ncfile = str(test_data_path / "daily_data_masked.nc")
     uri = utils.write_to_storage(ncfile)
-    active = Active(uri, "ta", utils.get_storage_type(), missing_value=999.)
+    active = Active(uri, "ta", utils.get_storage_type())
     active._version = 0
     d = active[:]
     d = np.ma.masked_where(d==999., d)
     mean_result = np.ma.mean(d)
 
-    active = Active(uri, "ta", utils.get_storage_type(), missing_value=999.)
+    active = Active(uri, "ta", utils.get_storage_type())
     active._version = 2
     active.method = "mean"
     active.components = True

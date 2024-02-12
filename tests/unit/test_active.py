@@ -4,6 +4,9 @@ import pytest
 import threading
 
 from activestorage.active import Active
+from activestorage.active import load_from_s3
+from activestorage.config import *
+from botocore.exceptions import EndpointConnectionError as botoExc
 
 
 def test_uri_none():
@@ -34,13 +37,6 @@ def test_getitem():
     with pytest.raises(ValueError) as exc:
         active = Active(uri, ncvar=None)
     assert str(exc.value) == "Must set a netCDF variable name to slice"
-
-    # unopenable file
-    ncvar = "tas"
-    baseexc = "tas not found in /"
-    with pytest.raises(IndexError) as exc:
-        active = Active(uri, ncvar=ncvar)
-    assert baseexc in str(exc.value)
 
     # openable file and correct variable
     uri = "tests/test_data/cesm2_native.nc"
@@ -81,9 +77,7 @@ def test_active():
     uri = "tests/test_data/cesm2_native.nc"
     ncvar = "TREFHT"
     active = Active(uri, ncvar=ncvar)
-    init = active.__init__(uri=uri, ncvar=ncvar, missing_value=True,
-                           _FillValue=1e20, valid_min=-1,
-                           valid_max=1200)
+    init = active.__init__(uri=uri, ncvar=ncvar)
 
 
 def test_lock():
@@ -105,3 +99,14 @@ def test_lock():
 
     active.lock = None
     assert active.lock is False
+
+
+@pytest.mark.skipif(USE_S3 = True, reason="it will look for silly bucket")
+def test_load_from_s3():
+    """Test basic load from S3 without loading from S3."""
+    uri = "s3://bucket/file.nc"
+    expected_exc = "Could not connect to the endpoint URL"
+    with pytest.raises(botoExc) as exc:
+        with load_from_s3(uri) as nc:
+            data = nc["cow"][0]
+    assert expected_exc in str(exc.value)

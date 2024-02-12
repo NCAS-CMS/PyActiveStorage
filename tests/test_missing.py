@@ -7,6 +7,8 @@ import shutil
 import tempfile
 import unittest
 
+import h5netcdf
+
 from netCDF4 import Dataset
 
 from activestorage.active import Active
@@ -240,3 +242,63 @@ def test_validrange(tmp_path):
 
     np.testing.assert_array_equal(masked_numpy_mean, active_mean)
     np.testing.assert_array_equal(no_active_mean, active_mean)
+
+
+def test_active_mask_data(tmp_path):
+    testfile = str(tmp_path / 'test_partially_missing_data.nc')
+
+    # with valid min
+    r = dd.make_validmin_ncdata(testfile, valid_min=500)
+
+    # retrieve the actual numpy-ed result
+    actual_data = load_dataset(testfile)
+
+    # dataset variable
+    ds = h5netcdf.File(testfile, 'r', invalid_netcdf=True)
+    dsvar = ds["data"]
+
+    # test the function
+    data = Active._mask_data(None, actual_data, dsvar)
+    ds.close()
+
+    # with valid range
+    r = dd.make_validrange_ncdata(testfile, valid_range=[750., 850.])
+
+    # retrieve the actual numpy-ed result
+    actual_data = load_dataset(testfile)
+
+    # dataset variable
+    ds = h5netcdf.File(testfile, 'r', invalid_netcdf=True)
+    dsvar = ds["data"]
+
+    # test the function
+    data = Active._mask_data(None, actual_data, dsvar)
+    ds.close()
+
+    # with missing
+    r = dd.make_missing_ncdata(testfile)
+
+    # retrieve the actual numpy-ed result
+    actual_data = load_dataset(testfile)
+
+    # dataset variable
+    ds = h5netcdf.File(testfile, 'r', invalid_netcdf=True)
+    dsvar = ds["data"]
+
+    # test the function
+    data = Active._mask_data(None, actual_data, dsvar)
+    ds.close()
+
+    # with _FillValue
+    r = dd.make_fillvalue_ncdata(testfile)
+
+    # retrieve the actual numpy-ed result
+    actual_data = load_dataset(testfile)
+
+    # dataset variable
+    ds = h5netcdf.File(testfile, 'r', invalid_netcdf=True)
+    dsvar = ds["data"]
+
+    # test the function
+    data = Active._mask_data(None, actual_data, dsvar)
+    ds.close()

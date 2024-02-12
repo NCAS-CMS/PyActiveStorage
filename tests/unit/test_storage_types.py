@@ -89,7 +89,9 @@ def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
 
     assert result == 999.0
 
-    mock_load.assert_called_once_with(uri)
+    # S3 loading is not done from Active anymore
+    mock_load.assert_not_called()
+
     mock_nz.assert_called_once_with(uri, "data", "s3")
     # NOTE: This gets called multiple times with various arguments. Match on
     # the common ones.
@@ -134,6 +136,7 @@ def test_reductionist_version_0(mock_load, tmp_path):
     assert np.max(result) == 999.0
 
 
+@pytest.mark.skip(reason="No more valid file load in Active")
 @mock.patch.object(activestorage.active, "load_from_s3")
 def test_s3_load_failure(mock_load):
     """Test when an S3 object doesn't exist."""

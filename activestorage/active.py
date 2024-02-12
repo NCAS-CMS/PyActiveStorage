@@ -68,7 +68,7 @@ class Active:
         }
         return instance
 
-    def __init__(self, uri, ncvar, storage_type=None, missing_value=None, _FillValue=None, valid_min=None, valid_max=None, max_threads=100):
+    def __init__(self, uri, ncvar, storage_type=None, max_threads=100):
         """
         Instantiate with a NetCDF4 dataset and the variable of interest within that file.
         (We need the variable, because we need variable specific metadata from within that
@@ -92,65 +92,6 @@ class Active:
         self._method = None
         self._lock = False
         self._max_threads = max_threads
-      
-        # obtain metadata, using netcdf4_python for now
-        # FIXME: There is an outstanding issue with ._FilLValue to be handled.
-        # If the user actually wrote the data with no fill value, or the
-        # default fill value is in play, then this might go wrong.
-        if storage_type is None:
-            ds = Dataset(uri)
-        elif storage_type == "s3":
-            with load_from_s3(uri) as _ds:
-                ds = _ds
-        try:
-            ds_var = ds[ncvar]
-        except IndexError as exc:
-            print(f"Dataset {ds} does not contain ncvar {ncvar!r}.")
-            raise exc
-
-        # FIXME: We do not get the correct byte order on the Zarr Array's dtype
-        # when using S3, so capture it here.
-        self._dtype = ds_var.dtype
-
-        if (missing_value, _FillValue, valid_min, valid_max) == (None, None, None, None):
-            if isinstance(ds, Dataset):
-                self._missing = getattr(ds_var, 'missing_value', None)
-                self._fillvalue = getattr(ds_var, '_FillValue', None)
-                # could be fill_value set as netCDF4 attr
-                if self._fillvalue is None:
-                    self._fillvalue = getattr(ds_var, 'fill_value', None)
-                valid_min = getattr(ds_var, 'valid_min', None)
-                valid_max = getattr(ds_var, 'valid_max', None)
-                valid_range = getattr(ds_var, 'valid_range', None)
-            elif storage_type == "s3":
-                self._missing = ds_var.attrs.get('missing_value')
-                self._fillvalue = ds_var.attrs.get('_FillValue')
-                # could be fill_value set as netCDF4 attr
-                if self._fillvalue is None:
-                    self._fillvalue = ds_var.attrs.get('fill_value')
-                valid_min = ds_var.attrs.get('valid_min')
-                valid_max = ds_var.attrs.get('valid_max')
-                valid_range = ds_var.attrs.get('valid_range')
-
-            if valid_max is not None or valid_min is not None:
-                if valid_range is not None:
-                    raise ValueError(
-                        "Invalid combination in the file of valid_min, "
-                        "valid_max, valid_range: "
-                        f"{valid_min}, {valid_max}, {valid_range}"
-                    )                
-                valid_range = (valid_min, valid_max)
-            elif valid_range is None:
-                valid_range = (None, None)
-            self._valid_min, self._valid_max = valid_range
-
-        else:
-            self._missing = missing_value
-            self._fillvalue = _FillValue
-            self._valid_min = valid_min
-            self._valid_max = valid_max
-
-        ds.close()
 
     def __getitem__(self, index):
         """ 
@@ -174,22 +115,16 @@ class Active:
             elif self.storage_type == "s3":
                 with load_from_s3(self.uri) as nc:
                     data = nc[ncvar][index]
-                    # h5netcdf doesn't return masked arrays.
-                    if self._fillvalue:
-                        data = np.ma.masked_equal(data, self._fillvalue)
-                    if self._missing:
-                        data = np.ma.masked_equal(data, self._missing)
-                    if self._valid_max:
-                        data = np.ma.masked_greater(data, self._valid_max)
-                    if self._valid_min:
-                        data = np.ma.masked_less(data, self._valid_min)
+                    data = self._mask_data(data, nc[ncvar])
 
             if lock:
                 lock.release()
-
+                
             return data
+        
         elif self._version == 1:
             return self._via_kerchunk(index)
+        
         elif self._version  == 2:
             # No active operation either
             lock = self.lock
@@ -202,6 +137,7 @@ class Active:
                 lock.release()
 
             return data
+
         else:
             raise ValueError(f'Version {self._version} not supported')
 
@@ -299,14 +235,27 @@ class Active:
         if self.zds is None:
             print(f"Kerchunking file {self.uri} with variable "
                   f"{self.ncvar} for storage type {self.storage_type}")
-            ds = nz.load_netcdf_zarr_generic(self.uri,
-                                             self.ncvar,
-                                             self.storage_type)
+            ds, zarray, zattrs = nz.load_netcdf_zarr_generic(
+                self.uri,
+                self.ncvar,
+                self.storage_type
+            )
             # The following is a hangove from exploration
             # and is needed if using the original doing it ourselves
             # self.zds = make_an_array_instance_active(ds)
             self.zds = ds
 
+            # Retain attributes and other information
+            if zarray.get('fill_value') is not None:
+                zattrs['_FillValue'] = zarray['fill_value']
+            
+            self.zarray = zarray
+            self.zattrs = zattrs
+
+            # FIXME: We do not get the correct byte order on the Zarr
+            # Array's dtype when using S3, so capture it here.
+            self._dtype = np.dtype(zarray['dtype'])
+            
         return self._get_selection(index)
 
     def _get_selection(self, *args):
@@ -319,7 +268,28 @@ class Active:
         compressor = self.zds._compressor
         filters = self.zds._filters
 
-        missing = self._fillvalue, self._missing, self._valid_min, self._valid_max
+        # Get missing values
+        _FillValue = self.zattrs.get('_FillValue')
+        missing_value = self.zattrs.get('missing_value')
+        valid_min = self.zattrs.get('valid_min')
+        valid_max = self.zattrs.get('valid_max')
+        valid_range = self.zattrs.get('valid_range')
+        if valid_max is not None or valid_min is not None:
+            if valid_range is not None:
+                raise ValueError(
+                    "Invalid combination in the file of valid_min, "
+                    "valid_max, valid_range: "
+                    f"{valid_min}, {valid_max}, {valid_range}"
+                )
+        elif valid_range is not None:            
+            valid_min, valid_max = valid_range
+        
+        missing = (
+            _FillValue,
+            missing_value,
+            valid_min,
+            valid_max,
+        )
 
         indexer = OrthogonalIndexer(*args, self.zds)
         out_shape = indexer.shape
@@ -468,3 +438,37 @@ class Active:
             if drop_axes:
                 tmp = np.squeeze(tmp, axis=drop_axes)
             return tmp, out_selection
+
+    def _mask_data(self, data, ds_var):
+        """ppp"""
+        # TODO: replace with cfdm.NetCDFIndexer, hopefully.
+        attrs = ds_var.attrs
+        missing_value = attrs.get('missing_value')
+        _FillValue = attrs.get('_FillValue')
+        valid_min = attrs.get('valid_min')
+        valid_max = attrs.get('valid_max')
+        valid_range = attrs.get('valid_range')
+
+        if valid_max is not None or valid_min is not None:
+            if valid_range is not None:
+                raise ValueError(
+                    "Invalid combination in the file of valid_min, "
+                    "valid_max, valid_range: "
+                    f"{valid_min}, {valid_max}, {valid_range}"
+                )
+        elif valid_range is not None:
+            valid_min, valid_max = valid_range
+        
+        if _FillValue is not None:
+            data = np.ma.masked_equal(data, _FillValue)
+
+        if missing_value is not None:
+            data = np.ma.masked_equal(data, missing_value)
+
+        if valid_max is not None:
+            data = np.ma.masked_greater(data, valid_max)
+
+        if valid_min is not None:
+            data = np.ma.masked_less(data, valid_min)
+
+        return data
