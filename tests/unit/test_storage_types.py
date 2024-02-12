@@ -119,7 +119,7 @@ def test_reductionist_version_0(mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3 using version 0."""
 
     @contextlib.contextmanager
-    def load_from_s3(uri):
+    def load_from_s3(uri, storage_options=None):
         yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
 
     mock_load.side_effect = load_from_s3
