@@ -448,7 +448,7 @@ class Active:
         valid_min = attrs.get('valid_min')
         valid_max = attrs.get('valid_max')
         valid_range = attrs.get('valid_range')
-            
+
         if valid_max is not None or valid_min is not None:
             if valid_range is not None:
                 raise ValueError(
