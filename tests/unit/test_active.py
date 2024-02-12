@@ -4,6 +4,8 @@ import pytest
 import threading
 
 from activestorage.active import Active
+from activestorage.active import load_from_s3
+from botocore.exceptions import EndpointConnectionError as botoExc
 
 
 def test_uri_none():
@@ -96,3 +98,13 @@ def test_lock():
 
     active.lock = None
     assert active.lock is False
+
+
+def test_load_from_s3():
+    """Test basic load from S3 without loading from S3."""
+    uri = "s3://bucket/file.nc"
+    expected_exc = "Could not connect to the endpoint URL"
+    with pytest.raises(botoExc) as exc:
+        with load_from_s3(uri) as nc:
+            data = nc["cow"][0]
+    assert expected_exc in str(exc.value)
