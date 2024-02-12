@@ -5,6 +5,7 @@ import threading
 
 from activestorage.active import Active
 from activestorage.active import load_from_s3
+from activestorage.config import *
 from botocore.exceptions import EndpointConnectionError as botoExc
 
 
@@ -100,6 +101,7 @@ def test_lock():
     assert active.lock is False
 
 
+@pytest.mark.skipif(USE_S3 = True, reason="it will look for silly bucket")
 def test_load_from_s3():
     """Test basic load from S3 without loading from S3."""
     uri = "s3://bucket/file.nc"
