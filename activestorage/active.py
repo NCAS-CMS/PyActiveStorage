@@ -418,6 +418,20 @@ class Active:
 
         return out
 
+    def _get_endpoint_url(self):
+        """Return the endpoint_url of an S3 object store, or `None`"""
+        endpoint_url = self.storage_options.get('endpoint_url')
+        if endpoint_url is not None:
+            return endpoint_url
+
+        client_kwargs = self.storage_options.get('client_kwargs')
+        if client_kwargs:
+            endpoint_url = client_kwargs.get('endpoint_url')
+            if endpoint_url is not None:
+                return endpoint_url
+
+        return f"http://{urllib.parse.urlparse(self.filename).netloc}"
+
     def _process_chunk(self, session, fsref, chunk_coords, chunk_selection, counts,
                        out_selection, compressor, filters, missing, 
                        drop_axes=None):
@@ -434,22 +448,39 @@ class Active:
         key = f"{self.ncvar}/{coord}"
         rfile, offset, size = tuple(fsref[key])
 
+        # S3: pass in pre-configured storage options (credentials)
         if self.storage_type == "s3":
             parsed_url = urllib.parse.urlparse(rfile)
             bucket = parsed_url.netloc
             object = parsed_url.path
-            # FIXME: We do not get the correct byte order on the Zarr Array's dtype
-            # when using S3, so use the value captured earlier.
-            dtype = self._dtype
-            tmp, count = reductionist.reduce_chunk(session, S3_ACTIVE_STORAGE_URL,
-                                                   S3_URL,
-                                                   bucket, object, offset,
-                                                   size, compressor, filters,
-                                                   missing, dtype,
-                                                   self.zds._chunks,
-                                                   self.zds._order,
-                                                   chunk_selection,
-                                                   operation=self._method)
+            if not self.storage_options:
+                # FIXME: We do not get the correct byte order on the Zarr Array's dtype
+                # when using S3, so use the value captured earlier.
+                dtype = self._dtype
+                tmp, count = reductionist.reduce_chunk(session,
+                                                       S3_ACTIVE_STORAGE_URL,
+                                                       S3_URL,
+                                                       bucket, object, offset,
+                                                       size, compressor, filters,
+                                                       missing, dtype,
+                                                       self.zds._chunks,
+                                                       self.zds._order,
+                                                       chunk_selection,
+                                                       operation=self._method)
+            else:
+                # FIXME: We do not get the correct byte order on the Zarr Array's dtype
+                # when using S3, so use the value captured earlier.
+                dtype = self._dtype
+                tmp, count = reductionist.reduce_chunk(session,
+                                                       self.active_storage_url,
+                                                       self._get_endpoint_url(),
+                                                       bucket, object, offset,
+                                                       size, compressor, filters,
+                                                       missing, dtype,
+                                                       self.zds._chunks,
+                                                       self.zds._order,
+                                                       chunk_selection,
+                                                       operation=self._method)
         else:
             # note there is an ongoing discussion about this interface, and what it returns
             # see https://github.com/valeriupredoi/PyActiveStorage/issues/33
