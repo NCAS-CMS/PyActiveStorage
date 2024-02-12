@@ -90,7 +90,7 @@ def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
     assert result == 999.0
 
     # S3 loading is not done from Active anymore
-    # mock_load.assert_called_once_with(uri)
+    mock_load.assert_not_called()
 
     mock_nz.assert_called_once_with(uri, "data", "s3")
     # NOTE: This gets called multiple times with various arguments. Match on
