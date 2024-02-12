@@ -20,7 +20,7 @@ from activestorage import netcdf_to_zarr as nz
 
 
 @contextlib.contextmanager
-def load_from_s3(uri):
+def load_from_s3(uri, storage_options=None):
     """
     Load a netCDF4-like object from S3.
 
@@ -34,10 +34,15 @@ def load_from_s3(uri):
     '<File-like object S3FileSystem, pyactivestorage/s3_test_bizarre.nc>'
     instead, we use h5netcdf: https://github.com/h5netcdf/h5netcdf
     a Python binder straight to HDF5-netCDF4 interface, that doesn't need a "local" file
+
+    storage_options: kwarg dict containing S3 credentials passed straight to Active
     """
-    fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
-                           secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
-                           client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
+    if not storage_options:  # use pre-configured S3 credentials
+        fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
+                               secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
+                               client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
+    else:
+        fs = s3fs.S3FileSystem(**storage_options)  # use passed-in dictionary
     with fs.open(uri, 'rb') as s3file:
         ds = h5netcdf.File(s3file, 'r', invalid_netcdf=True)
         print(f"Dataset loaded from S3 via h5netcdf: {ds}")
@@ -68,20 +73,43 @@ class Active:
         }
         return instance
 
-    def __init__(self, uri, ncvar, storage_type=None, max_threads=100):
+    def __init__(
+        self,
+        uri,
+        ncvar,
+        storage_type=None,
+        max_threads=100,
+        storage_options=None,
+        active_storage_url=None
+    ):
         """
         Instantiate with a NetCDF4 dataset and the variable of interest within that file.
         (We need the variable, because we need variable specific metadata from within that
         file, however, if that information is available at instantiation, it can be provided
         using keywords and avoid a metadata read.)
+
+        :param storage_options: s3fs.S3FileSystem options
+        :param active_storage_url: Reductionist server URL
         """
         # Assume NetCDF4 for now
         self.uri = uri
         if self.uri is None:
             raise ValueError(f"Must use a valid file for uri. Got {self.uri}")
+
+        # still allow for a passable storage_type
+        # for special cases eg "special-POSIX" ie DDN
+        if not storage_type:
+            storage_type = urllib.parse.urlparse(uri).scheme
         self.storage_type = storage_type
+
+        # get storage_options
+        self.storage_options = storage_options
+        self.active_storage_url = active_storage_url
+
+        # basic check on file
         if not os.path.isfile(self.uri) and not self.storage_type:
             raise ValueError(f"Must use existing file for uri. {self.uri} not found")
+
         self.ncvar = ncvar
         if self.ncvar is None:
             raise ValueError("Must set a netCDF variable name to slice")
@@ -113,7 +141,7 @@ class Active:
                 data = nc[ncvar][index]
                 nc.close()
             elif self.storage_type == "s3":
-                with load_from_s3(self.uri) as nc:
+                with load_from_s3(self.uri, self.storage_options) as nc:
                     data = nc[ncvar][index]
                     data = self._mask_data(data, nc[ncvar])
 
