@@ -98,7 +98,7 @@ class Active:
 
         # still allow for a passable storage_type
         # for special cases eg "special-POSIX" ie DDN
-        if not storage_type:
+        if not storage_type and storage_options:
             storage_type = urllib.parse.urlparse(uri).scheme
         self.storage_type = storage_type
 
@@ -135,7 +135,7 @@ class Active:
             lock = self.lock
             if lock:
                 lock.acquire()
-                
+
             if self.storage_type is None:
                 nc = Dataset(self.uri)
                 data = nc[ncvar][index]
