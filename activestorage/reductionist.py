@@ -19,7 +19,7 @@ def get_session(username: str, password: str, cacert: typing.Optional[str]) -> r
     """
     session = requests.Session()
     session.auth = (username, password)
-    session.verify = cacert or True
+    session.verify = cacert or False
     return session
 
 
