@@ -45,10 +45,11 @@ STORAGE_OPTIONS_CLASSIC = {
     'secret': S3_SECRET_KEY,
     'client_kwargs': {'endpoint_url': S3_URL},
 }
+S3_ACTIVE_URL_CLASSIC = S3_ACTIVE_STORAGE_URL
 # TODO include all supported configuration types
 storage_options_paramlist = [
-    None,
-    STORAGE_OPTIONS_CLASSIC,
+    (None, None),
+    (STORAGE_OPTIONS_CLASSIC, S3_ACTIVE_URL_CLASSIC)
 ]
 
 
@@ -67,8 +68,8 @@ def test_compression_and_filters(tmp_path: str, compression: str, shuffle: bool)
     assert result == 740.0
 
 
-@pytest.mark.parametrize("storage_options", storage_options_paramlist)
-def test_compression_and_filters_cmip6_data(storage_options):
+@pytest.mark.parametrize("storage_options, active_storage_url", storage_options_paramlist)
+def test_compression_and_filters_cmip6_data(storage_options, active_storage_url):
     """
     Test use of datasets with compression and filters applied for a real
     CMIP6 dataset (CMIP6_IPSL-CM6A-LR_tas).
@@ -83,7 +84,8 @@ def test_compression_and_filters_cmip6_data(storage_options):
     check_dataset_filters(test_file, "tas", "zlib", False)
 
     active = Active(test_file, 'tas', utils.get_storage_type(),
-                    storage_options=storage_options)
+                    storage_options=storage_options,
+                    active_storage_url=active_storage_url)
     active._version = 1
     active._method = "min"
     result = active[0:2,4:6,7:9]
@@ -91,8 +93,8 @@ def test_compression_and_filters_cmip6_data(storage_options):
     assert result == 239.25946044921875
 
 
-@pytest.mark.parametrize("storage_options", storage_options_paramlist)
-def test_compression_and_filters_obs4mips_data(storage_options):
+@pytest.mark.parametrize("storage_options, active_storage_url", storage_options_paramlist)
+def test_compression_and_filters_obs4mips_data(storage_options, active_storage_url):
     """
     Test use of datasets with compression and filters applied for a real
     obs4mips dataset (obs4MIPS_CERES-EBAF_L3B_Ed2-8_rlut.nc) at CMIP5 MIP standard
@@ -108,7 +110,8 @@ def test_compression_and_filters_obs4mips_data(storage_options):
     check_dataset_filters(test_file, "rlut", "zlib", False)
 
     active = Active(test_file, 'rlut', utils.get_storage_type(),
-                    storage_options=storage_options)
+                    storage_options=storage_options,
+                    active_storage_url=active_storage_url)
     active._version = 1
     active._method = "min"
     result = active[0:2,4:6,7:9]
