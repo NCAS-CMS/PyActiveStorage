@@ -57,7 +57,7 @@ jobs:
           python -V
           which python
           pip install -e .
-      - name: Run the mother of all tests
+      - name: Run one single test
         run: |
           pytest tests/test_compression_remote_reductionist.py
       - name: Upload HTML report artifact
