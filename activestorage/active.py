@@ -454,10 +454,10 @@ class Active:
             parsed_url = urllib.parse.urlparse(rfile)
             bucket = parsed_url.netloc
             object = parsed_url.path
+            # FIXME: We do not get the correct byte order on the Zarr Array's dtype
+            # when using S3, so use the value captured earlier.
+            dtype = self._dtype
             if not self.storage_options:
-                # FIXME: We do not get the correct byte order on the Zarr Array's dtype
-                # when using S3, so use the value captured earlier.
-                dtype = self._dtype
                 tmp, count = reductionist.reduce_chunk(session,
                                                        S3_ACTIVE_STORAGE_URL,
                                                        S3_URL,
@@ -469,9 +469,14 @@ class Active:
                                                        chunk_selection,
                                                        operation=self._method)
             else:
-                # FIXME: We do not get the correct byte order on the Zarr Array's dtype
-                # when using S3, so use the value captured earlier.
-                dtype = self._dtype
+                # special case for "anon=True" buckets that work only with e.g.
+                # fs = s3fs.S3FileSystem(anon=True, client_kwargs={'endpoint_url': S3_URL})
+                # where file uri = bucketX/fileY.mc
+                print("S3 Storage options to Reductionist:", self.storage_options)
+                if self.storage_options.get("anon", None) == True:
+                    bucket = os.path.dirname(parsed_url.path)  # bucketX
+                    object = os.path.basename(parsed_url.path)  # fileY
+                    print("S3 anon=True Bucket and File:", bucket, object)
                 tmp, count = reductionist.reduce_chunk(session,
                                                        self.active_storage_url,
                                                        self._get_endpoint_url(),
