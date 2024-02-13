@@ -49,7 +49,8 @@ def test_reduce_chunk_defaults(mock_request):
 
     session = reductionist.get_session(access_key, secret_key, cacert)
     assert session.auth == (access_key, secret_key)
-    assert session.verify
+    # FIXME this is hacky and comes from peasantly setting the cacert to False in reductionist.py
+    assert not session.verify
 
     tmp, count = reductionist.reduce_chunk(session, active_url,
                                            s3_url, bucket, object, offset,
