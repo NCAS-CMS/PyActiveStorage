@@ -39,8 +39,8 @@ def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
     def load_from_s3(uri):
         yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
 
-    def load_netcdf_zarr_generic(uri, ncvar, storage_type):
-        return old_netcdf_to_zarr(test_file, ncvar, None)
+    def load_netcdf_zarr_generic(uri, ncvar, storage_type, storage_options=None):
+        return old_netcdf_to_zarr(test_file, ncvar, None, None)
 
     def reduce_chunk(
         session,
@@ -92,7 +92,7 @@ def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
     # S3 loading is not done from Active anymore
     mock_load.assert_not_called()
 
-    mock_nz.assert_called_once_with(uri, "data", "s3")
+    mock_nz.assert_called_once_with(uri, "data", "s3", None)
     # NOTE: This gets called multiple times with various arguments. Match on
     # the common ones.
     mock_reduce.assert_called_with(
@@ -158,8 +158,8 @@ def test_reductionist_connection(mock_reduce, mock_nz, mock_load, tmp_path):
     def load_from_s3(uri):
         yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
 
-    def load_netcdf_zarr_generic(uri, ncvar, storage_type):
-        return old_netcdf_to_zarr(test_file, ncvar, None)
+    def load_netcdf_zarr_generic(uri, ncvar, storage_type, storage_options=None):
+        return old_netcdf_to_zarr(test_file, ncvar, None, None)
 
     mock_load.side_effect = load_from_s3
     mock_nz.side_effect = load_netcdf_zarr_generic
@@ -187,8 +187,8 @@ def test_reductionist_bad_request(mock_reduce, mock_nz, mock_load, tmp_path):
     def load_from_s3(uri):
         yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
 
-    def load_netcdf_zarr_generic(uri, ncvar, storage_type):
-        return old_netcdf_to_zarr(test_file, ncvar, None)
+    def load_netcdf_zarr_generic(uri, ncvar, storage_type, storage_options=None):
+        return old_netcdf_to_zarr(test_file, ncvar, None, None)
 
     mock_load.side_effect = load_from_s3
     mock_nz.side_effect = load_netcdf_zarr_generic
