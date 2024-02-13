@@ -1,0 +1,68 @@
+# adapted GA workflow from https://github.com/stackhpc/reductionist-rs
+# This runs Active with a remote Reductionist and S3 data stored elsewhere
+---
+name: S3/Remote Reductionist
+
+on:
+  push:
+    branches:
+      - main  # keep this at all times
+  pull_request:
+  schedule:
+    - cron: '0 0 * * *'  # nightly
+
+# Required shell entrypoint to have properly configured bash shell
+defaults:
+  run:
+    shell: bash -l {0}
+
+jobs:
+  linux-test:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+      fail-fast: false
+    name: Linux Python ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          miniforge-version: "latest"
+          miniforge-variant: Mambaforge
+          use-mamba: true
+      - name: Get conda and Python versions
+        run: |
+          conda --version
+          python -V
+      - name: Export proxy
+        run: |
+          echo 'USE_S3 = True' >> activestorage/config.py
+      - name: Ping remote Reductionist
+        run: curl -k https://192.171.169.248:8080/.well-known/reductionist-schema
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: activestorage-minio
+          environment-file: environment.yml
+          python-version: ${{ matrix.python-version }}
+          miniforge-version: "latest"
+          miniforge-variant: Mambaforge
+          use-mamba: true
+      - name: Install PyActiveStorage
+        run: |
+          conda --version
+          python -V
+          which python
+          pip install -e .
+      - name: Run the mother of all tests
+        run: |
+          pytest tests/test_compression_remote_reductionist.py
+      - name: Upload HTML report artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: html-report
+          path: test-reports/
+        if: always()
