@@ -29,9 +29,9 @@ S3_BUCKET = "bnl"
 def test_compression_and_filters_cmip6_data(storage_options, active_storage_url):
     """
     Test use of datasets with compression and filters applied for a real
-    CMIP6 dataset (CMIP6-test.nc).
+    CMIP6 dataset (CMIP6-test.nc) - an IPSL file.
     """
-    test_file = str(Path(__file__).resolve().parent / 'test_data' / 'CMIP6_IPSL-CM6A-LR_tas.nc')
+    test_file = str(Path(__file__).resolve().parent / 'test_data' / 'CMIP6-test.nc')
     with Dataset(test_file) as nc_data:
         nc_min = np.min(nc_data["tas"][0:2,4:6,7:9])
     print(f"Numpy min from compressed file {nc_min}")
