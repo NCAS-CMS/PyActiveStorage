@@ -40,6 +40,18 @@ def create_compressed_dataset(tmp_path: str, compression: str, shuffle: bool):
     return test_data
 
 
+STORAGE_OPTIONS_CLASSIC = {
+    'key': S3_ACCESS_KEY,
+    'secret': S3_SECRET_KEY,
+    'client_kwargs': {'endpoint_url': S3_URL},
+}
+# TODO include all supported configuration types
+storage_options_paramlist = [
+    None,
+    STORAGE_OPTIONS_CLASSIC,
+]
+
+
 @pytest.mark.parametrize('compression', ['zlib'])
 @pytest.mark.parametrize('shuffle', [False, True])
 def test_compression_and_filters(tmp_path: str, compression: str, shuffle: bool):
@@ -55,7 +67,8 @@ def test_compression_and_filters(tmp_path: str, compression: str, shuffle: bool)
     assert result == 740.0
 
 
-def test_compression_and_filters_cmip6_data():
+@pytest.mark.parametrize("storage_options", storage_options_paramlist)
+def test_compression_and_filters_cmip6_data(storage_options):
     """
     Test use of datasets with compression and filters applied for a real
     CMIP6 dataset (CMIP6_IPSL-CM6A-LR_tas).
@@ -69,7 +82,8 @@ def test_compression_and_filters_cmip6_data():
 
     check_dataset_filters(test_file, "tas", "zlib", False)
 
-    active = Active(test_file, 'tas', utils.get_storage_type())
+    active = Active(test_file, 'tas', utils.get_storage_type(),
+                    storage_options=storage_options)
     active._version = 1
     active._method = "min"
     result = active[0:2,4:6,7:9]
@@ -77,7 +91,8 @@ def test_compression_and_filters_cmip6_data():
     assert result == 239.25946044921875
 
 
-def test_compression_and_filters_obs4mips_data():
+@pytest.mark.parametrize("storage_options", storage_options_paramlist)
+def test_compression_and_filters_obs4mips_data(storage_options):
     """
     Test use of datasets with compression and filters applied for a real
     obs4mips dataset (obs4MIPS_CERES-EBAF_L3B_Ed2-8_rlut.nc) at CMIP5 MIP standard
@@ -92,7 +107,8 @@ def test_compression_and_filters_obs4mips_data():
 
     check_dataset_filters(test_file, "rlut", "zlib", False)
 
-    active = Active(test_file, 'rlut', utils.get_storage_type())
+    active = Active(test_file, 'rlut', utils.get_storage_type(),
+                    storage_options=storage_options)
     active._version = 1
     active._method = "min"
     result = active[0:2,4:6,7:9]
