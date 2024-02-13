@@ -22,6 +22,8 @@ S3_ACTIVE_URL_Bryan = "https://192.171.169.248:8080"
 storage_options_paramlist = [
     (STORAGE_OPTIONS_Bryan, S3_ACTIVE_URL_Bryan)
 ]
+# bucket needed too for this test only
+# otherwise, bucket is extracted automatically from full file uri
 S3_BUCKET = "bnl"
 
 
@@ -37,7 +39,7 @@ def test_compression_and_filters_cmip6_data(storage_options, active_storage_url)
     print(f"Numpy min from compressed file {nc_min}")
 
     # TODO remember that the special case for "anon=True" buckets is that
-    # the actual file uri = bocket + filename (do we want to generalize this in active.py ???)
+    # the actual file uri = "bucket/filename"
     if USE_S3:
         ofile = os.path.basename(test_file)
         test_file_uri = os.path.join(S3_BUCKET, ofile)
