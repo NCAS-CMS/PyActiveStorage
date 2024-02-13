@@ -266,7 +266,8 @@ class Active:
             ds, zarray, zattrs = nz.load_netcdf_zarr_generic(
                 self.uri,
                 self.ncvar,
-                self.storage_type
+                self.storage_type,
+                self.storage_options,
             )
             # The following is a hangove from exploration
             # and is needed if using the original doing it ourselves
