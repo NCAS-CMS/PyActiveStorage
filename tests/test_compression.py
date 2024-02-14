@@ -45,11 +45,13 @@ STORAGE_OPTIONS_CLASSIC = {
     'secret': S3_SECRET_KEY,
     'client_kwargs': {'endpoint_url': S3_URL},
 }
-S3_ACTIVE_URL_CLASSIC = S3_ACTIVE_STORAGE_URL
+S3_ACTIVE_URL_MINIO = S3_ACTIVE_STORAGE_URL
+S3_ACTIVE_URL_Bryan = "https://192.171.169.248:8080"
 # TODO include all supported configuration types
 storage_options_paramlist = [
     (None, None),
     (STORAGE_OPTIONS_CLASSIC, S3_ACTIVE_URL_CLASSIC)
+    (STORAGE_OPTIONS_CLASSIC, S3_ACTIVE_URL_Bryan)
 ]
 
 
