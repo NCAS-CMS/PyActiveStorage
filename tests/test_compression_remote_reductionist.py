@@ -35,8 +35,14 @@ def test_compression_and_filters_cmip6_data(storage_options, active_storage_url)
     CMIP6 dataset (CMIP6-test.nc) - an IPSL file.
 
     This test will always pass when USE_S3 = False; equally, it will always
-    fail if USE_S3 = True until Reductionist supports anon=True S3 buckets. See following
-    test below with a forced storage_type="s3" that mimicks locally the fail, and catches it.
+    fail if USE_S3 = True until Reductionist supports anon=True S3 buckets.
+    See following test below with a forced storage_type="s3" that mimicks
+    locally the fail, and catches it. Equally, we catch the same exception when USE_S3=True
+
+    Important info on session data:
+    S3 Storage options to Reductionist: {'anon': True, 'client_kwargs': {'endpoint_url': 'https://uor-aces-o.s3-ext.jc.rl.ac.uk'}}
+    S3 anon=True Bucket and File: bnl CMIP6-test.nc
+    Reductionist request data dictionary: {'source': 'https://uor-aces-o.s3-ext.jc.rl.ac.uk', 'bucket': 'bnl', 'object': 'CMIP6-test.nc', 'dtype': 'float32', 'byte_order': 'little', 'offset': 29385, 'size': 942518, 'order': 'C', 'shape': (15, 143, 144), 'selection': [[0, 2, 1], [4, 6, 1], [7, 9, 1]], 'compression': {'id': 'zlib'}}
     """
     test_file = str(Path(__file__).resolve().parent / 'test_data' / 'CMIP6-test.nc')
     with Dataset(test_file) as nc_data:
@@ -55,13 +61,23 @@ def test_compression_and_filters_cmip6_data(storage_options, active_storage_url)
                     active_storage_url=active_storage_url)
     active._version = 1
     active._method = "min"
-    result = active[0:2,4:6,7:9]
-    assert nc_min == result
-    assert result == 239.25946044921875
+
+    if USE_S3:
+        # for now anon=True S3 buckets are not supported by Reductionist
+        with pytest.raises(RedErr) as rederr:
+            result = active[0:2,4:6,7:9]
+        access_denied_err = 'code: \\"AccessDenied\\"'
+        assert access_denied_err in str(rederr.value)
+        # assert nc_min == result
+        # assert result == 239.25946044921875
+    else:
+        result = active[0:2,4:6,7:9]
+        assert nc_min == result
+        assert result == 239.25946044921875
 
 
 @pytest.mark.parametrize("storage_options, active_storage_url", storage_options_paramlist)
-def test_compression_and_filters_cmip6_forced_s3(storage_options, active_storage_url):
+def test_compression_and_filters_cmip6_forced_s3_from_local(storage_options, active_storage_url):
     """
     Test use of datasets with compression and filters applied for a real
     CMIP6 dataset (CMIP6-test.nc) - an IPSL file.
