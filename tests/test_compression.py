@@ -55,7 +55,7 @@ S3_ACTIVE_URL_Bryan = "https://192.171.169.248:8080"
 # - storage_options = CLASSIC, active_storage_url = Bryan's machine (Minio BUT Reductionist moved on Bryan's machine)
 storage_options_paramlist = [
     (None, None),
-    (STORAGE_OPTIONS_CLASSIC, S3_ACTIVE_URL_CLASSIC),
+    (STORAGE_OPTIONS_CLASSIC, S3_ACTIVE_URL_MINIO),
     (STORAGE_OPTIONS_CLASSIC, S3_ACTIVE_URL_Bryan)
 ]
 
