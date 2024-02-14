@@ -37,7 +37,7 @@ def load_from_s3(uri, storage_options=None):
 
     storage_options: kwarg dict containing S3 credentials passed straight to Active
     """
-    if not storage_options:  # use pre-configured S3 credentials
+    if storage_options is None:  # use pre-configured S3 credentials
         fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
                                secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
                                client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
@@ -98,7 +98,7 @@ class Active:
 
         # still allow for a passable storage_type
         # for special cases eg "special-POSIX" ie DDN
-        if not storage_type and storage_options:
+        if not storage_type and storage_options is not None:
             storage_type = urllib.parse.urlparse(uri).scheme
         self.storage_type = storage_type
 
@@ -457,7 +457,7 @@ class Active:
             # FIXME: We do not get the correct byte order on the Zarr Array's dtype
             # when using S3, so use the value captured earlier.
             dtype = self._dtype
-            if not self.storage_options:
+            if self.storage_options is None:
                 tmp, count = reductionist.reduce_chunk(session,
                                                        S3_ACTIVE_STORAGE_URL,
                                                        S3_URL,
