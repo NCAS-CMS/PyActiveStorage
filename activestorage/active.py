@@ -20,7 +20,7 @@ from activestorage import netcdf_to_zarr as nz
 
 
 @contextlib.contextmanager
-def load_from_s3(uri):
+def load_from_s3(uri, storage_options=None):
     """
     Load a netCDF4-like object from S3.
 
@@ -34,10 +34,15 @@ def load_from_s3(uri):
     '<File-like object S3FileSystem, pyactivestorage/s3_test_bizarre.nc>'
     instead, we use h5netcdf: https://github.com/h5netcdf/h5netcdf
     a Python binder straight to HDF5-netCDF4 interface, that doesn't need a "local" file
+
+    storage_options: kwarg dict containing S3 credentials passed straight to Active
     """
-    fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
-                           secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
-                           client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
+    if storage_options is None:  # use pre-configured S3 credentials
+        fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
+                               secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
+                               client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
+    else:
+        fs = s3fs.S3FileSystem(**storage_options)  # use passed-in dictionary
     with fs.open(uri, 'rb') as s3file:
         ds = h5netcdf.File(s3file, 'r', invalid_netcdf=True)
         print(f"Dataset loaded from S3 via h5netcdf: {ds}")
@@ -68,20 +73,43 @@ class Active:
         }
         return instance
 
-    def __init__(self, uri, ncvar, storage_type=None, max_threads=100):
+    def __init__(
+        self,
+        uri,
+        ncvar,
+        storage_type=None,
+        max_threads=100,
+        storage_options=None,
+        active_storage_url=None
+    ):
         """
         Instantiate with a NetCDF4 dataset and the variable of interest within that file.
         (We need the variable, because we need variable specific metadata from within that
         file, however, if that information is available at instantiation, it can be provided
         using keywords and avoid a metadata read.)
+
+        :param storage_options: s3fs.S3FileSystem options
+        :param active_storage_url: Reductionist server URL
         """
         # Assume NetCDF4 for now
         self.uri = uri
         if self.uri is None:
             raise ValueError(f"Must use a valid file for uri. Got {self.uri}")
+
+        # still allow for a passable storage_type
+        # for special cases eg "special-POSIX" ie DDN
+        if not storage_type and storage_options is not None:
+            storage_type = urllib.parse.urlparse(uri).scheme
         self.storage_type = storage_type
+
+        # get storage_options
+        self.storage_options = storage_options
+        self.active_storage_url = active_storage_url
+
+        # basic check on file
         if not os.path.isfile(self.uri) and not self.storage_type:
             raise ValueError(f"Must use existing file for uri. {self.uri} not found")
+
         self.ncvar = ncvar
         if self.ncvar is None:
             raise ValueError("Must set a netCDF variable name to slice")
@@ -107,13 +135,13 @@ class Active:
             lock = self.lock
             if lock:
                 lock.acquire()
-                
+
             if self.storage_type is None:
                 nc = Dataset(self.uri)
                 data = nc[ncvar][index]
                 nc.close()
             elif self.storage_type == "s3":
-                with load_from_s3(self.uri) as nc:
+                with load_from_s3(self.uri, self.storage_options) as nc:
                     data = nc[ncvar][index]
                     data = self._mask_data(data, nc[ncvar])
 
@@ -238,7 +266,8 @@ class Active:
             ds, zarray, zattrs = nz.load_netcdf_zarr_generic(
                 self.uri,
                 self.ncvar,
-                self.storage_type
+                self.storage_type,
+                self.storage_options,
             )
             # The following is a hangove from exploration
             # and is needed if using the original doing it ourselves
@@ -390,6 +419,20 @@ class Active:
 
         return out
 
+    def _get_endpoint_url(self):
+        """Return the endpoint_url of an S3 object store, or `None`"""
+        endpoint_url = self.storage_options.get('endpoint_url')
+        if endpoint_url is not None:
+            return endpoint_url
+
+        client_kwargs = self.storage_options.get('client_kwargs')
+        if client_kwargs:
+            endpoint_url = client_kwargs.get('endpoint_url')
+            if endpoint_url is not None:
+                return endpoint_url
+
+        return f"http://{urllib.parse.urlparse(self.filename).netloc}"
+
     def _process_chunk(self, session, fsref, chunk_coords, chunk_selection, counts,
                        out_selection, compressor, filters, missing, 
                        drop_axes=None):
@@ -406,6 +449,7 @@ class Active:
         key = f"{self.ncvar}/{coord}"
         rfile, offset, size = tuple(fsref[key])
 
+        # S3: pass in pre-configured storage options (credentials)
         if self.storage_type == "s3":
             parsed_url = urllib.parse.urlparse(rfile)
             bucket = parsed_url.netloc
@@ -413,15 +457,36 @@ class Active:
             # FIXME: We do not get the correct byte order on the Zarr Array's dtype
             # when using S3, so use the value captured earlier.
             dtype = self._dtype
-            tmp, count = reductionist.reduce_chunk(session, S3_ACTIVE_STORAGE_URL,
-                                                   S3_URL,
-                                                   bucket, object, offset,
-                                                   size, compressor, filters,
-                                                   missing, dtype,
-                                                   self.zds._chunks,
-                                                   self.zds._order,
-                                                   chunk_selection,
-                                                   operation=self._method)
+            if self.storage_options is None:
+                tmp, count = reductionist.reduce_chunk(session,
+                                                       S3_ACTIVE_STORAGE_URL,
+                                                       S3_URL,
+                                                       bucket, object, offset,
+                                                       size, compressor, filters,
+                                                       missing, dtype,
+                                                       self.zds._chunks,
+                                                       self.zds._order,
+                                                       chunk_selection,
+                                                       operation=self._method)
+            else:
+                # special case for "anon=True" buckets that work only with e.g.
+                # fs = s3fs.S3FileSystem(anon=True, client_kwargs={'endpoint_url': S3_URL})
+                # where file uri = bucketX/fileY.mc
+                print("S3 Storage options to Reductionist:", self.storage_options)
+                if self.storage_options.get("anon", None) == True:
+                    bucket = os.path.dirname(parsed_url.path)  # bucketX
+                    object = os.path.basename(parsed_url.path)  # fileY
+                    print("S3 anon=True Bucket and File:", bucket, object)
+                tmp, count = reductionist.reduce_chunk(session,
+                                                       self.active_storage_url,
+                                                       self._get_endpoint_url(),
+                                                       bucket, object, offset,
+                                                       size, compressor, filters,
+                                                       missing, dtype,
+                                                       self.zds._chunks,
+                                                       self.zds._order,
+                                                       chunk_selection,
+                                                       operation=self._method)
         else:
             # note there is an ongoing discussion about this interface, and what it returns
             # see https://github.com/valeriupredoi/PyActiveStorage/issues/33

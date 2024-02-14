@@ -7,6 +7,7 @@ from activestorage.active import Active
 from activestorage.active import load_from_s3
 from activestorage.config import *
 from botocore.exceptions import EndpointConnectionError as botoExc
+from botocore.exceptions import NoCredentialsError as NoCredsExc
 
 
 def test_uri_none():
@@ -101,7 +102,7 @@ def test_lock():
     assert active.lock is False
 
 
-@pytest.mark.skipif(USE_S3 = True, reason="it will look for silly bucket")
+@pytest.mark.skipif(USE_S3 == True, reason="it will look for silly bucket")
 def test_load_from_s3():
     """Test basic load from S3 without loading from S3."""
     uri = "s3://bucket/file.nc"
@@ -110,3 +111,29 @@ def test_load_from_s3():
         with load_from_s3(uri) as nc:
             data = nc["cow"][0]
     assert expected_exc in str(exc.value)
+
+
+@pytest.mark.skipif(USE_S3 == True, reason="it will look for silly bucket")
+def test_load_from_s3_so_None():
+    """Test basic load from S3 without loading from S3."""
+    uri = "s3://bucket/file.nc"
+    expected_exc = "Unable to locate credentials"
+    with pytest.raises(NoCredsExc) as exc:
+        with load_from_s3(uri, storage_options={}) as nc:
+            data = nc["cow"][0]
+    assert expected_exc in str(exc.value)
+
+
+@pytest.mark.skipif(USE_S3 == True, reason="it will look for silly URIs")
+def test_get_endpoint_url():
+    """Test _get_endpoint_url(self) from Active class."""
+    storage_options = {
+        'key': "cow",
+        'secret': "secretcow",
+        'client_kwargs': {'endpoint_url': "https://cow.moo"},
+    }
+    uri = "tests/test_data/cesm2_native.nc"
+    ncvar = "TREFHT"
+    active = Active(uri, ncvar=ncvar, storage_options=storage_options)
+    ep_url = Active._get_endpoint_url(active)
+    assert ep_url == "https://cow.moo"

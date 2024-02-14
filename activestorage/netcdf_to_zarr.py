@@ -10,9 +10,10 @@ from activestorage.config import *
 from kerchunk.hdf import SingleHdf5ToZarr
 
 
-def gen_json(file_url, varname, outf, storage_type):
+def gen_json(file_url, varname, outf, storage_type, storage_options):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
-    if storage_type == "s3":
+    # S3 configuration presets
+    if storage_type == "s3" and storage_options is None:
         fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,
                                secret=S3_SECRET_KEY,
                                client_kwargs={'endpoint_url': S3_URL},
@@ -26,6 +27,21 @@ def gen_json(file_url, varname, outf, storage_type):
             with fs2.open(outf, 'wb') as f:
                 content = h5chunks.translate()
                 f.write(ujson.dumps(content).encode())
+
+    # S3 passed-in configuration
+    elif storage_type == "s3" and storage_options is not None:
+        storage_options = storage_options.copy()
+        storage_options['default_fill_cache'] = False
+        storage_options['default_cache_type'] = "none"
+        fs = s3fs.S3FileSystem(**storage_options)
+        fs2 = fsspec.filesystem('')
+        with fs.open(file_url, 'rb') as s3file:
+            h5chunks = SingleHdf5ToZarr(s3file, file_url,
+                                        inline_threshold=0)
+            with fs2.open(outf, 'wb') as f:
+                content = h5chunks.translate()
+                f.write(ujson.dumps(content).encode())
+    # not S3
     else:
         fs = fsspec.filesystem('')
         with fs.open(file_url, 'rb') as local_file:
@@ -77,13 +93,17 @@ def open_zarr_group(out_json, varname):
     return zarr_array
 
 
-def load_netcdf_zarr_generic(fileloc, varname, storage_type, build_dummy=True):
+def load_netcdf_zarr_generic(fileloc, varname, storage_type, storage_options, build_dummy=True):
     """Pass a netCDF4 file to be shaped as Zarr file by kerchunk."""
     print(f"Storage type {storage_type}")
 
     # Write the Zarr group JSON to a temporary file.
     with tempfile.NamedTemporaryFile() as out_json:
-        _, zarray, zattrs = gen_json(fileloc, varname, out_json.name, storage_type)
+        _, zarray, zattrs = gen_json(fileloc,
+                                     varname,
+                                     out_json.name,
+                                     storage_type,
+                                     storage_options)
 
         # open this monster
         print(f"Attempting to open and convert {fileloc}.")
