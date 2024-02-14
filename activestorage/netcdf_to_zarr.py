@@ -13,7 +13,7 @@ from kerchunk.hdf import SingleHdf5ToZarr
 def gen_json(file_url, varname, outf, storage_type, storage_options):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
     # S3 configuration presets
-    if storage_type == "s3" and not storage_options:
+    if storage_type == "s3" and storage_options is None:
         fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,
                                secret=S3_SECRET_KEY,
                                client_kwargs={'endpoint_url': S3_URL},
@@ -29,7 +29,7 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
                 f.write(ujson.dumps(content).encode())
 
     # S3 passed-in configuration
-    elif storage_type == "s3" and storage_options:
+    elif storage_type == "s3" and storage_options is not None:
         storage_options = storage_options.copy()
         storage_options['default_fill_cache'] = False
         storage_options['default_cache_type'] = "none"
