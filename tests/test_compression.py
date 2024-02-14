@@ -47,10 +47,15 @@ STORAGE_OPTIONS_CLASSIC = {
 }
 S3_ACTIVE_URL_MINIO = S3_ACTIVE_STORAGE_URL
 S3_ACTIVE_URL_Bryan = "https://192.171.169.248:8080"
+
 # TODO include all supported configuration types
+# so far test three possible configurations for storage_options:
+# - storage_options = None, active_storage_url = None (Minio and local Reductionist, preset credentials from config.py)
+# - storage_options = CLASSIC, active_storage_url = CLASSIC (Minio and local Reductionist, preset credentials from config.py but folded in storage_options and active_storage_url)
+# - storage_options = CLASSIC, active_storage_url = Bryan's machine (Minio BUT Reductionist moved on Bryan's machine)
 storage_options_paramlist = [
     (None, None),
-    (STORAGE_OPTIONS_CLASSIC, S3_ACTIVE_URL_CLASSIC)
+    (STORAGE_OPTIONS_CLASSIC, S3_ACTIVE_URL_CLASSIC),
     (STORAGE_OPTIONS_CLASSIC, S3_ACTIVE_URL_Bryan)
 ]
 
