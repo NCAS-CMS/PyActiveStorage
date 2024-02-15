@@ -27,7 +27,6 @@ storage_options_paramlist = [
 # otherwise, bucket is extracted automatically from full file uri
 S3_BUCKET = "bnl"
 
-
 @pytest.mark.parametrize("storage_options, active_storage_url", storage_options_paramlist)
 def test_compression_and_filters_cmip6_data(storage_options, active_storage_url):
     """
@@ -107,3 +106,79 @@ def test_compression_and_filters_cmip6_forced_s3_from_local(storage_options, act
     assert access_denied_err in str(rederr.value)
     # assert nc_min == result
     # assert result == 239.25946044921875
+
+
+def test_compression_and_filters_cmip6_forced_s3_from_local_2():
+    """
+    Test use of datasets with compression and filters applied for a real
+    CMIP6 dataset (CMIP6-test.nc) - an IPSL file.
+
+    This is for a special anon=True bucket connected to via valid key.secret
+    """
+    storage_options = {
+        'key': "f2d55c6dcfc7618b2c34e00b58df3cef",
+        'secret': "$/'#M{0{/4rVhp%n^(XeX$q@y#&(NM3W1->~N.Q6VP.5[@bLpi='nt]AfH)>78pT",
+        'client_kwargs': {'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"}
+    }
+    active_storage_url = "https://192.171.169.248:8080"
+    test_file = str(Path(__file__).resolve().parent / 'test_data' / 'CMIP6-test.nc')
+    with Dataset(test_file) as nc_data:
+        nc_min = np.min(nc_data["tas"][0:2,4:6,7:9])
+    print(f"Numpy min from compressed file {nc_min}")
+
+    ofile = os.path.basename(test_file)
+    test_file_uri = os.path.join(
+        S3_BUCKET,
+        ofile
+    )
+    print("S3 Test file path:", test_file_uri)
+    active = Active(test_file_uri, 'tas', storage_type="s3",
+                    storage_options=storage_options,
+                    active_storage_url=active_storage_url)
+
+    active._version = 1
+    active._method = "min"
+
+    result = active[0:2,4:6,7:9]
+    assert nc_min == result
+    assert result == 239.25946044921875
+
+
+@pytest.mark.skipif(not USE_S3, reason="we need only localhost Reductionist in GA CI")
+@pytest.mark.skipif(REMOTE_RED, reason="we need only localhost Reductionist in GA CI")
+def test_compression_and_filters_cmip6_forced_s3_using_local_Reductionist():
+    """
+    Test use of datasets with compression and filters applied for a real
+    CMIP6 dataset (CMIP6-test.nc) - an IPSL file.
+
+    This is for a special anon=True bucket connected to via valid key.secret
+    and uses the locally deployed Reductionist via container.
+    """
+    print("Reductionist URL", S3_ACTIVE_STORAGE_URL)
+    storage_options = {
+        'key': "f2d55c6dcfc7618b2c34e00b58df3cef",
+        'secret': "$/'#M{0{/4rVhp%n^(XeX$q@y#&(NM3W1->~N.Q6VP.5[@bLpi='nt]AfH)>78pT",
+        'client_kwargs': {'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"}
+    }
+
+    test_file = str(Path(__file__).resolve().parent / 'test_data' / 'CMIP6-test.nc')
+    with Dataset(test_file) as nc_data:
+        nc_min = np.min(nc_data["tas"][0:2,4:6,7:9])
+    print(f"Numpy min from compressed file {nc_min}")
+
+    ofile = os.path.basename(test_file)
+    test_file_uri = os.path.join(
+        S3_BUCKET,
+        ofile
+    )
+    print("S3 Test file path:", test_file_uri)
+    active = Active(test_file_uri, 'tas', storage_type="s3",
+                    storage_options=storage_options,
+                    active_storage_url=S3_ACTIVE_STORAGE_URL)
+
+    active._version = 1
+    active._method = "min"
+
+    result = active[0:2,4:6,7:9]
+    assert nc_min == result
+    assert result == 239.25946044921875
