@@ -348,8 +348,21 @@ class Active:
 
         # Create a shared session object.
         if self.storage_type == "s3":
-            session = reductionist.get_session(S3_ACCESS_KEY, S3_SECRET_KEY,
-                                               S3_ACTIVE_STORAGE_CACERT)
+            if self.storage_options is not None:
+                key, secret = None, None
+                if "key" in self.storage_options:
+                    key = self.storage_options["key"]
+                if "secret" in self.storage_options:
+                    secret = self.storage_options["secret"]
+                if key and secret:
+                    session = reductionist.get_session(key, secret,
+                                                       S3_ACTIVE_STORAGE_CACERT)
+                else:
+                    session = reductionist.get_session(S3_ACCESS_KEY, S3_SECRET_KEY,
+                                                       S3_ACTIVE_STORAGE_CACERT)
+            else:
+                session = reductionist.get_session(S3_ACCESS_KEY, S3_SECRET_KEY,
+                                                   S3_ACTIVE_STORAGE_CACERT)
         else:
             session = None
 
