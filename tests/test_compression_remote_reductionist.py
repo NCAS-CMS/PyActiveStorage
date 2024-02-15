@@ -26,7 +26,7 @@ storage_options_paramlist = [
 # bucket needed too for this test only
 # otherwise, bucket is extracted automatically from full file uri
 S3_BUCKET = "bnl"
-ACTIVE_URLS = [S3_ACTIVE_URL_Bryan, S3_ACTIVE_STORAGE_URL]
+ACTIVE_URLS = [S3_ACTIVE_URL_Bryan]  # S3_ACTIVE_STORAGE_URL]
 
 @pytest.mark.parametrize("storage_options, active_storage_url", storage_options_paramlist)
 def test_compression_and_filters_cmip6_data(storage_options, active_storage_url):
@@ -109,8 +109,7 @@ def test_compression_and_filters_cmip6_forced_s3_from_local(storage_options, act
     # assert result == 239.25946044921875
 
 
-@pytest.mark.parametrize("active_storage_url", ACTIVE_URLS)
-def test_compression_and_filters_cmip6_forced_s3_from_local_2(active_storage_url):
+def test_compression_and_filters_cmip6_forced_s3_from_local_2():
     """
     Test use of datasets with compression and filters applied for a real
     CMIP6 dataset (CMIP6-test.nc) - an IPSL file.
@@ -122,6 +121,7 @@ def test_compression_and_filters_cmip6_forced_s3_from_local_2(active_storage_url
         'secret': "$/'#M{0{/4rVhp%n^(XeX$q@y#&(NM3W1->~N.Q6VP.5[@bLpi='nt]AfH)>78pT",
         'client_kwargs': {'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"}
     }
+    active_storage_url = "https://192.171.169.248:8080"
     test_file = str(Path(__file__).resolve().parent / 'test_data' / 'CMIP6-test.nc')
     with Dataset(test_file) as nc_data:
         nc_min = np.min(nc_data["tas"][0:2,4:6,7:9])
