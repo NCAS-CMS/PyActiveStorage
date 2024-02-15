@@ -451,12 +451,20 @@ class Active:
 
         # S3: pass in pre-configured storage options (credentials)
         if self.storage_type == "s3":
+            print("S3 rfile is:", rfile)
             parsed_url = urllib.parse.urlparse(rfile)
             bucket = parsed_url.netloc
             object = parsed_url.path
             # FIXME: We do not get the correct byte order on the Zarr Array's dtype
             # when using S3, so use the value captured earlier.
             dtype = self._dtype
+            # for certain S3 servers rfile needs to contain the bucket eg "bucket/filename"
+            # as a result the parser above finds empty string bucket
+            if bucket == "":
+                bucket = os.path.dirname(object)
+                object = os.path.basename(object)
+            print("S3 bucket:", bucket)
+            print("S3 file:", object)
             if self.storage_options is None:
                 tmp, count = reductionist.reduce_chunk(session,
                                                        S3_ACTIVE_STORAGE_URL,
