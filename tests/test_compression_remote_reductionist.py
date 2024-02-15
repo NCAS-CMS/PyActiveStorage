@@ -145,6 +145,7 @@ def test_compression_and_filters_cmip6_forced_s3_from_local_2():
 
 
 @pytest.mark.skipif(not USE_S3, reason="we need only localhost Reductionist in GA CI")
+@pytest.mark.skipif(REMOTE_RED, reason="we need only localhost Reductionist in GA CI")
 def test_compression_and_filters_cmip6_forced_s3_using_local_Reductionist():
     """
     Test use of datasets with compression and filters applied for a real
