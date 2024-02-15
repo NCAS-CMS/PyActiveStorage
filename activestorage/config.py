@@ -20,3 +20,6 @@ S3_SECRET_KEY = "minioadmin"
 
 # S3 bucket.
 S3_BUCKET = "pyactivestorage"
+
+# Remote Reductionist or not
+REMOTE_RED = False
