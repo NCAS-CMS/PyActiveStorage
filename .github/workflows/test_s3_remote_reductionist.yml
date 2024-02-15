@@ -41,6 +41,7 @@ jobs:
       - name: Export proxy
         run: |
           echo 'USE_S3 = True' >> activestorage/config.py
+          echo 'REMOTE_RED = True' >> activestorage/config.py
       - name: Ping remote Reductionist
         run: curl -k https://192.171.169.248:8080/.well-known/reductionist-schema
       - uses: conda-incubator/setup-miniconda@v2
