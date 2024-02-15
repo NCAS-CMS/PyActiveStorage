@@ -26,7 +26,6 @@ storage_options_paramlist = [
 # bucket needed too for this test only
 # otherwise, bucket is extracted automatically from full file uri
 S3_BUCKET = "bnl"
-ACTIVE_URLS = [S3_ACTIVE_URL_Bryan]  # S3_ACTIVE_STORAGE_URL]
 
 @pytest.mark.parametrize("storage_options, active_storage_url", storage_options_paramlist)
 def test_compression_and_filters_cmip6_data(storage_options, active_storage_url):
