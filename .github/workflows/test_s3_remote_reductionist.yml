@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - main  # keep this at all times
+      - test_s3_bigger_file
   pull_request:
   schedule:
     - cron: '0 0 * * *'  # nightly
@@ -58,9 +59,9 @@ jobs:
           python -V
           which python
           pip install -e .
-      - name: Run one single test
+      - name: Run big file
         run: |
-          pytest tests/test_compression_remote_reductionist.py
+          pytest tests/test_compression_remote_reductionist.py::test_compression_and_filters_cmip6_forced_s3_from_local_bigger_file
       - name: Upload HTML report artifact
         uses: actions/upload-artifact@v3
         with:
