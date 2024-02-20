@@ -9,6 +9,7 @@ import tempfile
 from activestorage.config import *
 from kerchunk.hdf import SingleHdf5ToZarr
 
+import time
 
 def gen_json(file_url, varname, outf, storage_type, storage_options):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
@@ -35,12 +36,17 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
         storage_options['default_cache_type'] = "none"
         fs = s3fs.S3FileSystem(**storage_options)
         fs2 = fsspec.filesystem('')
+        tk1 = time.time()
         with fs.open(file_url, 'rb') as s3file:
             h5chunks = SingleHdf5ToZarr(s3file, file_url,
                                         inline_threshold=0)
+            tk2 = time.time()
+            print("Time to set up Kerchunk", tk2 - tk1)
             with fs2.open(outf, 'wb') as f:
                 content = h5chunks.translate()
                 f.write(ujson.dumps(content).encode())
+            tk3 = time.time()
+            print("Time to Translate and Dump Kerchunks to json file", tk3 - tk2)
     # not S3
     else:
         fs = fsspec.filesystem('')
@@ -98,7 +104,9 @@ def load_netcdf_zarr_generic(fileloc, varname, storage_type, storage_options, bu
     print(f"Storage type {storage_type}")
 
     # Write the Zarr group JSON to a temporary file.
-    with tempfile.NamedTemporaryFile() as out_json:
+    save_json = "test_file.json"
+    # with tempfile.NamedTemporaryFile() as out_json:
+    with open(save_json, "wb") as out_json:
         _, zarray, zattrs = gen_json(fileloc,
                                      varname,
                                      out_json.name,
