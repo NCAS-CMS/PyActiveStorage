@@ -18,7 +18,9 @@ from activestorage import reductionist
 from activestorage.storage import reduce_chunk
 from activestorage import netcdf_to_zarr as nz
 
+import time
 
+t1 = time.time()
 @contextlib.contextmanager
 def load_from_s3(uri, storage_options=None):
     """
@@ -259,16 +261,20 @@ class Active:
         """ 
         The objective is to use kerchunk to read the slices ourselves. 
         """
+        tx = time.time()
         # FIXME: Order of calls is hardcoded'
         if self.zds is None:
             print(f"Kerchunking file {self.uri} with variable "
                   f"{self.ncvar} for storage type {self.storage_type}")
+            tx1 = time.time()
             ds, zarray, zattrs = nz.load_netcdf_zarr_generic(
                 self.uri,
                 self.ncvar,
                 self.storage_type,
                 self.storage_options,
             )
+            ty1 = time.time()
+            print("Time to load to netCDF from Zarr", ty1 - tx1)
             # The following is a hangove from exploration
             # and is needed if using the original doing it ourselves
             # self.zds = make_an_array_instance_active(ds)
@@ -284,7 +290,9 @@ class Active:
             # FIXME: We do not get the correct byte order on the Zarr
             # Array's dtype when using S3, so capture it here.
             self._dtype = np.dtype(zarray['dtype'])
-            
+
+        ty = time.time()
+        print("Time Via Kerchunk", ty - tx)
         return self._get_selection(index)
 
     def _get_selection(self, *args):
@@ -366,6 +374,7 @@ class Active:
         else:
             session = None
 
+        t3 = time.time()
         # Process storage chunks using a thread pool.
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_threads) as executor:
             futures = []
@@ -394,6 +403,8 @@ class Active:
                         result, selection = result
                         out[selection] = result
 
+        t4 = time.time()
+        print("Storage chunks processing", t4 - t3)
         if method is not None:
             # Apply the method (again) to aggregate the result
             out = method(out)
@@ -498,6 +509,8 @@ class Active:
                     bucket = os.path.dirname(parsed_url.path)  # bucketX
                     object = os.path.basename(parsed_url.path)  # fileY
                     print("S3 anon=True Bucket and File:", bucket, object)
+                t2 = time.time()
+                print("Time before Reductionist", t2 - t1)
                 tmp, count = reductionist.reduce_chunk(session,
                                                        self.active_storage_url,
                                                        self._get_endpoint_url(),
