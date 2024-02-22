@@ -18,8 +18,8 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
         fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,
                                secret=S3_SECRET_KEY,
                                client_kwargs={'endpoint_url': S3_URL},
-                               default_fill_cache=False,
-                               default_cache_type="none"
+                               # default_fill_cache=False,
+                               # default_cache_type="none"
         )
         fs2 = fsspec.filesystem('')
         with fs.open(file_url, 'rb') as s3file:
@@ -32,8 +32,8 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
     # S3 passed-in configuration
     elif storage_type == "s3" and storage_options is not None:
         storage_options = storage_options.copy()
-        storage_options['default_fill_cache'] = False
-        storage_options['default_cache_type'] = "none"
+        # storage_options['default_fill_cache'] = False
+        # storage_options['default_cache_type'] = "none"
         fs = s3fs.S3FileSystem(**storage_options)
         fs2 = fsspec.filesystem('')
         tk1 = time.time()
