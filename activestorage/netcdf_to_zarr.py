@@ -10,6 +10,7 @@ from activestorage.config import *
 from kerchunk.hdf import SingleHdf5ToZarr
 
 import time
+import h5py
 
 def gen_json(file_url, varname, outf, storage_type, storage_options):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
@@ -32,13 +33,21 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
     # S3 passed-in configuration
     elif storage_type == "s3" and storage_options is not None:
         storage_options = storage_options.copy()
-        # storage_options['default_fill_cache'] = False
+        storage_options['default_fill_cache'] = False
         # storage_options['default_cache_type'] = "none"
         fs = s3fs.S3FileSystem(**storage_options)
         fs2 = fsspec.filesystem('')
         tk1 = time.time()
         with fs.open(file_url, 'rb') as s3file:
-            h5chunks = SingleHdf5ToZarr(s3file, file_url,
+            s3file = h5py.File(s3file, mode="w")
+            if isinstance(s3file[varname], h5py.Dataset):
+                print("Looking only at a single Dataset", s3file[varname])
+                s3file.create_group(varname + " ")
+                s3file[varname + " "][varname] = s3file[varname]
+            elif isinstance(s3file[varname], h5py.Group):
+                print("Looking only at a single Group", s3file[varname])
+                s3file = s3file[varname]
+            h5chunks = SingleHdf5ToZarr(s3file, file_url, var=varname,
                                         inline_threshold=0)
             tk2 = time.time()
             print("Time to set up Kerchunk", tk2 - tk1)
@@ -69,8 +78,8 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
                 content = h5chunks.translate()
                 f.write(ujson.dumps(content).encode())
 
-    zarray =  ujson.loads(content['refs'][f"{varname}/.zarray"])
-    zattrs =  ujson.loads(content['refs'][f"{varname}/.zattrs"])
+    zarray =  ujson.loads(content['refs'][f"{varname} /{varname}/.zarray"])
+    zattrs =  ujson.loads(content['refs'][f"{varname} /{varname}/.zattrs"])
                 
     return outf, zarray, zattrs
 
@@ -115,7 +124,7 @@ def load_netcdf_zarr_generic(fileloc, varname, storage_type, storage_options, bu
 
         # open this monster
         print(f"Attempting to open and convert {fileloc}.")
-        ref_ds = open_zarr_group(out_json.name, varname)
+        ref_ds = open_zarr_group(out_json.name, varname + " ")
 
     return ref_ds, zarray, zattrs
 
