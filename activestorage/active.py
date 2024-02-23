@@ -19,6 +19,7 @@ from activestorage.storage import reduce_chunk
 from activestorage import netcdf_to_zarr as nz
 
 import time
+import zarr
 
 t1 = time.time()
 @contextlib.contextmanager
@@ -278,6 +279,8 @@ class Active:
             # The following is a hangove from exploration
             # and is needed if using the original doing it ourselves
             # self.zds = make_an_array_instance_active(ds)
+            if isinstance(ds, zarr.hierarchy.Group):
+                ds = ds[self.ncvar]
             self.zds = ds
 
             # Retain attributes and other information
@@ -302,6 +305,7 @@ class Active:
         from zarr and friends and use simple dictionaries and tuples, then
         we can go to the storage layer with no zarr.
         """
+        print("ZDS", self.zds)
         compressor = self.zds._compressor
         filters = self.zds._filters
 
@@ -471,7 +475,7 @@ class Active:
         """
         coord = '.'.join([str(c) for c in chunk_coords])
         key = f"{self.ncvar}/{coord}"
-        rfile, offset, size = tuple(fsref[key])
+        rfile, offset, size = tuple(fsref[self.ncvar + " /" + key])
 
         # S3: pass in pre-configured storage options (credentials)
         if self.storage_type == "s3":
