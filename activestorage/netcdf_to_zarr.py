@@ -119,8 +119,13 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
                 content = h5chunks.translate()
                 f.write(ujson.dumps(content).encode())
 
-    zarray =  ujson.loads(content['refs'][f"{varname} /{varname}/.zarray"])
-    zattrs =  ujson.loads(content['refs'][f"{varname} /{varname}/.zattrs"])
+    # account for both Group and Dataset
+    try:
+        zarray =  ujson.loads(content['refs'][f"{varname}/.zarray"])
+        zattrs =  ujson.loads(content['refs'][f"{varname}/.zattrs"])
+    except KeyError:
+        zarray =  ujson.loads(content['refs'][f"{varname} /{varname}/.zarray"])
+        zattrs =  ujson.loads(content['refs'][f"{varname} /{varname}/.zattrs"])
                 
     return outf, zarray, zattrs
 
@@ -165,7 +170,10 @@ def load_netcdf_zarr_generic(fileloc, varname, storage_type, storage_options, bu
 
         # open this monster
         print(f"Attempting to open and convert {fileloc}.")
-        ref_ds = open_zarr_group(out_json.name, varname + " ")
+        try:
+            ref_ds = open_zarr_group(out_json.name, varname)
+        except AttributeError:
+            ref_ds = open_zarr_group(out_json.name, varname + " ")
 
     return ref_ds, zarray, zattrs
 
