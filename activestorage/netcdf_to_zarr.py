@@ -31,6 +31,46 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
                 f.write(ujson.dumps(content).encode())
 
     # S3 passed-in configuration
+#### this implementation works with a minimally changed kerchunk/hdf.py #####
+#############################################################################
+###    def __init__(
+###        self,
+###        h5f: "BinaryIO | str",
+###        url: str = None,
+###        spec=1,
+###        inline_threshold=500,
+###        storage_options=None,
+###        error="warn",
+###        vlen_encode="embed",
+###    ):
+###
+###        # Open HDF5 file in read mode...
+###        lggr.debug(f"HDF5 file: {h5f}")
+###
+###        if isinstance(h5f, str):
+###            fs, path = fsspec.core.url_to_fs(h5f, **(storage_options or {}))
+###            self.input_file = fs.open(path, "rb")
+###            url = h5f
+###            self._h5f = h5py.File(self.input_file, mode="r")
+###        elif isinstance(h5f, io.IOBase):
+###            self.input_file = h5f
+###            self._h5f = h5py.File(self.input_file, mode="r")
+###        elif isinstance(h5f, (h5py.File, h5py.Group)):
+###            self._h5f = h5f
+###
+###        self.spec = spec
+###        self.inline = inline_threshold
+###        if vlen_encode not in ["embed", "null", "leave", "encode"]:
+###            raise NotImplementedError
+###        self.vlen = vlen_encode
+###
+###        self.store = {}
+###        self._zroot = zarr.group(store=self.store, overwrite=True)
+###
+###        self._uri = url
+###        self.error = error
+###        lggr.debug(f"HDF5 file URI: {self._uri}")
+###############################################################################
     elif storage_type == "s3" and storage_options is not None:
         storage_options = storage_options.copy()
         storage_options['default_fill_cache'] = False
