@@ -475,7 +475,10 @@ class Active:
         """
         coord = '.'.join([str(c) for c in chunk_coords])
         key = f"{self.ncvar}/{coord}"
-        rfile, offset, size = tuple(fsref[self.ncvar + " /" + key])
+        try:
+            rfile, offset, size = tuple(fsref[self.ncvar + " /" + key])
+        except KeyError:
+            rfile, offset, size = tuple(fsref[key])
 
         # S3: pass in pre-configured storage options (credentials)
         if self.storage_type == "s3":
