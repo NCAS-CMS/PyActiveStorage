@@ -19,8 +19,8 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
         fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,
                                secret=S3_SECRET_KEY,
                                client_kwargs={'endpoint_url': S3_URL},
-                               # default_fill_cache=False,
-                               # default_cache_type="none"
+                               default_fill_cache=False,
+                               default_cache_type="first"
         )
         fs2 = fsspec.filesystem('')
         with fs.open(file_url, 'rb') as s3file:
@@ -34,7 +34,7 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
     elif storage_type == "s3" and storage_options is not None:
         storage_options = storage_options.copy()
         storage_options['default_fill_cache'] = False
-        # storage_options['default_cache_type'] = "none"
+        storage_options['default_cache_type'] = "first"
         fs = s3fs.S3FileSystem(**storage_options)
         fs2 = fsspec.filesystem('')
         tk1 = time.time()
@@ -44,10 +44,11 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
                 print("Looking only at a single Dataset", s3file[varname])
                 s3file.create_group(varname + " ")
                 s3file[varname + " "][varname] = s3file[varname]
+                s3file = s3file[varname + " "]
             elif isinstance(s3file[varname], h5py.Group):
                 print("Looking only at a single Group", s3file[varname])
                 s3file = s3file[varname]
-            h5chunks = SingleHdf5ToZarr(s3file, file_url, var=varname,
+            h5chunks = SingleHdf5ToZarr(s3file, file_url,
                                         inline_threshold=0)
             tk2 = time.time()
             print("Time to set up Kerchunk", tk2 - tk1)
