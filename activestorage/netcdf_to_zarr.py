@@ -78,6 +78,8 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
         fs = s3fs.S3FileSystem(**storage_options)
         fs2 = fsspec.filesystem('')
         tk1 = time.time()
+        print("Storage options dict", storage_options)
+        print("File url", file_url)
         with fs.open(file_url, 'rb') as s3file:
             s3file = h5py.File(s3file, mode="w")
             if isinstance(s3file[varname], h5py.Dataset):
@@ -88,8 +90,12 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
             elif isinstance(s3file[varname], h5py.Group):
                 print("Looking only at a single Group", s3file[varname])
                 s3file = s3file[varname]
+            if not file_url.startswith("s3://"):
+                file_url = "s3://" + file_url
+            print("File_url to Kerchunk", file_url)
             h5chunks = SingleHdf5ToZarr(s3file, file_url,
-                                        inline_threshold=0)
+                                        inline_threshold=0,
+                                        storage_options=storage_options)
             tk2 = time.time()
             print("Time to set up Kerchunk", tk2 - tk1)
             with fs2.open(outf, 'wb') as f:
