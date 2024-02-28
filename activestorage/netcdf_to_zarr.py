@@ -12,6 +12,32 @@ from kerchunk.hdf import SingleHdf5ToZarr
 import time
 import h5py
 
+
+def _correct_compressor(content, varname):
+    """Correct the compressor type as it comes out of Kerchunk."""
+    new_content = content.copy()
+    try:
+        new_zarray =  ujson.loads(new_content['refs'][f"{varname}/.zarray"])
+        group = False
+    except KeyError:
+        new_zarray =  ujson.loads(new_content['refs'][f"{varname} /{varname}/.zarray"])
+        group = True
+
+    # re-add the correct compressor if it's in the "filters" list
+    if new_zarray["compressor"] is None:
+        for zfilter in new_zarray["filters"]:
+            if zfilter["id"] == "zlib":
+                new_zarray["compressor"] = zfilter
+                new_zarray["filters"].remove(zfilter)
+
+    if not group:
+        new_content['refs'][f"{varname}/.zarray"] = ujson.dumps(new_zarray)
+    else:
+        new_content['refs'][f"{varname} /{varname}/.zarray"] = ujson.dumps(new_zarray)
+
+    return new_content
+
+
 def gen_json(file_url, varname, outf, storage_type, storage_options):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
     # S3 configuration presets
@@ -100,6 +126,7 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
             print("Time to set up Kerchunk", tk2 - tk1)
             with fs2.open(outf, 'wb') as f:
                 content = h5chunks.translate()
+                content = _correct_compressor(content, varname)
                 f.write(ujson.dumps(content).encode())
             tk3 = time.time()
             print("Time to Translate and Dump Kerchunks to json file", tk3 - tk2)
@@ -132,7 +159,7 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
     except KeyError:
         zarray =  ujson.loads(content['refs'][f"{varname} /{varname}/.zarray"])
         zattrs =  ujson.loads(content['refs'][f"{varname} /{varname}/.zattrs"])
-                
+
     return outf, zarray, zattrs
 
 
