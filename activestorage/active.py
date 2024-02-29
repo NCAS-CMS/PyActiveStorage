@@ -383,6 +383,11 @@ class Active:
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_threads) as executor:
             futures = []
             # Submit chunks for processing.
+            print("Stripped indexer")
+            for chunk_coords, chunk_selection, out_selection in stripped_indexer:
+                print("Chunk coords", chunk_coords)
+                print("Chunk selection", chunk_selection)
+                print("Out selection", out_selection)
             for chunk_coords, chunk_selection, out_selection in stripped_indexer:
                 future = executor.submit(
                     self._process_chunk,
