@@ -4,19 +4,15 @@ import os
 import numpy as np
 import pathlib
 import urllib
+import pyfive
+from pyfive import ZarrArrayStub, OrthogonalIndexer
 
-import h5netcdf
 import s3fs
 
-#FIXME: Consider using h5py throughout, for more generality
-from netCDF4 import Dataset
-from zarr.indexing import (
-    OrthogonalIndexer,
-)
 from activestorage.config import *
 from activestorage import reductionist
 from activestorage.storage import reduce_chunk
-from activestorage import netcdf_to_zarr as nz
+
 
 
 @contextlib.contextmanager
@@ -44,9 +40,10 @@ def load_from_s3(uri, storage_options=None):
     else:
         fs = s3fs.S3FileSystem(**storage_options)  # use passed-in dictionary
     with fs.open(uri, 'rb') as s3file:
-        ds = h5netcdf.File(s3file, 'r', invalid_netcdf=True)
+        ds = pyfive.File(s3file, 'r', invalid_netcdf=True)
         print(f"Dataset loaded from S3 via h5netcdf: {ds}")
         yield ds
+
 
 
 class Active:
@@ -83,7 +80,7 @@ class Active:
         active_storage_url=None
     ):
         """
-        Instantiate with a NetCDF4 dataset and the variable of interest within that file.
+        Instantiate with a NetCDF4 dataset URI and the variable of interest within that file.
         (We need the variable, because we need variable specific metadata from within that
         file, however, if that information is available at instantiation, it can be provided
         using keywords and avoid a metadata read.)
@@ -113,57 +110,48 @@ class Active:
         self.ncvar = ncvar
         if self.ncvar is None:
             raise ValueError("Must set a netCDF variable name to slice")
-        self.zds = None
 
         self._version = 1
         self._components = False
         self._method = None
-        self._lock = False
         self._max_threads = max_threads
 
     def __getitem__(self, index):
         """ 
         Provides support for a standard get item.
+        #FIXME-BNL: Why is the argument index?
         """
         # In version one this is done by explicitly looping over each chunk in the file
         # and returning the requested slice ourselves. In version 2, we can pass this
         # through to the default method.
         ncvar = self.ncvar
 
+        # in all casese we need an open netcdf file to get at attributes
+        # FIXME. We then need to monkey patch the "filename" as rfile onto the dataset
+        if self.storage_type is None:
+            nc = pyfive.FILE(self.uri)
+        elif self.storage_type == "s3":
+            nc = load_from_s3(self.uri, self.storage_options)
+
         if self.method is None and self._version == 0:
             # No active operation
-            lock = self.lock
-            if lock:
-                lock.acquire()
-
             if self.storage_type is None:
-                nc = Dataset(self.uri)
                 data = nc[ncvar][index]
                 nc.close()
             elif self.storage_type == "s3":
-                with load_from_s3(self.uri, self.storage_options) as nc:
-                    data = nc[ncvar][index]
-                    data = self._mask_data(data, nc[ncvar])
-
-            if lock:
-                lock.release()
+        
+                data = nc[ncvar][index]
+                data = self._mask_data(data, nc[ncvar])
+                nc.close()
                 
             return data
         
         elif self._version == 1:
-            return self._via_kerchunk(index)
+            return self._get_selection(nc[ncvar], index)
         
         elif self._version  == 2:
-            # No active operation either
-            lock = self.lock
-            if lock:
-                lock.acquire()
 
-            data = self._via_kerchunk(index)
-
-            if lock:
-                lock.release()
-
+            data = self._get_selection(nc[ncvar], index)
             return data
 
         else:
@@ -223,27 +211,8 @@ class Active:
     def ncvar(self, value):
         self._ncvar = value
 
-    @property
-    def lock(self):
-        """Return or set a lock that prevents concurrent file reads when accessing the data locally.
 
-        The lock is either a `threading.Lock` instance, an object with
-        same API and functionality (such as
-        `dask.utils.SerializableLock`), or is `False` if no lock is
-        required.
 
-        To be effective, the same lock instance must be used across
-        all process threads.
-
-        """
-        return self._lock
-
-    @lock.setter
-    def lock(self, value):
-        if not value:
-            value = False
-            
-        self._lock = value
 
     def _get_active(self, method, *args):
         """ 
@@ -255,54 +224,21 @@ class Active:
         """
         raise NotImplementedError
 
-    def _via_kerchunk(self, index):
+ 
+
+    def _get_selection(self, ds, *args):
         """ 
-        The objective is to use kerchunk to read the slices ourselves. 
+        We need to load the b-tree index first. The current machinery is 
+        using a temporary branch in a fork of pyfive. It will get cleaner
+        when we tidy that up.
         """
-        # FIXME: Order of calls is hardcoded'
-        if self.zds is None:
-            print(f"Kerchunking file {self.uri} with variable "
-                  f"{self.ncvar} for storage type {self.storage_type}")
-            ds, zarray, zattrs = nz.load_netcdf_zarr_generic(
-                self.uri,
-                self.ncvar,
-                self.storage_type,
-                self.storage_options,
-            )
-            # The following is a hangove from exploration
-            # and is needed if using the original doing it ourselves
-            # self.zds = make_an_array_instance_active(ds)
-            self.zds = ds
-
-            # Retain attributes and other information
-            if zarray.get('fill_value') is not None:
-                zattrs['_FillValue'] = zarray['fill_value']
-            
-            self.zarray = zarray
-            self.zattrs = zattrs
-
-            # FIXME: We do not get the correct byte order on the Zarr
-            # Array's dtype when using S3, so capture it here.
-            self._dtype = np.dtype(zarray['dtype'])
-            
-        return self._get_selection(index)
-
-    def _get_selection(self, *args):
-        """ 
-        First we need to convert the selection into chunk coordinates,
-        steps etc, via the Zarr machinery, then we get everything else we can
-        from zarr and friends and use simple dictionaries and tuples, then
-        we can go to the storage layer with no zarr.
-        """
-        compressor = self.zds._compressor
-        filters = self.zds._filters
 
         # Get missing values
-        _FillValue = self.zattrs.get('_FillValue')
-        missing_value = self.zattrs.get('missing_value')
-        valid_min = self.zattrs.get('valid_min')
-        valid_max = self.zattrs.get('valid_max')
-        valid_range = self.zattrs.get('valid_range')
+        _FillValue = ds.attrs.get('_FillValue')
+        missing_value = ds.attrs.get('missing_value')
+        valid_min = ds.attrs.get('valid_min')
+        valid_max = ds.attrs.get('valid_max')
+        valid_range = ds.attrs.get('valid_range')
         if valid_max is not None or valid_min is not None:
             if valid_range is not None:
                 raise ValueError(
@@ -319,31 +255,25 @@ class Active:
             valid_min,
             valid_max,
         )
+        array = ZarrArrayStub(ds.shape, ds.chunks)
 
-        indexer = OrthogonalIndexer(*args, self.zds)
+
+        indexer = OrthogonalIndexer(*args, array)
         out_shape = indexer.shape
         out_dtype = self.zds._dtype
-        stripped_indexer = [(a, b, c) for a,b,c in indexer]
-        drop_axes = indexer.drop_axes  # not sure what this does and why, yet.
+        #stripped_indexer = [(a, b, c) for a,b,c in indexer]
+        #drop_axes = indexer.drop_axes  # not sure what this does and why, yet.
 
-        # yes this next line is bordering on voodoo ...
-        # this returns a nested dictionary with the full file FS reference
-        # ie all the gubbins: chunks, data structure, types, etc
-        # if using zarr<=2.13.3 call with _mutable_mapping ie
-        # fsref = self.zds.chunk_store._mutable_mapping.fs.references 
-        fsref = self.zds.chunk_store.fs.references
 
-        return self._from_storage(stripped_indexer, drop_axes, out_shape,
-                                  out_dtype, compressor, filters, missing, fsref)
+        return self._from_storage(ds, indexer, out_shape, out_dtype, missing)
 
-    def _from_storage(self, stripped_indexer, drop_axes, out_shape, out_dtype,
-                      compressor, filters, missing, fsref):
+    def _from_storage(self, ds, indexer, out_shape, out_dtype, missing):
         method = self.method
         if method is not None:
             out = []
             counts = []
         else:
-            out = np.empty(out_shape, dtype=out_dtype, order=self.zds._order)
+            out = np.empty(out_shape, dtype=out_dtype, order=ds.order)
             counts = None  # should never get touched with no method!
 
         # Create a shared session object.
@@ -370,13 +300,12 @@ class Active:
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_threads) as executor:
             futures = []
             # Submit chunks for processing.
-            for chunk_coords, chunk_selection, out_selection in stripped_indexer:
+            for chunk_coords, chunk_selection, out_selection in indexer:
                 future = executor.submit(
                     self._process_chunk,
-                    session, fsref, chunk_coords, chunk_selection,
-                    counts, out_selection,
-                    compressor, filters, missing,
-                    drop_axes=drop_axes)
+                    session,  ds, chunk_coords, chunk_selection,
+                    counts, out_selection, missing)
+                    #drop_axes=drop_axes)
                 futures.append(future)
             # Wait for completion.
             for future in concurrent.futures.as_completed(futures):
@@ -446,9 +375,9 @@ class Active:
 
         return f"http://{urllib.parse.urlparse(self.filename).netloc}"
 
-    def _process_chunk(self, session, fsref, chunk_coords, chunk_selection, counts,
-                       out_selection, compressor, filters, missing, 
-                       drop_axes=None):
+    def _process_chunk(self, session, ds, chunk_coords, chunk_selection, counts,
+                       out_selection, missing) 
+                       #drop_axes=None):
         """
         Obtain part or whole of a chunk.
 
@@ -456,11 +385,15 @@ class Active:
         the output array.
 
         Note the need to use counts for some methods
+        #FIXME: Do, we, it's not actually used?
 
         """
-        coord = '.'.join([str(c) for c in chunk_coords])
-        key = f"{self.ncvar}/{coord}"
-        rfile, offset, size = tuple(fsref[key])
+        
+        offset, size, filter_mask = ds.get_chunk_details[chunk_coords]
+        rfile = ds.rfile
+        #FIXME: need compressor and filters from ds
+        compressor = None
+        filters=None
 
         # S3: pass in pre-configured storage options (credentials)
         if self.storage_type == "s3":
@@ -485,8 +418,8 @@ class Active:
                                                        bucket, object, offset,
                                                        size, compressor, filters,
                                                        missing, dtype,
-                                                       self.zds._chunks,
-                                                       self.zds._order,
+                                                       ds.chunks,
+                                                       ds.order,
                                                        chunk_selection,
                                                        operation=self._method)
             else:
@@ -504,8 +437,8 @@ class Active:
                                                        bucket, object, offset,
                                                        size, compressor, filters,
                                                        missing, dtype,
-                                                       self.zds._chunks,
-                                                       self.zds._order,
+                                                       ds.chunks,
+                                                       ds.order,
                                                        chunk_selection,
                                                        operation=self._method)
         else:
@@ -515,14 +448,14 @@ class Active:
             # although we will version changes.
             tmp, count = reduce_chunk(rfile, offset, size, compressor, filters,
                                       missing, self.zds._dtype,
-                                      self.zds._chunks, self.zds._order,
+                                      ds.chunks, ds.order,
                                       chunk_selection, method=self.method)
 
         if self.method is not None:
             return tmp, count
         else:
-            if drop_axes:
-                tmp = np.squeeze(tmp, axis=drop_axes)
+            #if drop_axes:
+            #    tmp = np.squeeze(tmp, axis=drop_axes)
             return tmp, out_selection
 
     def _mask_data(self, data, ds_var):
