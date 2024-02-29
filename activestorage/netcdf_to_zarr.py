@@ -70,8 +70,14 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
         with fs.open(file_url, 'rb') as s3file:
             h5chunks = SingleHdf5ToZarr(s3file, file_url,
                                         inline_threshold=0)
+            bryan_bucket = False
+            if "bnl" in file_url:
+                bryan_bucket = True
             with fs2.open(outf, 'wb') as f:
                 content = h5chunks.translate()
+                content = _correct_compressor_and_filename(content,
+                                                           varname,
+                                                           bryan_bucket=bryan_bucket)
                 f.write(ujson.dumps(content).encode())
 
     # S3 passed-in configuration
@@ -155,18 +161,20 @@ def open_zarr_group(out_json, varname):
     mapper = fs.get_mapper("")  # local FS mapper
     #mapper.fs.reference has the kerchunk mapping, how does this propagate into the Zarr array?
     zarr_group = zarr.open_group(mapper)
-   
+
+    not_group = False
     try:
-        print("Trying opening Zarr object as Group")
         zarr_array = getattr(zarr_group, varname + " ")
-    except AttributeError as attrerr_group:
-        print("Trying opening Zarr object as Dataset")
+    except AttributeError:
+        not_group = True
+        pass
+    if not_group:
         try:
             zarr_array = getattr(zarr_group, varname)
-        except AttributeError as attrerr:
+        except AttributeError:
             print(f"Zarr Group does not contain variable {varname}. "
                   f"Zarr Group info: {zarr_group.info}")
-            raise attrerr
+            raise
     
     return zarr_array
 
