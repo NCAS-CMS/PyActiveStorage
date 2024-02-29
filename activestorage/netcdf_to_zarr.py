@@ -184,9 +184,7 @@ def load_netcdf_zarr_generic(fileloc, varname, storage_type, storage_options, bu
     print(f"Storage type {storage_type}")
 
     # Write the Zarr group JSON to a temporary file.
-    save_json = "test_file.json"
-    # with tempfile.NamedTemporaryFile() as out_json:
-    with open(save_json, "wb") as out_json:
+    with tempfile.NamedTemporaryFile() as out_json:
         _, zarray, zattrs = gen_json(fileloc,
                                      varname,
                                      out_json.name,
