@@ -295,7 +295,7 @@ class Active:
             self._dtype = np.dtype(zarray['dtype'])
 
         ty = time.time()
-        print("Time Via Kerchunk", ty - tx)
+        print("Time of _via_kerchunk()", ty - tx)
         return self._get_selection(index)
 
     def _get_selection(self, *args):
@@ -305,7 +305,6 @@ class Active:
         from zarr and friends and use simple dictionaries and tuples, then
         we can go to the storage layer with no zarr.
         """
-        print("ZDS", self.zds)
         compressor = self.zds._compressor
         filters = self.zds._filters
 
@@ -378,16 +377,10 @@ class Active:
         else:
             session = None
 
-        t3 = time.time()
         # Process storage chunks using a thread pool.
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_threads) as executor:
             futures = []
             # Submit chunks for processing.
-            print("Stripped indexer")
-            for chunk_coords, chunk_selection, out_selection in stripped_indexer:
-                print("Chunk coords", chunk_coords)
-                print("Chunk selection", chunk_selection)
-                print("Out selection", out_selection)
             for chunk_coords, chunk_selection, out_selection in stripped_indexer:
                 future = executor.submit(
                     self._process_chunk,
@@ -412,8 +405,6 @@ class Active:
                         result, selection = result
                         out[selection] = result
 
-        t4 = time.time()
-        print("Storage chunks processing", t4 - t3)
         if method is not None:
             # Apply the method (again) to aggregate the result
             out = method(out)
@@ -516,13 +507,13 @@ class Active:
                 # special case for "anon=True" buckets that work only with e.g.
                 # fs = s3fs.S3FileSystem(anon=True, client_kwargs={'endpoint_url': S3_URL})
                 # where file uri = bucketX/fileY.mc
-                print("S3 Storage options to Reductionist:", self.storage_options)
+                print("S3 Storage options:", self.storage_options)
                 if self.storage_options.get("anon", None) == True:
                     bucket = os.path.dirname(parsed_url.path)  # bucketX
                     object = os.path.basename(parsed_url.path)  # fileY
                     print("S3 anon=True Bucket and File:", bucket, object)
                 t2 = time.time()
-                print("Time before Reductionist", t2 - t1)
+                print("Total time before going in Reductionist", t2 - t1)
                 tmp, count = reductionist.reduce_chunk(session,
                                                        self.active_storage_url,
                                                        self._get_endpoint_url(),
