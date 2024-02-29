@@ -13,7 +13,7 @@ import time
 import h5py
 
 
-def _correct_compressor_and_filename(content, varname):
+def _correct_compressor_and_filename(content, varname, bryan_bucket=False):
     """
     Correct the compressor type as it comes out of Kerchunk.
     Also correct file name as Kerchnk now prefixes it with "s3://"
@@ -43,9 +43,13 @@ def _correct_compressor_and_filename(content, varname):
 
     # FIXME TODO this is an absolute nightmate: the type of bucket on UOR ACES
     # this is a HACK and it works only with the crazy Bryan S3 bucket "bnl/file.nc"
-    for key in new_content['refs'].keys():
-        if varname in key and isinstance(new_content['refs'][key], list) and "s3://" in new_content['refs'][key][0]:
-            new_content['refs'][key][0] = new_content['refs'][key][0].replace("s3://", "")
+    # the problem: filename gets written to JSON as "s3://bnl/file.nc" but Reductionist doesn't
+    # find it since it needs url=bnl/file.nc, with endpoint URL being extracted from the
+    # endpoint_url of storage_options. BAH!
+    if bryan_bucket:
+        for key in new_content['refs'].keys():
+            if varname in key and isinstance(new_content['refs'][key], list) and "s3://" in new_content['refs'][key][0]:
+                new_content['refs'][key][0] = new_content['refs'][key][0].replace("s3://", "")
 
     tc2 = time.time()
     print("Time to manipulate Kerchunk Zarr output", tc2 - tc1)
@@ -91,13 +95,18 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
             # Kerchunk wants the correct file name in S3 format
             if not file_url.startswith("s3://"):
                 file_url = "s3://" + file_url
+            bryan_bucket = False
+            if "bnl" in file_url:
+                bryan_bucket = True
             h5chunks = SingleHdf5ToZarr(s3file, file_url,
                                         inline_threshold=0,
                                         storage_options=storage_options)
             tk2 = time.time()
             with fs2.open(outf, 'wb') as f:
                 content = h5chunks.translate()
-                content = _correct_compressor_and_filename(content, varname)
+                content = _correct_compressor_and_filename(content,
+                                                           varname,
+                                                           bryan_bucket=bryan_bucket)
                 f.write(ujson.dumps(content).encode())
             tk3 = time.time()
             print("Time to Kerchunk and write JSON file", tk3 - tk2)
@@ -148,11 +157,16 @@ def open_zarr_group(out_json, varname):
     zarr_group = zarr.open_group(mapper)
    
     try:
-        zarr_array = getattr(zarr_group, varname)
-    except AttributeError as attrerr:
-        print(f"Zarr Group does not contain variable {varname}. "
-              f"Zarr Group info: {zarr_group.info}")
-        raise attrerr
+        print("Trying opening Zarr object as Group")
+        zarr_array = getattr(zarr_group, varname + " ")
+    except AttributeError as attrerr_group:
+        print("Trying opening Zarr object as Dataset")
+        try:
+            zarr_array = getattr(zarr_group, varname)
+        except AttributeError as attrerr:
+            print(f"Zarr Group does not contain variable {varname}. "
+                  f"Zarr Group info: {zarr_group.info}")
+            raise attrerr
     
     return zarr_array
 
@@ -173,9 +187,6 @@ def load_netcdf_zarr_generic(fileloc, varname, storage_type, storage_options, bu
 
         # open this monster
         print(f"Attempting to open and convert {fileloc}.")
-        try:
-            ref_ds = open_zarr_group(out_json.name, varname)
-        except AttributeError:
-            ref_ds = open_zarr_group(out_json.name, varname + " ")
+        ref_ds = open_zarr_group(out_json.name, varname)
 
     return ref_ds, zarray, zattrs
