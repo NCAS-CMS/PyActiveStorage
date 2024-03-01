@@ -184,6 +184,18 @@ def test_compression_and_filters_cmip6_forced_s3_using_local_Reductionist():
     assert result == 239.25946044921875
 
 
+# if pytest is run on a single thread, this test throws a PytestUnraisableException
+# followed at the end by a SegFault (test passes fine, and writes report etc); when
+# pytest runs in n>=2 threads all is fine. This is defo due to something in Kerchunk
+# tests/test_compression_remote_reductionist.py::test_compression_and_filters_cmip6_forced_s3_from_local_bigger_file_v1
+#   /home/valeriu/miniconda3/envs/pyactive/lib/python3.12/site-packages/_pytest/unraisableexception.py:80: PytestUnraisableExceptionWarning: Exception ignored in: 'h5py._objects.ObjectID.__dealloc__'
+#   
+#   Traceback (most recent call last):
+#     File "h5py/_objects.pyx", line 201, in h5py._objects.ObjectID.__dealloc__
+#     File "h5py/h5fd.pyx", line 180, in h5py.h5fd.H5FD_fileobj_truncate
+#   AttributeError: 'S3File' object has no attribute 'truncate'
+# For no I am just shutting this up, later we may have to take it up with Kerchunk
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 def test_compression_and_filters_cmip6_forced_s3_from_local_bigger_file_v1():
     """
     Test identical to previous
