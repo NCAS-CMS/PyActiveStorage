@@ -89,6 +89,9 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
         fs2 = fsspec.filesystem('')
         tk1 = time.time()
         with fs.open(file_url, 'rb') as s3file:
+            # restrict only to the Group/Dataset that the varname belongs to
+            # this saves 2-3x time in Kerchunk
+            # TODO make this available to the other routines that use Kerchunk
             s3file = h5py.File(s3file, mode="w")
             if isinstance(s3file[varname], h5py.Dataset):
                 print("Looking only at a single Dataset", s3file[varname])
