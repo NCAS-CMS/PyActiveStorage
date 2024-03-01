@@ -2,6 +2,8 @@ import os
 import numpy as np
 import pytest
 
+import utils
+
 from netCDF4 import Dataset
 from pathlib import Path
 
@@ -9,8 +11,6 @@ from activestorage.active import Active, load_from_s3
 from activestorage.config import *
 from activestorage.dummy_data import make_compressed_ncdata
 from activestorage.reductionist import ReductionistError as RedErr
-
-import utils
 
 
 # Bryan's S3 machine + Bryan's reductionist
@@ -197,6 +197,8 @@ def test_compression_and_filters_cmip6_forced_s3_from_local_bigger_file_v1():
 
     Entire mother file info:
     [2024-01-24 10:07:02 GMT] 2.8GiB STANDARD da193a_25_day__198807-198807.nc
+
+    NOTE: we used this test as timing reference for performance testing.
     """
     storage_options = {
         'key': "f2d55c6dcfc7618b2c34e00b58df3cef",
@@ -219,7 +221,6 @@ def test_compression_and_filters_cmip6_forced_s3_from_local_bigger_file_v1():
     active._method = "min"
 
     result = active[0:2, 0:3, 4:6, 7:9]
-    print(x)
 
 
 def test_compression_and_filters_cmip6_forced_s3_from_local_bigger_file_v0():
