@@ -5,7 +5,6 @@ import numpy as np
 import pathlib
 import urllib
 import pyfive
-from pyfive import ZarrArrayStub, OrthogonalIndexer
 
 import s3fs
 
@@ -129,7 +128,7 @@ class Active:
         # in all casese we need an open netcdf file to get at attributes
         # FIXME. We then need to monkey patch the "filename" as rfile onto the dataset
         if self.storage_type is None:
-            nc = pyfive.FILE(self.uri)
+            nc = pyfive.File(self.uri)
         elif self.storage_type == "s3":
             nc = load_from_s3(self.uri, self.storage_options)
 
@@ -228,10 +227,15 @@ class Active:
 
     def _get_selection(self, ds, *args):
         """ 
-        We need to load the b-tree index first. The current machinery is 
-        using a temporary branch in a fork of pyfive. It will get cleaner
-        when we tidy that up.
+        At this point we have a Dataset object, but all the important information about
+        how to use it is in the attribute DataoobjectDataset class. Here we gather 
+        metadata from the dataset instance and then continue with the dataobjects instance.
         """
+
+
+
+        # stick this here for later, to discuss with David
+        keepdims = True
 
         # Get missing values
         _FillValue = ds.attrs.get('_FillValue')
@@ -255,19 +259,20 @@ class Active:
             valid_min,
             valid_max,
         )
-        array = ZarrArrayStub(ds.shape, ds.chunks)
 
 
-        indexer = OrthogonalIndexer(*args, array)
+        ds = ds._dataobjects
+        array = pyfive.ZarrArrayStub(ds.shape, ds.chunks)
+        indexer = pyfive.OrthogonalIndexer(*args, array)
+
         out_shape = indexer.shape
-        out_dtype = self.zds._dtype
+        out_dtype =ds.dtype
         #stripped_indexer = [(a, b, c) for a,b,c in indexer]
-        #drop_axes = indexer.drop_axes  # not sure what this does and why, yet.
+        drop_axes = indexer.drop_axes and keepdims
 
+        return self._from_storage(ds, indexer, out_shape, out_dtype, missing, drop_axes)
 
-        return self._from_storage(ds, indexer, out_shape, out_dtype, missing)
-
-    def _from_storage(self, ds, indexer, out_shape, out_dtype, missing):
+    def _from_storage(self, ds, indexer, out_shape, out_dtype, missing, drop_axes):
         method = self.method
         if method is not None:
             out = []
@@ -304,8 +309,7 @@ class Active:
                 future = executor.submit(
                     self._process_chunk,
                     session,  ds, chunk_coords, chunk_selection,
-                    counts, out_selection, missing)
-                    #drop_axes=drop_axes)
+                    counts, out_selection, missing, drop_axes=drop_axes)
                 futures.append(future)
             # Wait for completion.
             for future in concurrent.futures.as_completed(futures):
@@ -376,8 +380,7 @@ class Active:
         return f"http://{urllib.parse.urlparse(self.filename).netloc}"
 
     def _process_chunk(self, session, ds, chunk_coords, chunk_selection, counts,
-                       out_selection, missing) 
-                       #drop_axes=None):
+                       out_selection, missing, drop_axes=None):
         """
         Obtain part or whole of a chunk.
 
@@ -389,8 +392,8 @@ class Active:
 
         """
         
-        offset, size, filter_mask = ds.get_chunk_details[chunk_coords]
-        rfile = ds.rfile
+        offset, size, filter_mask = ds.get_chunk_details(chunk_coords)
+        rfile = ds.fh.name
         #FIXME: need compressor and filters from ds
         compressor = None
         filters=None
@@ -447,15 +450,15 @@ class Active:
             # so neither the returned data or the interface should be considered stable
             # although we will version changes.
             tmp, count = reduce_chunk(rfile, offset, size, compressor, filters,
-                                      missing, self.zds._dtype,
+                                      missing, ds.dtype,
                                       ds.chunks, ds.order,
                                       chunk_selection, method=self.method)
 
         if self.method is not None:
             return tmp, count
         else:
-            #if drop_axes:
-            #    tmp = np.squeeze(tmp, axis=drop_axes)
+            if drop_axes:
+                tmp = np.squeeze(tmp, axis=drop_axes)
             return tmp, out_selection
 
     def _mask_data(self, data, ds_var):
