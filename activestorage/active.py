@@ -233,8 +233,6 @@ class Active:
         metadata from the dataset instance and then continue with the dataobjects instance.
         """
 
-
-
         # stick this here for later, to discuss with David
         keepdims = True
 
@@ -261,7 +259,8 @@ class Active:
             valid_max,
         )
 
-        nfilters = decode_filters(ds._dataobjects.filter_pipeline ,ds.name)
+        # hopefully fix pyfive to get a dtype directly
+        compressor, filters = decode_filters(ds._dataobjects.filter_pipeline , np.dtype(ds.dtype).itemsize, ds.name)
         ds = ds._dataobjects
         array = pyfive.ZarrArrayStub(ds.shape, ds.chunks)
         indexer = pyfive.OrthogonalIndexer(*args, array)
@@ -271,9 +270,9 @@ class Active:
         #stripped_indexer = [(a, b, c) for a,b,c in indexer]
         drop_axes = indexer.drop_axes and keepdims
 
-        return self._from_storage(ds, indexer, out_shape, out_dtype, missing, nfilters, drop_axes)
+        return self._from_storage(ds, indexer, out_shape, out_dtype, missing, compressor, filters, drop_axes)
 
-    def _from_storage(self, ds, indexer, out_shape, out_dtype, missing, nfilters, drop_axes):
+    def _from_storage(self, ds, indexer, out_shape, out_dtype, missing, compressor, filters, drop_axes):
         method = self.method
        
         if method is not None:
@@ -311,7 +310,7 @@ class Active:
                 future = executor.submit(
                     self._process_chunk,
                     session,  ds, chunk_coords, chunk_selection,
-                    counts, out_selection, missing, nfilters, drop_axes=drop_axes)
+                    counts, out_selection, missing, compressor, filters, drop_axes=drop_axes)
                 futures.append(future)
             # Wait for completion.
             for future in concurrent.futures.as_completed(futures):
@@ -382,7 +381,7 @@ class Active:
         return f"http://{urllib.parse.urlparse(self.filename).netloc}"
 
     def _process_chunk(self, session, ds, chunk_coords, chunk_selection, counts,
-                       out_selection, missing, nfilters,drop_axes=None):
+                       out_selection, missing, compressor, filters, drop_axes=None):
         """
         Obtain part or whole of a chunk.
 
@@ -396,10 +395,6 @@ class Active:
         
         offset, size, filter_mask = ds.get_chunk_details(chunk_coords)
         rfile = ds.fh.name
-        #The compressor is none, as compression is in the filter pipeline
-        #Note that the filter_pipeline here is the _numcodecs_ one, not the native ds one!
-        compressor = None
-        filters=nfilters
 
         # S3: pass in pre-configured storage options (credentials)
         if self.storage_type == "s3":
