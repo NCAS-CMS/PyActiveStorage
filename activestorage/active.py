@@ -260,7 +260,10 @@ class Active:
         )
 
         # hopefully fix pyfive to get a dtype directly
-        compressor, filters = decode_filters(ds._dataobjects.filter_pipeline , np.dtype(ds.dtype).itemsize, ds.name)
+        if ds._dataobjects.filter_pipeline is None:
+            compressor, filters = None, None
+        else:
+            compressor, filters = decode_filters(ds._dataobjects.filter_pipeline , np.dtype(ds.dtype).itemsize, ds.name)
         ds = ds._dataobjects
         array = pyfive.ZarrArrayStub(ds.shape, ds.chunks)
         indexer = pyfive.OrthogonalIndexer(*args, array)
