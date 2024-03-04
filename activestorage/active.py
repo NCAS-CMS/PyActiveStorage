@@ -11,6 +11,7 @@ import s3fs
 from activestorage.config import *
 from activestorage import reductionist
 from activestorage.storage import reduce_chunk
+from activestorage.hdf2numcodec import decode_filters
 
 
 
@@ -260,7 +261,7 @@ class Active:
             valid_max,
         )
 
-
+        nfilters = decode_filters(ds._dataobjects.filter_pipeline ,ds.name)
         ds = ds._dataobjects
         array = pyfive.ZarrArrayStub(ds.shape, ds.chunks)
         indexer = pyfive.OrthogonalIndexer(*args, array)
@@ -270,10 +271,11 @@ class Active:
         #stripped_indexer = [(a, b, c) for a,b,c in indexer]
         drop_axes = indexer.drop_axes and keepdims
 
-        return self._from_storage(ds, indexer, out_shape, out_dtype, missing, drop_axes)
+        return self._from_storage(ds, indexer, out_shape, out_dtype, missing, nfilters, drop_axes)
 
-    def _from_storage(self, ds, indexer, out_shape, out_dtype, missing, drop_axes):
+    def _from_storage(self, ds, indexer, out_shape, out_dtype, missing, nfilters, drop_axes):
         method = self.method
+       
         if method is not None:
             out = []
             counts = []
@@ -309,7 +311,7 @@ class Active:
                 future = executor.submit(
                     self._process_chunk,
                     session,  ds, chunk_coords, chunk_selection,
-                    counts, out_selection, missing, drop_axes=drop_axes)
+                    counts, out_selection, missing, nfilters, drop_axes=drop_axes)
                 futures.append(future)
             # Wait for completion.
             for future in concurrent.futures.as_completed(futures):
@@ -380,7 +382,7 @@ class Active:
         return f"http://{urllib.parse.urlparse(self.filename).netloc}"
 
     def _process_chunk(self, session, ds, chunk_coords, chunk_selection, counts,
-                       out_selection, missing, drop_axes=None):
+                       out_selection, missing, nfilters,drop_axes=None):
         """
         Obtain part or whole of a chunk.
 
@@ -394,9 +396,10 @@ class Active:
         
         offset, size, filter_mask = ds.get_chunk_details(chunk_coords)
         rfile = ds.fh.name
-        #FIXME: need compressor and filters from ds
+        #The compressor is none, as compression is in the filter pipeline
+        #Note that the filter_pipeline here is the _numcodecs_ one, not the native ds one!
         compressor = None
-        filters=None
+        filters=nfilters
 
         # S3: pass in pre-configured storage options (credentials)
         if self.storage_type == "s3":
@@ -404,9 +407,7 @@ class Active:
             parsed_url = urllib.parse.urlparse(rfile)
             bucket = parsed_url.netloc
             object = parsed_url.path
-            # FIXME: We do not get the correct byte order on the Zarr Array's dtype
-            # when using S3, so use the value captured earlier.
-            dtype = self._dtype
+        
             # for certain S3 servers rfile needs to contain the bucket eg "bucket/filename"
             # as a result the parser above finds empty string bucket
             if bucket == "":
@@ -420,7 +421,7 @@ class Active:
                                                        S3_URL,
                                                        bucket, object, offset,
                                                        size, compressor, filters,
-                                                       missing, dtype,
+                                                       missing, ds.dtype,
                                                        ds.chunks,
                                                        ds.order,
                                                        chunk_selection,
@@ -439,7 +440,7 @@ class Active:
                                                        self._get_endpoint_url(),
                                                        bucket, object, offset,
                                                        size, compressor, filters,
-                                                       missing, dtype,
+                                                       missing, ds.dtype,
                                                        ds.chunks,
                                                        ds.order,
                                                        chunk_selection,
