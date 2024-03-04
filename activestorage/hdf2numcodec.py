@@ -4,7 +4,8 @@ def decode_filters(filter_pipeline, itemsize, name):
     """
     
     Convert HDF5 filter and compression instructions into instructions understood
-    by numcodecs. Input is a pyfive filter_pipeline object
+    by numcodecs. Input is a pyfive filter_pipeline object, the itemsize, and the
+    dataset name for error messages.
 
     We can only support things that are supported by our storage backends, which
     is a rather limited range right now:
