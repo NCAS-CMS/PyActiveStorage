@@ -18,6 +18,7 @@ def mytest():
     ncfile, v = "cesm2_native.nc","TREFHT"
     ncfile, v  = "CMIP6-test.nc", 'tas'
     #ncfile, v = "chunked.hdf5", "dataset1"
+    ncfile, v = 'daily_data.nc', 'ta'
     mypath = Path(__file__).parent
     uri = str(mypath/ncfile)
     active = Active(uri, v, None)

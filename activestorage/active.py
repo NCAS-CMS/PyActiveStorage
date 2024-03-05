@@ -259,23 +259,28 @@ class Active:
             valid_max,
         )
 
+        name = ds.name
+        dtype = np.dtype(ds.dtype)
         # hopefully fix pyfive to get a dtype directly
-        if ds._dataobjects.filter_pipeline is None:
+        array = pyfive.ZarrArrayStub(ds.shape, ds.chunks)
+        ds = ds._dataobjects
+        
+        if ds.filter_pipeline is None:
             compressor, filters = None, None
         else:
-            compressor, filters = decode_filters(ds._dataobjects.filter_pipeline , np.dtype(ds.dtype).itemsize, ds.name)
-        ds = ds._dataobjects
-        array = pyfive.ZarrArrayStub(ds.shape, ds.chunks)
+            compressor, filters = decode_filters(ds.filter_pipeline , dtype.itemsize, name)
+        
         indexer = pyfive.OrthogonalIndexer(*args, array)
-
         out_shape = indexer.shape
         out_dtype =ds.dtype
         #stripped_indexer = [(a, b, c) for a,b,c in indexer]
         drop_axes = indexer.drop_axes and keepdims
 
-        return self._from_storage(ds, indexer, out_shape, out_dtype, missing, compressor, filters, drop_axes)
+        # we use array._chunks rather than ds.chunks, as the latter is none in the case of
+        # unchunked data, and we need to tell the storage the array dimensions in this case.
+        return self._from_storage(ds, indexer, array._chunks, out_shape, out_dtype, missing, compressor, filters, drop_axes)
 
-    def _from_storage(self, ds, indexer, out_shape, out_dtype, missing, compressor, filters, drop_axes):
+    def _from_storage(self, ds, indexer, chunks, out_shape, out_dtype, missing, compressor, filters, drop_axes):
         method = self.method
        
         if method is not None:
@@ -312,7 +317,7 @@ class Active:
             for chunk_coords, chunk_selection, out_selection in indexer:
                 future = executor.submit(
                     self._process_chunk,
-                    session,  ds, chunk_coords, chunk_selection,
+                    session,  ds, chunks, chunk_coords, chunk_selection,
                     counts, out_selection, missing, compressor, filters, drop_axes=drop_axes)
                 futures.append(future)
             # Wait for completion.
@@ -383,7 +388,7 @@ class Active:
 
         return f"http://{urllib.parse.urlparse(self.filename).netloc}"
 
-    def _process_chunk(self, session, ds, chunk_coords, chunk_selection, counts,
+    def _process_chunk(self, session, ds, chunks, chunk_coords, chunk_selection, counts,
                        out_selection, missing, compressor, filters, drop_axes=None):
         """
         Obtain part or whole of a chunk.
@@ -420,7 +425,7 @@ class Active:
                                                        bucket, object, offset,
                                                        size, compressor, filters,
                                                        missing, ds.dtype,
-                                                       ds.chunks,
+                                                       chunks,
                                                        ds.order,
                                                        chunk_selection,
                                                        operation=self._method)
@@ -439,7 +444,7 @@ class Active:
                                                        bucket, object, offset,
                                                        size, compressor, filters,
                                                        missing, ds.dtype,
-                                                       ds.chunks,
+                                                       chunks,
                                                        ds.order,
                                                        chunk_selection,
                                                        operation=self._method)
@@ -450,7 +455,7 @@ class Active:
             # although we will version changes.
             tmp, count = reduce_chunk(rfile, offset, size, compressor, filters,
                                       missing, ds.dtype,
-                                      ds.chunks, ds.order,
+                                      chunks, ds.order,
                                       chunk_selection, method=self.method)
 
         if self.method is not None:
