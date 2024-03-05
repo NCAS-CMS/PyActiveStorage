@@ -44,7 +44,6 @@ def load_from_s3(uri, storage_options=None):
     return ds
 
 
-
 class Active:
     """ 
     Instantiates an interface to active storage which contains either zarr files
@@ -114,6 +113,7 @@ class Active:
         self._components = False
         self._method = None
         self._max_threads = max_threads
+        self.missing = None
 
     def __getitem__(self, index):
         """ 
@@ -125,36 +125,50 @@ class Active:
         # through to the default method.
         ncvar = self.ncvar
 
-        # in all casese we need an open netcdf file to get at attributes
+        # in all cases we need an open netcdf file to get at attributes
         # we keep it open because we need it's b-tree
         if self.storage_type is None:
             nc = pyfive.File(self.uri)
         elif self.storage_type == "s3":
             nc = load_from_s3(self.uri, self.storage_options)
         self.filename = self.uri
- 
 
+        ds = nc[ncvar]
+        # Get missing values
+        
+        _FillValue = ds.attrs.get('_FillValue')
+        missing_value = ds.attrs.get('missing_value')
+        valid_min = ds.attrs.get('valid_min')
+        valid_max = ds.attrs.get('valid_max')
+        valid_range = ds.attrs.get('valid_range')
+        if valid_max is not None or valid_min is not None:
+            if valid_range is not None:
+                raise ValueError(
+                    "Invalid combination in the file of valid_min, "
+                    "valid_max, valid_range: "
+                    f"{valid_min}, {valid_max}, {valid_range}"
+                )
+        elif valid_range is not None:            
+            valid_min, valid_max = valid_range
+        
+        self.missing = _FillValue, missing_value, valid_min, valid_max,
+        
         if self.method is None and self._version == 0:
+            
             # No active operation
-            if self.storage_type is None:
-                data = nc[ncvar][index]
-                
-            elif self.storage_type == "s3":
-        
-                data = nc[ncvar][index]
-                data = self._mask_data(data, nc[ncvar])
-     
+            data = ds[index]    
+            data = self._mask_data(data)
             return data
-        
-        
+
         elif self._version == 1:
-            return self._get_selection(nc[ncvar], index)
+
+            #FIXME: is the difference between version 1 and 2 still honoured?
+            return self._get_selection(ds, index)
         
         elif self._version  == 2:
 
-            data = self._get_selection(nc[ncvar], index)
-            return data
-
+            return self._get_selection(ds, index)
+          
         else:
             raise ValueError(f'Version {self._version} not supported')
 
@@ -213,8 +227,6 @@ class Active:
         self._ncvar = value
 
 
-
-
     def _get_active(self, method, *args):
         """ 
         *args defines a slice of data. This method loops over each of the chunks
@@ -224,7 +236,6 @@ class Active:
         an array returned via getitem.
         """
         raise NotImplementedError
-
  
 
     def _get_selection(self, ds, *args):
@@ -236,29 +247,6 @@ class Active:
 
         # stick this here for later, to discuss with David
         keepdims = True
-
-        # Get missing values
-        _FillValue = ds.attrs.get('_FillValue')
-        missing_value = ds.attrs.get('missing_value')
-        valid_min = ds.attrs.get('valid_min')
-        valid_max = ds.attrs.get('valid_max')
-        valid_range = ds.attrs.get('valid_range')
-        if valid_max is not None or valid_min is not None:
-            if valid_range is not None:
-                raise ValueError(
-                    "Invalid combination in the file of valid_min, "
-                    "valid_max, valid_range: "
-                    f"{valid_min}, {valid_max}, {valid_range}"
-                )
-        elif valid_range is not None:            
-            valid_min, valid_max = valid_range
-        
-        missing = (
-            _FillValue,
-            missing_value,
-            valid_min,
-            valid_max,
-        )
 
         name = ds.name
         dtype = np.dtype(ds.dtype)
@@ -279,9 +267,9 @@ class Active:
 
         # we use array._chunks rather than ds.chunks, as the latter is none in the case of
         # unchunked data, and we need to tell the storage the array dimensions in this case.
-        return self._from_storage(ds, indexer, array._chunks, out_shape, out_dtype, missing, compressor, filters, drop_axes)
+        return self._from_storage(ds, indexer, array._chunks, out_shape, out_dtype, compressor, filters, drop_axes)
 
-    def _from_storage(self, ds, indexer, chunks, out_shape, out_dtype, missing, compressor, filters, drop_axes):
+    def _from_storage(self, ds, indexer, chunks, out_shape, out_dtype, compressor, filters, drop_axes):
         method = self.method
        
         if method is not None:
@@ -312,6 +300,10 @@ class Active:
             session = None
 
         # Process storage chunks using a thread pool.
+        # Because we do this, we need to read the dataset b-tree now, not as we go, so
+        # it is already in cache. If we remove the thread pool from here, we probably
+        # wouldn't need to do it before the first one.
+        ds._get_chunk_addresses()
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_threads) as executor:
             futures = []
             # Submit chunks for processing.
@@ -319,7 +311,7 @@ class Active:
                 future = executor.submit(
                     self._process_chunk,
                     session,  ds, chunks, chunk_coords, chunk_selection,
-                    counts, out_selection, missing, compressor, filters, drop_axes=drop_axes)
+                    counts, out_selection, compressor, filters, drop_axes=drop_axes)
                 futures.append(future)
             # Wait for completion.
             for future in concurrent.futures.as_completed(futures):
@@ -390,7 +382,7 @@ class Active:
         return f"http://{urllib.parse.urlparse(self.filename).netloc}"
 
     def _process_chunk(self, session, ds, chunks, chunk_coords, chunk_selection, counts,
-                       out_selection, missing, compressor, filters, drop_axes=None):
+                       out_selection, compressor, filters, drop_axes=None):
         """
         Obtain part or whole of a chunk.
 
@@ -403,7 +395,6 @@ class Active:
         """
         
         offset, size, filter_mask = ds.get_chunk_details(chunk_coords)
-
 
         # S3: pass in pre-configured storage options (credentials)
         if self.storage_type == "s3":
@@ -426,7 +417,7 @@ class Active:
                                                        S3_URL,
                                                        bucket, object, offset,
                                                        size, compressor, filters,
-                                                       missing, np.dtype(ds.dtype),
+                                                       self.missing, np.dtype(ds.dtype),
                                                        chunks,
                                                        ds.order,
                                                        chunk_selection,
@@ -445,7 +436,7 @@ class Active:
                                                        self._get_endpoint_url(),
                                                        bucket, object, offset,
                                                        size, compressor, filters,
-                                                       missing, np.dtype(ds.dtype),
+                                                       self.missing, np.dtype(ds.dtype),
                                                        chunks,
                                                        ds.order,
                                                        chunk_selection,
@@ -456,7 +447,7 @@ class Active:
             # so neither the returned data or the interface should be considered stable
             # although we will version changes.
             tmp, count = reduce_chunk(self.filename, offset, size, compressor, filters,
-                                      missing, ds.dtype,
+                                      self.missing, ds.dtype,
                                       chunks, ds.order,
                                       chunk_selection, method=self.method)
 
@@ -467,25 +458,13 @@ class Active:
                 tmp = np.squeeze(tmp, axis=drop_axes)
             return tmp, out_selection
 
-    def _mask_data(self, data, ds_var):
-        """ppp"""
-        # TODO: replace with cfdm.NetCDFIndexer, hopefully.
-        attrs = ds_var.attrs
-        missing_value = attrs.get('missing_value')
-        _FillValue = attrs.get('_FillValue')
-        valid_min = attrs.get('valid_min')
-        valid_max = attrs.get('valid_max')
-        valid_range = attrs.get('valid_range')
-
-        if valid_max is not None or valid_min is not None:
-            if valid_range is not None:
-                raise ValueError(
-                    "Invalid combination in the file of valid_min, "
-                    "valid_max, valid_range: "
-                    f"{valid_min}, {valid_max}, {valid_range}"
-                )
-        elif valid_range is not None:
-            valid_min, valid_max = valid_range
+    def _mask_data(self, data):
+        """ 
+        Missing values obtained at initial getitem, and are used here to 
+        mask data, if necessary
+        """
+        
+        _FillValue, missing_value, valid_min, valid_max = self.missing
         
         if _FillValue is not None:
             data = np.ma.masked_equal(data, _FillValue)
