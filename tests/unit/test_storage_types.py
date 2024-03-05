@@ -16,17 +16,13 @@ import activestorage.active
 from activestorage.active import Active
 from activestorage.config import *
 from activestorage.dummy_data import make_vanilla_ncdata
-from activestorage import netcdf_to_zarr
 import activestorage.reductionist
 import activestorage.storage
 
 
-# Capture the real function before it is mocked.
-old_netcdf_to_zarr = netcdf_to_zarr.load_netcdf_zarr_generic
 
 
 @mock.patch.object(activestorage.active, "load_from_s3")
-@mock.patch.object(activestorage.netcdf_to_zarr, "load_netcdf_zarr_generic")
 @mock.patch.object(activestorage.active.reductionist, "reduce_chunk")
 def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3."""
@@ -38,9 +34,6 @@ def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
     @contextlib.contextmanager
     def load_from_s3(uri):
         yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
-
-    def load_netcdf_zarr_generic(uri, ncvar, storage_type, storage_options=None):
-        return old_netcdf_to_zarr(test_file, ncvar, None, None)
 
     def reduce_chunk(
         session,
@@ -149,7 +142,6 @@ def test_s3_load_failure(mock_load):
 
 
 @mock.patch.object(activestorage.active, "load_from_s3")
-@mock.patch.object(activestorage.netcdf_to_zarr, "load_netcdf_zarr_generic")
 @mock.patch.object(activestorage.active.reductionist, "reduce_chunk")
 def test_reductionist_connection(mock_reduce, mock_nz, mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3."""
@@ -158,11 +150,7 @@ def test_reductionist_connection(mock_reduce, mock_nz, mock_load, tmp_path):
     def load_from_s3(uri):
         yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
 
-    def load_netcdf_zarr_generic(uri, ncvar, storage_type, storage_options=None):
-        return old_netcdf_to_zarr(test_file, ncvar, None, None)
-
     mock_load.side_effect = load_from_s3
-    mock_nz.side_effect = load_netcdf_zarr_generic
     mock_reduce.side_effect = requests.exceptions.ConnectTimeout()
 
     uri = "s3://fake-bucket/fake-object"
@@ -178,7 +166,6 @@ def test_reductionist_connection(mock_reduce, mock_nz, mock_load, tmp_path):
 
 
 @mock.patch.object(activestorage.active, "load_from_s3")
-@mock.patch.object(activestorage.netcdf_to_zarr, "load_netcdf_zarr_generic")
 @mock.patch.object(activestorage.active.reductionist, "reduce_chunk")
 def test_reductionist_bad_request(mock_reduce, mock_nz, mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3."""
@@ -186,9 +173,6 @@ def test_reductionist_bad_request(mock_reduce, mock_nz, mock_load, tmp_path):
     @contextlib.contextmanager
     def load_from_s3(uri):
         yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
-
-    def load_netcdf_zarr_generic(uri, ncvar, storage_type, storage_options=None):
-        return old_netcdf_to_zarr(test_file, ncvar, None, None)
 
     mock_load.side_effect = load_from_s3
     mock_nz.side_effect = load_netcdf_zarr_generic
