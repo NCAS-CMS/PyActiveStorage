@@ -14,8 +14,6 @@ from activestorage.storage import reduce_chunk
 from activestorage.hdf2numcodec import decode_filters
 
 
-
-@contextlib.contextmanager
 def load_from_s3(uri, storage_options=None):
     """
     Load a netCDF4-like object from S3.
@@ -39,10 +37,11 @@ def load_from_s3(uri, storage_options=None):
                                client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
     else:
         fs = s3fs.S3FileSystem(**storage_options)  # use passed-in dictionary
-    with fs.open(uri, 'rb') as s3file:
-        ds = pyfive.File(s3file, 'r', invalid_netcdf=True)
-        print(f"Dataset loaded from S3 via h5netcdf: {ds}")
-        yield ds
+   
+    s3file = fs.open(uri, 'rb')
+    ds = pyfive.File(s3file)
+    print(f"Dataset loaded from S3 via h5netcdf: {uri}")
+    return ds
 
 
 
@@ -127,24 +126,27 @@ class Active:
         ncvar = self.ncvar
 
         # in all casese we need an open netcdf file to get at attributes
-        # FIXME. We then need to monkey patch the "filename" as rfile onto the dataset
+        # we keep it open because we need it's b-tree
         if self.storage_type is None:
             nc = pyfive.File(self.uri)
         elif self.storage_type == "s3":
             nc = load_from_s3(self.uri, self.storage_options)
+        self.filename = self.uri
+ 
 
         if self.method is None and self._version == 0:
             # No active operation
             if self.storage_type is None:
                 data = nc[ncvar][index]
-                nc.close()
+                
             elif self.storage_type == "s3":
         
                 data = nc[ncvar][index]
                 data = self._mask_data(data, nc[ncvar])
-                nc.close()
-                
+
+            data.filename = self.uri        
             return data
+        
         
         elif self._version == 1:
             return self._get_selection(nc[ncvar], index)
@@ -402,12 +404,12 @@ class Active:
         """
         
         offset, size, filter_mask = ds.get_chunk_details(chunk_coords)
-        rfile = ds.fh.name
+
 
         # S3: pass in pre-configured storage options (credentials)
         if self.storage_type == "s3":
-            print("S3 rfile is:", rfile)
-            parsed_url = urllib.parse.urlparse(rfile)
+            print("S3 rfile is:", self.filename)
+            parsed_url = urllib.parse.urlparse(self.filename)
             bucket = parsed_url.netloc
             object = parsed_url.path
         
@@ -419,12 +421,13 @@ class Active:
             print("S3 bucket:", bucket)
             print("S3 file:", object)
             if self.storage_options is None:
+                # for the moment we need to force ds.dtype to be a numpy type
                 tmp, count = reductionist.reduce_chunk(session,
                                                        S3_ACTIVE_STORAGE_URL,
                                                        S3_URL,
                                                        bucket, object, offset,
                                                        size, compressor, filters,
-                                                       missing, ds.dtype,
+                                                       missing, np.dtype(ds.dtype),
                                                        chunks,
                                                        ds.order,
                                                        chunk_selection,
@@ -443,7 +446,7 @@ class Active:
                                                        self._get_endpoint_url(),
                                                        bucket, object, offset,
                                                        size, compressor, filters,
-                                                       missing, ds.dtype,
+                                                       missing, np.dtype(ds.dtype),
                                                        chunks,
                                                        ds.order,
                                                        chunk_selection,
@@ -453,7 +456,7 @@ class Active:
             # see https://github.com/valeriupredoi/PyActiveStorage/issues/33
             # so neither the returned data or the interface should be considered stable
             # although we will version changes.
-            tmp, count = reduce_chunk(rfile, offset, size, compressor, filters,
+            tmp, count = reduce_chunk(self.filename, offset, size, compressor, filters,
                                       missing, ds.dtype,
                                       chunks, ds.order,
                                       chunk_selection, method=self.method)
