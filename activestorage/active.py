@@ -40,7 +40,7 @@ def load_from_s3(uri, storage_options=None):
    
     s3file = fs.open(uri, 'rb')
     ds = pyfive.File(s3file)
-    print(f"Dataset loaded from S3 via h5netcdf: {uri}")
+    print(f"Dataset loaded from S3 via h5netcdf: {uri} with Pyfive File handler")
     return ds
 
 
