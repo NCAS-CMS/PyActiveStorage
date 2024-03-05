@@ -398,7 +398,7 @@ class Active:
 
         # S3: pass in pre-configured storage options (credentials)
         if self.storage_type == "s3":
-            print("S3 rfile is:", self.filename)
+            # print("S3 rfile is:", self.filename)
             parsed_url = urllib.parse.urlparse(self.filename)
             bucket = parsed_url.netloc
             object = parsed_url.path
@@ -408,8 +408,8 @@ class Active:
             if bucket == "":
                 bucket = os.path.dirname(object)
                 object = os.path.basename(object)
-            print("S3 bucket:", bucket)
-            print("S3 file:", object)
+            # print("S3 bucket:", bucket)
+            # print("S3 file:", object)
             if self.storage_options is None:
                 # for the moment we need to force ds.dtype to be a numpy type
                 tmp, count = reductionist.reduce_chunk(session,
