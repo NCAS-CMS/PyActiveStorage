@@ -143,8 +143,7 @@ class Active:
         
                 data = nc[ncvar][index]
                 data = self._mask_data(data, nc[ncvar])
-
-            data.filename = self.uri        
+     
             return data
         
         
