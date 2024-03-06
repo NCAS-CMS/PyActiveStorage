@@ -27,7 +27,7 @@ def simple(filename, var):
 
     #f2 = load_from_s3(uri, storage_options={'client_kwargs':{"endpoint_url":S3_URL}})
       
-def test_compression_and_filters_cmip6_forced_s3_from_local_2(ncfile, var):
+def ex_test(ncfile, var):
     """
     Test use of datasets with compression and filters applied for a real
     CMIP6 dataset (CMIP6-test.nc) - an IPSL file.
@@ -58,7 +58,7 @@ def test_compression_and_filters_cmip6_forced_s3_from_local_2(ncfile, var):
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
 
-    active._version = 1
+    active._version = 2
     active._method = "min"
 
     result = active[0:2,4:6,7:9]
@@ -66,7 +66,9 @@ def test_compression_and_filters_cmip6_forced_s3_from_local_2(ncfile, var):
     assert result == 239.25946044921875
 
 
+
 if __name__=="__main__":
     ncfile, var = 'CMIP6-test.nc','tas'
+    #ncfile, var = 'test_partially_missing_data.nc','data'
     simple(ncfile, var)
-    test_compression_and_filters_cmip6_forced_s3_from_local_2(ncfile, var)
+    ex_test(ncfile, var)
