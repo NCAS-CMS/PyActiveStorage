@@ -28,7 +28,6 @@ def mytest():
     else:
         d = active[4:5, 1:2]
     mean_result = np.mean(d)
-
     active = Active(uri, v, None)
     active._version = 2
     active.method = "mean"

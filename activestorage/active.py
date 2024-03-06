@@ -261,13 +261,12 @@ class Active:
         
         indexer = pyfive.OrthogonalIndexer(*args, array)
         out_shape = indexer.shape
-        out_dtype =ds.dtype
         #stripped_indexer = [(a, b, c) for a,b,c in indexer]
         drop_axes = indexer.drop_axes and keepdims
 
         # we use array._chunks rather than ds.chunks, as the latter is none in the case of
         # unchunked data, and we need to tell the storage the array dimensions in this case.
-        return self._from_storage(ds, indexer, array._chunks, out_shape, out_dtype, compressor, filters, drop_axes)
+        return self._from_storage(ds, indexer, array._chunks, out_shape, dtype, compressor, filters, drop_axes)
 
     def _from_storage(self, ds, indexer, chunks, out_shape, out_dtype, compressor, filters, drop_axes):
         method = self.method
@@ -303,7 +302,9 @@ class Active:
         # Because we do this, we need to read the dataset b-tree now, not as we go, so
         # it is already in cache. If we remove the thread pool from here, we probably
         # wouldn't need to do it before the first one.
-        ds._get_chunk_addresses()
+        
+        if ds.chunks is not None:
+            ds._get_chunk_addresses()
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_threads) as executor:
             futures = []
             # Submit chunks for processing.
