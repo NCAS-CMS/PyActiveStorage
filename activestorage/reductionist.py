@@ -116,6 +116,8 @@ def encode_missing(missing):
     if missing_value:
         if isinstance(missing_value, collections.abc.Sequence):
             return {"missing_values": [encode_dvalue(v) for v in missing_value]}
+        elif isinstance(missing_value, np.ndarray):
+            return {"missing_values": [encode_dvalue(v) for v in missing_value]}
         else:
             return {"missing_value": encode_dvalue(missing_value)}
     if valid_min and valid_max:
