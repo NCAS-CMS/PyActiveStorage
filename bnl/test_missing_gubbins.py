@@ -139,7 +139,3 @@ def test_partially_missing_data(tmp_path):
 
     np.testing.assert_array_equal(masked_numpy_mean, active_mean)
     np.testing.assert_array_equal(no_active_mean, active_mean)
-
-
-mypath = Path(__file__).parent
-test_partially_missing_data(mypath)
