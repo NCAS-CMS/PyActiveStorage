@@ -17,8 +17,8 @@ def check_dataset_filters(temp_file: str, ncvar: str, compression: str, shuffle:
     if USE_S3:
         with load_from_s3(temp_file) as test_data:
             # NOTE: h5netcdf thinks zlib is gzip
-            assert test_data.variables[ncvar].compression == "gzip"
-            assert test_data.variables[ncvar].shuffle == shuffle
+            assert test_data[ncvar].attrs.get('compression') == "gzip"
+            assert test_data[ncvar].attrs.get('shuffle') == shuffle
     else:
         with Dataset(temp_file) as test_data:
             test_data_filters = test_data.variables[ncvar].filters()
