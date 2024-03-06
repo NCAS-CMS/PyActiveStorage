@@ -91,6 +91,10 @@ def test_compression_and_filters_cmip6_data(storage_options, active_storage_url)
 
     check_dataset_filters(test_file, "tas", "zlib", False)
 
+    print("Test file and storage options", test_file, storage_options)
+    if not utils.get_storage_type():
+        storage_options = None
+        active_storage_url = None
     active = Active(test_file, 'tas', utils.get_storage_type(),
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
@@ -117,6 +121,10 @@ def test_compression_and_filters_obs4mips_data(storage_options, active_storage_u
 
     check_dataset_filters(test_file, "rlut", "zlib", False)
 
+    print("Test file and storage options", test_file, storage_options)
+    if not utils.get_storage_type():
+        storage_options = None
+        active_storage_url = None
     active = Active(test_file, 'rlut', utils.get_storage_type(),
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
