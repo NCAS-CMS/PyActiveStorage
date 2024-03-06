@@ -114,17 +114,11 @@ class Active:
         self._method = None
         self._max_threads = max_threads
         self.missing = None
+        self.ds = None
 
-    def __getitem__(self, index):
-        """ 
-        Provides support for a standard get item.
-        #FIXME-BNL: Why is the argument index?
-        """
-        # In version one this is done by explicitly looping over each chunk in the file
-        # and returning the requested slice ourselves. In version 2, we can pass this
-        # through to the default method.
+    def __load_nc_file(self):
+        """ Get the netcdf file and it's b-tree"""
         ncvar = self.ncvar
-
         # in all cases we need an open netcdf file to get at attributes
         # we keep it open because we need it's b-tree
         if self.storage_type is None:
@@ -133,14 +127,21 @@ class Active:
             nc = load_from_s3(self.uri, self.storage_options)
         self.filename = self.uri
 
-        ds = nc[ncvar]
-        # Get missing values
-        
-        _FillValue = ds.attrs.get('_FillValue')
-        missing_value = ds.attrs.get('missing_value')
-        valid_min = ds.attrs.get('valid_min')
-        valid_max = ds.attrs.get('valid_max')
-        valid_range = ds.attrs.get('valid_range')
+        self.ds = nc[ncvar]
+
+    def __get_missing_attributes(self):
+        """" 
+        Load all the missing attributes we need from a netcdf file
+        """
+
+        if self.ds is None:
+            self.__load_nc_file()
+
+        _FillValue = self.ds.attrs.get('_FillValue')
+        missing_value = self.ds.attrs.get('missing_value')
+        valid_min = self.ds.attrs.get('valid_min')
+        valid_max = self.ds.attrs.get('valid_max')
+        valid_range = self.ds.attrs.get('valid_range')
         if valid_max is not None or valid_min is not None:
             if valid_range is not None:
                 raise ValueError(
@@ -151,23 +152,36 @@ class Active:
         elif valid_range is not None:            
             valid_min, valid_max = valid_range
         
-        self.missing = _FillValue, missing_value, valid_min, valid_max,
+        return _FillValue, missing_value, valid_min, valid_max
+
+    def __getitem__(self, index):
+        """ 
+        Provides support for a standard get item.
+        #FIXME-BNL: Why is the argument index?
+        """
+        if self.ds is None:
+            self.__load_nc_file()
+        # In version one this is done by explicitly looping over each chunk in the file
+        # and returning the requested slice ourselves. In version 2, we can pass this
+        # through to the default method.
+        
+        self.missing = self.__get_missing_attributes()
         
         if self.method is None and self._version == 0:
             
             # No active operation
-            data = ds[index]    
+            data = self.ds[index]    
             data = self._mask_data(data)
             return data
 
         elif self._version == 1:
 
             #FIXME: is the difference between version 1 and 2 still honoured?
-            return self._get_selection(ds, index)
+            return self._get_selection(index)
         
         elif self._version  == 2:
 
-            return self._get_selection(ds, index)
+            return self._get_selection(index)
           
         else:
             raise ValueError(f'Version {self._version} not supported')
@@ -238,7 +252,7 @@ class Active:
         raise NotImplementedError
  
 
-    def _get_selection(self, ds, *args):
+    def _get_selection(self, *args):
         """ 
         At this point we have a Dataset object, but all the important information about
         how to use it is in the attribute DataoobjectDataset class. Here we gather 
@@ -248,11 +262,11 @@ class Active:
         # stick this here for later, to discuss with David
         keepdims = True
 
-        name = ds.name
-        dtype = np.dtype(ds.dtype)
+        name = self.ds.name
+        dtype = np.dtype(self.ds.dtype)
         # hopefully fix pyfive to get a dtype directly
-        array = pyfive.ZarrArrayStub(ds.shape, ds.chunks)
-        ds = ds._dataobjects
+        array = pyfive.ZarrArrayStub(self.ds.shape, self.ds.chunks)
+        ds = self.ds._dataobjects
         
         if ds.filter_pipeline is None:
             compressor, filters = None, None
@@ -464,7 +478,8 @@ class Active:
         Missing values obtained at initial getitem, and are used here to 
         mask data, if necessary
         """
-        
+        if self.missing is None:
+            self.missing = self.__get_missing_attributes()
         _FillValue, missing_value, valid_min, valid_max = self.missing
         
         if _FillValue is not None:

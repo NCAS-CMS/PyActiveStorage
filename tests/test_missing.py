@@ -7,7 +7,7 @@ import shutil
 import tempfile
 import unittest
 
-import h5netcdf
+import pyfive
 
 from netCDF4 import Dataset
 
@@ -247,58 +247,33 @@ def test_validrange(tmp_path):
 def test_active_mask_data(tmp_path):
     testfile = str(tmp_path / 'test_partially_missing_data.nc')
 
+    def check_masking(testfile, testname):
+
+        valid_masked_data = load_dataset(testfile)
+        ds = pyfive.File(testfile)
+        dsvar = ds["data"]
+        dsdata = dsvar[:]
+        ds.close()
+        a = Active(testfile, "data")
+        data = a._mask_data(dsdata)
+        np.testing.assert_array_equal(data, valid_masked_data,f'Failed masking for {testname}')
+
     # with valid min
     r = dd.make_validmin_ncdata(testfile, valid_min=500)
-
-    # retrieve the actual numpy-ed result
-    actual_data = load_dataset(testfile)
-
-    # dataset variable
-    ds = h5netcdf.File(testfile, 'r', invalid_netcdf=True)
-    dsvar = ds["data"]
-
-    # test the function
-    data = Active._mask_data(None, actual_data, dsvar)
-    ds.close()
+    check_masking(testfile, "valid min")
 
     # with valid range
     r = dd.make_validrange_ncdata(testfile, valid_range=[750., 850.])
+    check_masking(testfile, "valid range")
 
     # retrieve the actual numpy-ed result
     actual_data = load_dataset(testfile)
-
-    # dataset variable
-    ds = h5netcdf.File(testfile, 'r', invalid_netcdf=True)
-    dsvar = ds["data"]
-
-    # test the function
-    data = Active._mask_data(None, actual_data, dsvar)
-    ds.close()
 
     # with missing
     r = dd.make_missing_ncdata(testfile)
-
-    # retrieve the actual numpy-ed result
-    actual_data = load_dataset(testfile)
-
-    # dataset variable
-    ds = h5netcdf.File(testfile, 'r', invalid_netcdf=True)
-    dsvar = ds["data"]
-
-    # test the function
-    data = Active._mask_data(None, actual_data, dsvar)
-    ds.close()
+    check_masking(testfile,'missing')
 
     # with _FillValue
     r = dd.make_fillvalue_ncdata(testfile)
+    check_masking(testfile,"_FillValue")
 
-    # retrieve the actual numpy-ed result
-    actual_data = load_dataset(testfile)
-
-    # dataset variable
-    ds = h5netcdf.File(testfile, 'r', invalid_netcdf=True)
-    dsvar = ds["data"]
-
-    # test the function
-    data = Active._mask_data(None, actual_data, dsvar)
-    ds.close()
