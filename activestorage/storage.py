@@ -3,7 +3,9 @@ import numpy as np
 
 from numcodecs.compat import ensure_ndarray
 
-def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shape, order, chunk_selection, method=None):
+def reduce_chunk(rfile, 
+                 offset, size, compression, filters, missing, dtype, shape, 
+                 order, chunk_selection, method=None):
     """ We do our own read of chunks and decoding etc 
     
     rfile - the actual file with the data 

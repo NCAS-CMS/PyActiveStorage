@@ -138,17 +138,20 @@ class Active:
             return item if single element list/array
             see https://github.com/h5netcdf/h5netcdf/issues/116
             '''
+            if x is None:
+                return x
             if not np.isscalar(x) and len(x) == 1:
                 return x[0]
+            return x
 
         if self.ds is None:
             self.__load_nc_file()
 
-        _FillValue = self.ds.attrs.get('_FillValue')
+        _FillValue = hfix(self.ds.attrs.get('_FillValue'))
         missing_value = self.ds.attrs.get('missing_value')
-        valid_min = self.ds.attrs.get('valid_min')
-        valid_max = self.ds.attrs.get('valid_max')
-        valid_range = self.ds.attrs.get('valid_range')
+        valid_min = hfix(self.ds.attrs.get('valid_min'))
+        valid_max = hfix(self.ds.attrs.get('valid_max'))
+        valid_range = hfix(self.ds.attrs.get('valid_range'))
         if valid_max is not None or valid_min is not None:
             if valid_range is not None:
                 raise ValueError(
@@ -159,7 +162,7 @@ class Active:
         elif valid_range is not None:            
             valid_min, valid_max = valid_range
         
-        return hfix(_FillValue), hfix(missing_value), hfix(valid_min), hfix(valid_max)
+        return _FillValue, missing_value, valid_min, valid_max
 
     def __getitem__(self, index):
         """ 
