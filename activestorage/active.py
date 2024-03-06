@@ -1,5 +1,4 @@
 import concurrent.futures
-import contextlib
 import os
 import numpy as np
 import pathlib
@@ -40,7 +39,7 @@ def load_from_s3(uri, storage_options=None):
    
     s3file = fs.open(uri, 'rb')
     ds = pyfive.File(s3file)
-    print(f"Dataset loaded from S3 via h5netcdf: {uri} with Pyfive File handler")
+    print(f"Dataset loaded from S3 with s3fs and Pyfive: {uri}")
     return ds
 
 
