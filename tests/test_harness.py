@@ -33,6 +33,8 @@ def test_read0(tmp_path):
     active = Active(test_file, 'data', utils.get_storage_type())
     active._version = 0
     d = active[0:2,4:6,7:9]
+    # TODO Bryan look into this
+    print(d.data, type(d.data))
     nda = np.ndarray.flatten(d.data)
     assert np.array_equal(nda,np.array([740.,840.,750.,850.,741.,841.,751.,851.]))
 
