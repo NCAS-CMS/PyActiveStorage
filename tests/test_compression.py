@@ -16,7 +16,7 @@ def check_dataset_filters(temp_file: str, ncvar: str, compression: str, shuffle:
     # Sanity check that test data is compressed and filtered as expected.
     if USE_S3:
         with load_from_s3(temp_file) as test_data:
-            print("Variable attrs", test_data[ncvar].attrs)
+            print("File attrs", test_data.attrs)
             assert test_data[ncvar].attrs.get('compression') == "gzip"
             assert test_data[ncvar].attrs.get('shuffle') == shuffle
     else:
