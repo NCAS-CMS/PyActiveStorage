@@ -3,9 +3,7 @@
 # interaction and replace with local file operations.
 
 import botocore
-import contextlib
 import os
-import h5netcdf
 import numpy as np
 import pyfive
 import pytest
@@ -85,8 +83,9 @@ def test_s3(mock_reduce, mock_load, tmp_path):
 
     assert result == 999.0
 
-    # S3 loading is not done from Active anymore
-    mock_load.assert_not_called()
+    # S3 loading is done from Active
+    # but we should delegate that outside at some point
+    # mock_load.assert_not_called()
 
     # NOTE: This gets called multiple times with various arguments. Match on
     # the common ones.
@@ -113,9 +112,8 @@ def test_s3(mock_reduce, mock_load, tmp_path):
 def test_reductionist_version_0(mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3 using version 0."""
 
-    @contextlib.contextmanager
     def load_from_s3(uri, storage_options=None):
-        yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
+        return pyfive.File(test_file)
 
     mock_load.side_effect = load_from_s3
 
@@ -148,9 +146,8 @@ def test_s3_load_failure(mock_load):
 def test_reductionist_connection(mock_reduce, mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3."""
 
-    @contextlib.contextmanager
     def load_from_s3(uri, storage_options=None):
-        yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
+        return pyfive.File(test_file)
 
     mock_load.side_effect = load_from_s3
     mock_reduce.side_effect = requests.exceptions.ConnectTimeout()
@@ -172,9 +169,8 @@ def test_reductionist_connection(mock_reduce, mock_load, tmp_path):
 def test_reductionist_bad_request(mock_reduce, mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3."""
 
-    @contextlib.contextmanager
     def load_from_s3(uri, storage_options=None):
-        yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
+        return pyfive.File(test_file)
 
     mock_load.side_effect = load_from_s3
     mock_reduce.side_effect = activestorage.reductionist.ReductionistError(400, "Bad request")
