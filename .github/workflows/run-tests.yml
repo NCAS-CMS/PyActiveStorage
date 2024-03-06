@@ -66,5 +66,12 @@ jobs:
           use-mamba: true
       - run: conda --version
       - run: python -V
+      - name: Install development version of bnlawrence/Pyfive:issue6
+        run: |
+          cd ..
+          git clone https://github.com/bnlawrence/pyfive.git
+          cd pyfive
+          git checkout issue6
+          pip install -e .
       - run: pip install -e .
       - run: pytest
