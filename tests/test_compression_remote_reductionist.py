@@ -55,6 +55,10 @@ def test_compression_and_filters_cmip6_data(storage_options, active_storage_url)
         test_file_uri = os.path.join(S3_BUCKET, ofile)
     else:
         test_file_uri = test_file
+    print("Test file and storage options", test_file, storage_options)
+    if not utils.get_storage_type():
+        storage_options = None
+        active_storage_url = None
     active = Active(test_file_uri, 'tas', utils.get_storage_type(),
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
