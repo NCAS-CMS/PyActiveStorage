@@ -133,6 +133,14 @@ class Active:
         Load all the missing attributes we need from a netcdf file
         """
 
+        def hfix(x):
+            '''
+            return item if single element list/array
+            see https://github.com/h5netcdf/h5netcdf/issues/116
+            '''
+            if not np.isscalar(x) and len(x) == 1:
+                return x[0]
+
         if self.ds is None:
             self.__load_nc_file()
 
@@ -151,7 +159,7 @@ class Active:
         elif valid_range is not None:            
             valid_min, valid_max = valid_range
         
-        return _FillValue, missing_value, valid_min, valid_max
+        return hfix(_FillValue), hfix(missing_value), hfix(valid_min), hfix(valid_max)
 
     def __getitem__(self, index):
         """ 
