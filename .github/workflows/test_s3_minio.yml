@@ -58,12 +58,12 @@ jobs:
           miniforge-version: "latest"
           miniforge-variant: Mambaforge
           use-mamba: true
-      - name: Install development version of bnlawrence/Pyfive:issue6
+      - name: Install development version of bnlawrence/Pyfive:issue60
         run: |
           cd ..
           git clone https://github.com/bnlawrence/pyfive.git
           cd pyfive
-          git checkout issue6
+          git checkout issue60
           pip install -e .
       - name: Install PyActiveStorage
         run: |
