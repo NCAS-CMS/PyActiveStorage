@@ -208,7 +208,9 @@ def test_compression_and_filters_cmip6_forced_s3_from_local_bigger_file_v1():
     dims: 30 (time) 39 (plev) 325 (lat) 432 (lon)
 
     Entire mother file info:
-    [2024-01-24 10:07:02 GMT] 2.8GiB STANDARD da193a_25_day__198807-198807.nc
+    mc ls bryan/bnl/da193a_25_day__198808-198808.nc
+    [2024-01-24 10:07:03 GMT] 2.8GiB STANDARD da193a_25_day__198808-198808.nc
+    
 
     NOTE: we used this test as timing reference for performance testing.
     """
@@ -218,7 +220,7 @@ def test_compression_and_filters_cmip6_forced_s3_from_local_bigger_file_v1():
         'client_kwargs': {'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"}
     }
     active_storage_url = "https://192.171.169.248:8080"
-    bigger_file = "da193a_25_day__198807-198807.nc"
+    bigger_file = "da193a_25_day__198808-198808.nc"
 
     test_file_uri = os.path.join(
         S3_BUCKET,
@@ -247,7 +249,9 @@ def test_compression_and_filters_cmip6_forced_s3_from_local_bigger_file_v0():
     dims: 30 (time) 39 (plev) 325 (lat) 432 (lon)
 
     Entire mother file info:
-    [2024-01-24 10:07:02 GMT] 2.8GiB STANDARD da193a_25_day__198807-198807.nc
+    mc ls bryan/bnl/da193a_25_day__198808-198808.nc
+    [2024-01-24 10:07:03 GMT] 2.8GiB STANDARD da193a_25_day__198808-198808.nc
+    
     """
     storage_options = {
         'key': "f2d55c6dcfc7618b2c34e00b58df3cef",
@@ -255,7 +259,7 @@ def test_compression_and_filters_cmip6_forced_s3_from_local_bigger_file_v0():
         'client_kwargs': {'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"}
     }
     active_storage_url = "https://192.171.169.248:8080"
-    bigger_file = "da193a_25_day__198807-198807.nc"
+    bigger_file = "da193a_25_day__198808-198808.nc"
 
     test_file_uri = os.path.join(
         S3_BUCKET,
