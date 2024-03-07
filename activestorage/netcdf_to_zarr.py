@@ -20,8 +20,9 @@ def _correct_compressor_and_filename(content, varname, bryan_bucket=False):
     and for special buckets like Bryan's bnl the correct file is bnl/file.nc
     not s3://bnl/file.nc
     """
-    tc1 = time.time()
     new_content = content.copy()
+
+    # prelimniary assembly
     try:
         new_zarray =  ujson.loads(new_content['refs'][f"{varname}/.zarray"])
         group = False
@@ -30,16 +31,16 @@ def _correct_compressor_and_filename(content, varname, bryan_bucket=False):
         group = True
 
     # re-add the correct compressor if it's in the "filters" list
-    if new_zarray["compressor"] is None:
+    if new_zarray["compressor"] is None and new_zarray["filters"]:
         for zfilter in new_zarray["filters"]:
             if zfilter["id"] == "zlib":
                 new_zarray["compressor"] = zfilter
                 new_zarray["filters"].remove(zfilter)
 
-    if not group:
-        new_content['refs'][f"{varname}/.zarray"] = ujson.dumps(new_zarray)
-    else:
-        new_content['refs'][f"{varname} /{varname}/.zarray"] = ujson.dumps(new_zarray)
+        if not group:
+            new_content['refs'][f"{varname}/.zarray"] = ujson.dumps(new_zarray)
+        else:
+            new_content['refs'][f"{varname} /{varname}/.zarray"] = ujson.dumps(new_zarray)
 
     # FIXME TODO this is an absolute nightmate: the type of bucket on UOR ACES
     # this is a HACK and it works only with the crazy Bryan S3 bucket "bnl/file.nc"
@@ -51,8 +52,6 @@ def _correct_compressor_and_filename(content, varname, bryan_bucket=False):
             if varname in key and isinstance(new_content['refs'][key], list) and "s3://" in new_content['refs'][key][0]:
                 new_content['refs'][key][0] = new_content['refs'][key][0].replace("s3://", "")
 
-    tc2 = time.time()
-    print("Time to manipulate Kerchunk Zarr output", tc2 - tc1)
     return new_content
 
 
