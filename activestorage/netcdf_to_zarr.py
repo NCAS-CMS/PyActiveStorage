@@ -87,19 +87,20 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
         fs = s3fs.S3FileSystem(**storage_options)
         fs2 = fsspec.filesystem('')
         tk1 = time.time()
-        with fs.open(file_url, 'rb') as s3file:
+        with fs.open(file_url, 'rb') as s3file_o:
             # restrict only to the Group/Dataset that the varname belongs to
             # this saves 2-3x time in Kerchunk
             # TODO make this available to the other routines that use Kerchunk
-            s3file = h5py.File(s3file, mode="w")
-            if isinstance(s3file[varname], h5py.Dataset):
-                print("Looking only at a single Dataset", s3file[varname])
-                s3file.create_group(varname + " ")
-                s3file[varname + " "][varname] = s3file[varname]
-                s3file = s3file[varname + " "]
-            elif isinstance(s3file[varname], h5py.Group):
-                print("Looking only at a single Group", s3file[varname])
-                s3file = s3file[varname]
+            s3file_r = h5py.File(s3file_o, mode="r")
+            s3file_w = h5py.File(s3file_o, mode="w")
+            if isinstance(s3file_r[varname], h5py.Dataset):
+                print("Looking only at a single Dataset", s3file_r[varname])
+                s3file_w.create_group(varname + " ")
+                s3file_w[varname + " "][varname] = s3file_w[varname]
+                s3file = s3file_w[varname + " "]
+            elif isinstance(s3file_r[varname], h5py.Group):
+                print("Looking only at a single Group", s3file_r[varname])
+                s3file = s3file_r[varname]
             # Kerchunk wants the correct file name in S3 format
             if not file_url.startswith("s3://"):
                 file_url = "s3://" + file_url
