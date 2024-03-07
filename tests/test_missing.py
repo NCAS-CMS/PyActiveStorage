@@ -196,6 +196,18 @@ def test_validmax(tmp_path):
 
     # write file to storage
     testfile = utils.write_to_storage(testfile)
+    x = pyfive.File(testfile)
+    y = Dataset(testfile)
+    print('bnl',y['data'].getncattr('valid_max'))
+    print('bnl',x['data'].attrs.get('valid_max'))
+    import h5py
+    z = h5py.File(testfile)
+    print('bnl',z['data'].attrs.get('valid_max'))
+    import h5netcdf
+    a = h5netcdf.File(testfile)
+    print('bnl',a['data'].attrs.get('valid_max'))
+
+
 
     # numpy masked to check for correct Active behaviour
     no_active_mean = active_zero(testfile)

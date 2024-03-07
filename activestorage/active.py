@@ -88,7 +88,7 @@ class Active:
         # Assume NetCDF4 for now
         self.uri = uri
         if self.uri is None:
-            raise ValueError(f"Must use a valid file for uri. Got {self.uri}")
+            raise ValueError(f"Must use a valid file for uri. Got {uri}")
 
         # still allow for a passable storage_type
         # for special cases eg "special-POSIX" ie DDN
