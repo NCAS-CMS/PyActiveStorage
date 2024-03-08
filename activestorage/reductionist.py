@@ -139,8 +139,8 @@ def build_request_data(source: str, bucket: str, object: str, offset: int,
         'object': object,
         'dtype': dtype.name,
         'byte_order': encode_byte_order(dtype),
-        'offset': offset,
-        'size': size,
+        'offset': int(offset),
+        'size': int(size),
         'order': order,
     }
     if shape:

@@ -11,7 +11,7 @@ from activestorage.active import Active
 from activestorage.config import *
 from pyfive.core import InvalidHDF5File as InvalidHDF5Err
 
-import utils
+from . import utils
 
 
 @pytest.fixture
