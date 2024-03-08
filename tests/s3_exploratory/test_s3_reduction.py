@@ -47,42 +47,6 @@ def upload_to_s3(server, username, password, bucket, object, rfile):
     return os.path.join(bucket, object)
 
 
-def test_Active():
-    """
-    Shows what we expect an active example test to achieve and provides "the right answer"
-    Done twice: POSIX active and Reductionist; we compare results.
-
-    identical to tests/test_harness.py::testActive()
-
-    """
-    # make dummy data
-    s3_testfile, local_testfile = make_tempfile()
-
-    # put s3 dummy data onto S3. then rm from local
-    object = os.path.basename(s3_testfile)
-    bucket_file = upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY,
-                               S3_BUCKET, object, s3_testfile)
-    os.remove(s3_testfile)
-    s3_testfile_uri = os.path.join("s3://", bucket_file)
-    print("S3 file uri", s3_testfile_uri)
-
-    # run Active on s3 file
-    active = Active(s3_testfile_uri, "data", "s3")
-    active.method = "mean"
-    result1 = active[0:2, 4:6, 7:9]
-    print(result1)
-
-    # run Active on local file
-    active = Active(local_testfile, "data")
-    active._version = 2
-    active.method = "mean"
-    active.components = True
-    result2 = active[0:2, 4:6, 7:9]
-    print(result2)
-
-    assert_array_equal(result1, result2["sum"]/result2["n"])
-
-
 @pytest.fixture
 def test_data_path():
     """Path to test data for CMOR fixes."""
