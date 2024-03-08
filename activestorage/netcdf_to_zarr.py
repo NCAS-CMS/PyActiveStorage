@@ -66,12 +66,27 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
                                default_cache_type="first"  # best for HDF5
         )
         fs2 = fsspec.filesystem('')
-        with fs.open(file_url, 'rb') as s3file:
+        with fs.open(file_url, 'rb') as s3file_o_1:
+            # see below for reasoning behind this
+            s3file_r_1 = h5py.File(s3file_o_1, mode="r")
+            s3file_w_1 = h5py.File(s3file_o_1, mode="w")
+            if isinstance(s3file_r_1[varname], h5py.Dataset):
+                print("Looking only at a single Dataset", s3file_r_1[varname])
+                s3file_w_1.create_group(varname + " ")
+                s3file_w_1[varname + " "][varname] = s3file_w_1[varname]
+                s3file = s3file_w_1[varname + " "]
+            elif isinstance(s3file_r_1[varname], h5py.Group):
+                print("Looking only at a single Group", s3file_r_1[varname])
+                s3file = s3file_r_1[varname]
+
             h5chunks = SingleHdf5ToZarr(s3file, file_url,
                                         inline_threshold=0)
+
+            # TODO absolute crap, this needs to go
             bryan_bucket = False
             if "bnl" in file_url:
                 bryan_bucket = True
+
             with fs2.open(outf, 'wb') as f:
                 content = h5chunks.translate()
                 content = _correct_compressor_and_filename(content,
@@ -89,8 +104,21 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
         tk1 = time.time()
         with fs.open(file_url, 'rb') as s3file_o:
             # restrict only to the Group/Dataset that the varname belongs to
-            # this saves 2-3x time in Kerchunk
-            # TODO make this available to the other routines that use Kerchunk
+            # this saves 4-5x time in Kerchunk
+            # Restrict the s3file HDF5 file only to the Dataset or Group of interest.
+            # This bit extracts the Dataset or Group of interest
+            # (depending what type of object the varname is in). It is the best we can do with
+            # non-breaking h5py API, This is a touchy bit of said API, and depending on the
+            # way things are coded, can easily through SegFaults. Explanations:
+            # - an s3fs File object with HDF5 structure is passed in
+            # - h5py allows structural edits (creating/adding a Group)
+            # only if opening said file in WRITE mode
+            # - clear distinction between said File open in W mode as opposed to
+            # said file open in R(B) mode
+            # - the reason we open it in R mode is that we can only truncate it (select on key) if in R mode
+            # and then migrate extracted data to the file open in W mode
+            # - operations like copy or selection/truncating will always throw SegFaults
+            # if not operating with two open Files: W and R
             s3file_r = h5py.File(s3file_o, mode="r")
             s3file_w = h5py.File(s3file_o, mode="w")
             if isinstance(s3file_r[varname], h5py.Dataset):
@@ -101,12 +129,16 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
             elif isinstance(s3file_r[varname], h5py.Group):
                 print("Looking only at a single Group", s3file_r[varname])
                 s3file = s3file_r[varname]
+
             # Kerchunk wants the correct file name in S3 format
             if not file_url.startswith("s3://"):
                 file_url = "s3://" + file_url
+
+            # TODO absolute crap: this needs to go
             bryan_bucket = False
             if "bnl" in file_url:
                 bryan_bucket = True
+
             h5chunks = SingleHdf5ToZarr(s3file, file_url,
                                         inline_threshold=0,
                                         storage_options=storage_options)
