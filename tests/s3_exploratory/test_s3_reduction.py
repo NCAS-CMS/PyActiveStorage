@@ -104,6 +104,9 @@ def test_with_valid_netCDF_file(test_data_path):
     active._version = 2
     active.method = "mean"
     active.components = True
+
+    del active
+
     result2 = active[4:5, 1:2]
     print(result2)
 
