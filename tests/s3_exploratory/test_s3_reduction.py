@@ -89,6 +89,20 @@ def test_data_path():
     return Path(__file__).resolve().parent / 'test_data'
 
 
+def _run_active(ncfile, s3=False):
+    if not s3:
+        active = Active(ncfile, "TREFHT")
+    else:
+        active = Active(ncfile, "TREFHT", "s3")
+
+    active._version = 2
+    active.method = "mean"
+    active.components = True
+
+    result = active[4:5, 1:2]
+    return result
+
+
 def test_with_valid_netCDF_file(test_data_path):
     """
     Test as above but with an actual netCDF4 file.
@@ -100,14 +114,7 @@ def test_with_valid_netCDF_file(test_data_path):
     ncfile = str(test_data_path / "cesm2_native.nc")
 
     # run POSIX (local) Active
-    active = Active(ncfile, "TREFHT")
-    active._version = 2
-    active.method = "mean"
-    active.components = True
-
-    del active
-
-    result2 = active[4:5, 1:2]
+    result2 = _run_active(ncfile)
     print(result2)
 
     # put data onto S3. then rm from local
@@ -118,11 +125,7 @@ def test_with_valid_netCDF_file(test_data_path):
     print("S3 file uri", s3_testfile_uri)
 
     # run Active on s3 file
-    active2 = Active(s3_testfile_uri, "TREFHT", "s3")
-    active2._version = 2
-    active2.method = "mean"
-    active2.components = True
-    result1 = active2[4:5, 1:2]
+    result1 = _run_active(s3_testfile_uri, s3=True)
     print(result1)
 
     # expect {'sum': array([[[2368.3232]]], dtype=float32), 'n': array([[[8]]])}
