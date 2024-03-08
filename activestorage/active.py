@@ -42,6 +42,40 @@ def load_from_s3(uri, storage_options=None):
     print(f"Dataset loaded from S3 with s3fs and Pyfive: {uri}")
     return ds
 
+def get_missing_attributes(ds):
+        """" 
+        Load all the missing attributes we need from a netcdf file
+        """
+
+        def hfix(x):
+            '''
+            return item if single element list/array
+            see https://github.com/h5netcdf/h5netcdf/issues/116
+            '''
+            if x is None:
+                return x
+            if not np.isscalar(x) and len(x) == 1:
+                return x[0]
+            return x
+
+        _FillValue = hfix(ds.attrs.get('_FillValue'))
+        missing_value = ds.attrs.get('missing_value')
+        valid_min = hfix(ds.attrs.get('valid_min'))
+        valid_max = hfix(ds.attrs.get('valid_max'))
+        valid_range = hfix(ds.attrs.get('valid_range'))
+        if valid_max is not None or valid_min is not None:
+            if valid_range is not None:
+                raise ValueError(
+                    "Invalid combination in the file of valid_min, "
+                    "valid_max, valid_range: "
+                    f"{valid_min}, {valid_max}, {valid_range}"
+                )
+        elif valid_range is not None:            
+            valid_min, valid_max = valid_range
+        
+        return _FillValue, missing_value, valid_min, valid_max
+
+
 
 class Active:
     """ 
@@ -129,40 +163,9 @@ class Active:
         self.ds = nc[ncvar]
 
     def __get_missing_attributes(self):
-        """" 
-        Load all the missing attributes we need from a netcdf file
-        """
-
-        def hfix(x):
-            '''
-            return item if single element list/array
-            see https://github.com/h5netcdf/h5netcdf/issues/116
-            '''
-            if x is None:
-                return x
-            if not np.isscalar(x) and len(x) == 1:
-                return x[0]
-            return x
-
         if self.ds is None:
             self.__load_nc_file()
-
-        _FillValue = hfix(self.ds.attrs.get('_FillValue'))
-        missing_value = self.ds.attrs.get('missing_value')
-        valid_min = hfix(self.ds.attrs.get('valid_min'))
-        valid_max = hfix(self.ds.attrs.get('valid_max'))
-        valid_range = hfix(self.ds.attrs.get('valid_range'))
-        if valid_max is not None or valid_min is not None:
-            if valid_range is not None:
-                raise ValueError(
-                    "Invalid combination in the file of valid_min, "
-                    "valid_max, valid_range: "
-                    f"{valid_min}, {valid_max}, {valid_range}"
-                )
-        elif valid_range is not None:            
-            valid_min, valid_max = valid_range
-        
-        return _FillValue, missing_value, valid_min, valid_max
+        return get_missing_attributes(self.ds)
 
     def __getitem__(self, index):
         """ 
