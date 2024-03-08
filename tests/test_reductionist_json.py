@@ -4,13 +4,18 @@ from activestorage.hdf2numcodec import decode_filters
 import numpy as np
 
 from activestorage import reductionist
+from activestorage.active import load_from_s3
+from activestorage.config import *
 from test_bigger_data import save_cl_file_with_a
 
 import json
 
 class MockActive:
-    def __init__(self, f,v):
-        self.f = pyfive.File(f)
+    def __init__(self, f, v):
+        if USE_S3:
+            self.f = load_from_s3(f)
+        else:
+            self.f = pyfive.File(f)
         ds = self.f[v]
         self.dtype = np.dtype(ds.dtype)
         self.array = pyfive.ZarrArrayStub(ds.shape, ds.chunks or ds.shape)
