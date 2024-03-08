@@ -1,9 +1,11 @@
-from .test_bigger_data import save_cl_file_with_a
 import pyfive
 from activestorage.active import Active, get_missing_attributes
 from activestorage.hdf2numcodec import decode_filters
 import numpy as np
+
 from activestorage import reductionist
+from test_bigger_data import save_cl_file_with_a
+
 import json
 
 class MockActive:
