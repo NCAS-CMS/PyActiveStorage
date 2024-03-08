@@ -79,8 +79,12 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
                 print("Looking only at a single Group", s3file_r_1[varname])
                 s3file = s3file_r_1[varname]
 
+            storage_options = {"key": S3_ACCESS_KEY,
+                               "secret": S3_SECRET_KEY,
+                               "client_kwargs": {'endpoint_url': S3_URL}}
             h5chunks = SingleHdf5ToZarr(s3file, file_url,
-                                        inline_threshold=0)
+                                        inline_threshold=0,
+                                        storage_options=storage_options)
 
             # TODO absolute crap, this needs to go
             bryan_bucket = False
@@ -119,6 +123,8 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
             # and then migrate extracted data to the file open in W mode
             # - operations like copy or selection/truncating will always throw SegFaults
             # if not operating with two open Files: W and R
+            # - this block can not be extracted into a function because we need to dealloc each instance of
+            # s3file_o, s3file_r and s3file_w (hence the naming is different in the step above)
             s3file_r = h5py.File(s3file_o, mode="r")
             s3file_w = h5py.File(s3file_o, mode="w")
             if isinstance(s3file_r[varname], h5py.Dataset):
