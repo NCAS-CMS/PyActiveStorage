@@ -47,24 +47,46 @@ def upload_to_s3(server, username, password, bucket, object, rfile):
     return os.path.join(bucket, object)
 
 
+def test_Active():
+    """
+    Shows what we expect an active example test to achieve and provides "the right answer"
+    Done twice: POSIX active and Reductionist; we compare results.
+
+    identical to tests/test_harness.py::testActive()
+
+    """
+    # make dummy data
+    s3_testfile, local_testfile = make_tempfile()
+
+    # put s3 dummy data onto S3. then rm from local
+    object = os.path.basename(s3_testfile)
+    bucket_file = upload_to_s3(S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY,
+                               S3_BUCKET, object, s3_testfile)
+    os.remove(s3_testfile)
+    s3_testfile_uri = os.path.join("s3://", bucket_file)
+    print("S3 file uri", s3_testfile_uri)
+
+    # run Active on s3 file
+    active = Active(s3_testfile_uri, "data", "s3")
+    active.method = "mean"
+    result1 = active[0:2, 4:6, 7:9]
+    print(result1)
+
+    # run Active on local file
+    active = Active(local_testfile, "data")
+    active._version = 2
+    active.method = "mean"
+    active.components = True
+    result2 = active[0:2, 4:6, 7:9]
+    print(result2)
+
+    assert_array_equal(result1, result2["sum"]/result2["n"])
+
+
 @pytest.fixture
 def test_data_path():
     """Path to test data for CMOR fixes."""
     return Path(__file__).resolve().parent / 'test_data'
-
-
-def _run_active(ncfile, s3=False):
-    if not s3:
-        active = Active(ncfile, "TREFHT")
-    else:
-        active = Active(ncfile, "TREFHT", "s3")
-
-    active._version = 2
-    active.method = "mean"
-    active.components = True
-
-    result = active[4:5, 1:2]
-    return result
 
 
 def test_with_valid_netCDF_file(test_data_path):
@@ -78,8 +100,12 @@ def test_with_valid_netCDF_file(test_data_path):
     ncfile = str(test_data_path / "cesm2_native.nc")
 
     # run POSIX (local) Active
-    #result2 = _run_active(ncfile)
-    #print(result2)
+    active = Active(ncfile, "TREFHT")
+    active._version = 2
+    active.method = "mean"
+    active.components = True
+    result2 = active[4:5, 1:2]
+    print(result2)
 
     # put data onto S3. then rm from local
     object = os.path.basename(ncfile)
@@ -89,7 +115,11 @@ def test_with_valid_netCDF_file(test_data_path):
     print("S3 file uri", s3_testfile_uri)
 
     # run Active on s3 file
-    result1 = _run_active(s3_testfile_uri, s3=True)
+    active = Active(s3_testfile_uri, "TREFHT", "s3")
+    active._version = 2
+    active.method = "mean"
+    active.components = True
+    result1 = active[4:5, 1:2]
     print(result1)
 
     # expect {'sum': array([[[2368.3232]]], dtype=float32), 'n': array([[[8]]])}
@@ -97,8 +127,8 @@ def test_with_valid_netCDF_file(test_data_path):
     assert_allclose(result1["sum"], np.array([[[2368.3232]]], dtype="float32"), rtol=1e-6)
     assert_array_equal(result1["n"], np.array([[[8]]]))
 
-    #assert_allclose(result1["sum"], result2["sum"], rtol=1e-6)
-    #assert_array_equal(result1["n"], result2["n"])
+    assert_allclose(result1["sum"], result2["sum"], rtol=1e-6)
+    assert_array_equal(result1["n"], result2["n"])
 
 
 def test_reductionist_reduce_chunk():
