@@ -55,6 +55,19 @@ def _correct_compressor_and_filename(content, varname, bryan_bucket=False):
     return new_content
 
 
+def _return_zcomponents(content, varname):
+    """Return zarr array and attributes."""
+    # account for both Group and Dataset
+    try:
+        zarray =  ujson.loads(content['refs'][f"{varname}/.zarray"])
+        zattrs =  ujson.loads(content['refs'][f"{varname}/.zattrs"])
+    except KeyError:
+        zarray =  ujson.loads(content['refs'][f"{varname} /{varname}/.zarray"])
+        zattrs =  ujson.loads(content['refs'][f"{varname} /{varname}/.zattrs"])
+
+    return zarray, zattrs
+
+
 def gen_json(file_url, varname, outf, storage_type, storage_options):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
     # S3 configuration presets
@@ -97,6 +110,8 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
                                                            varname,
                                                            bryan_bucket=bryan_bucket)
                 f.write(ujson.dumps(content).encode())
+        zarray, zattrs = _return_zcomponents(content, varname)
+        return outf, zarray, zattrs    
 
     # S3 passed-in configuration
     elif storage_type == "s3" and storage_options is not None:
@@ -157,6 +172,10 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
                 f.write(ujson.dumps(content).encode())
             tk3 = time.time()
             print("Time to Kerchunk and write JSON file", tk3 - tk2)
+
+        zarray, zattrs = _return_zcomponents(content, varname)
+        return outf, zarray, zattrs
+
     # not S3
     else:
         fs = fsspec.filesystem('')
@@ -179,15 +198,8 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
                 content = h5chunks.translate()
                 f.write(ujson.dumps(content).encode())
 
-    # account for both Group and Dataset
-    try:
-        zarray =  ujson.loads(content['refs'][f"{varname}/.zarray"])
-        zattrs =  ujson.loads(content['refs'][f"{varname}/.zattrs"])
-    except KeyError:
-        zarray =  ujson.loads(content['refs'][f"{varname} /{varname}/.zarray"])
-        zattrs =  ujson.loads(content['refs'][f"{varname} /{varname}/.zattrs"])
-
-    return outf, zarray, zattrs
+        zarray, zattrs = _return_zcomponents(content, varname)
+        return outf, zarray, zattrs
 
 
 def open_zarr_group(out_json, varname):
