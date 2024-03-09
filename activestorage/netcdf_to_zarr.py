@@ -79,25 +79,26 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
                                default_cache_type="first"  # best for HDF5
         )
         fs2 = fsspec.filesystem('')
-        with fs.open(file_url, 'rb') as s3file_o_1:
-            # see below for reasoning behind this
-            s3file_r_1 = h5py.File(s3file_o_1, mode="r")
-            s3file_w_1 = h5py.File(s3file_o_1, mode="w")
-            if isinstance(s3file_r_1[varname], h5py.Dataset):
-                print("Looking only at a single Dataset", s3file_r_1[varname])
-                s3file_w_1.create_group(varname + " ")
-                s3file_w_1[varname + " "][varname] = s3file_w_1[varname]
-                s3file = s3file_w_1[varname + " "]
-            elif isinstance(s3file_r_1[varname], h5py.Group):
-                print("Looking only at a single Group", s3file_r_1[varname])
-                s3file = s3file_r_1[varname]
-
-            storage_options = {"key": S3_ACCESS_KEY,
-                               "secret": S3_SECRET_KEY,
-                               "client_kwargs": {'endpoint_url': S3_URL}}
+        with fs.open(file_url, 'rb') as s3file:
+            # with fs.open(file_url, 'rb') as s3file_o_1:
+            # this block, together with the block down, is causing
+            # SegFaults; h5py backend very brittle: see below for reasoning behind this
+            # s3file_r_1 = h5py.File(s3file_o_1, mode="r")
+            # s3file_w_1 = h5py.File(s3file_o_1, mode="w")
+            # if isinstance(s3file_r_1[varname], h5py.Dataset):
+            #     print("Looking only at a single Dataset", s3file_r_1[varname])
+            #     s3file_w_1.create_group(varname + " ")
+            #     s3file_w_1[varname + " "][varname] = s3file_w_1[varname]
+            #     s3file = s3file_w_1[varname + " "]
+            # elif isinstance(s3file_r_1[varname], h5py.Group):
+            #     print("Looking only at a single Group", s3file_r_1[varname])
+            #     s3file = s3file_r_1[varname]
+            # storage_options = {"key": S3_ACCESS_KEY,
+            #                    "secret": S3_SECRET_KEY,
+            #                    "client_kwargs": {'endpoint_url': S3_URL}}
             h5chunks = SingleHdf5ToZarr(s3file, file_url,
-                                        inline_threshold=0,
-                                        storage_options=storage_options)
+                                        inline_threshold=0)
+                                        # storage_options=storage_options)
 
             # TODO absolute crap, this needs to go
             bryan_bucket = False
