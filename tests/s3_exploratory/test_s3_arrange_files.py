@@ -7,9 +7,8 @@ import s3fs
 import tempfile
 
 from activestorage.dummy_data import make_vanilla_ncdata
-import activestorage.storage as st
+from kerchunk.hdf import SingleHdf5ToZarr
 
-from numpy.testing import assert_allclose, assert_array_equal
 from pathlib import Path
 
 from config_minio import *
