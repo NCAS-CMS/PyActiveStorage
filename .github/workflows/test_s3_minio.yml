@@ -64,12 +64,14 @@ jobs:
           which python
           pip install -e .
       - name: Run tests
+        # run tests on one process to catch eventual SegFaults
+        # no SegFaults happen with n procs > 1
         run: |
-          pytest -n 2
-      #- name: Run S3 exploratory tests
-      #  run: |
-      #    pytest tests/s3_exploratory/test_s3_reduction.py --html=test-reports/s3-exploratory-report.html
-      #  if: always()
+          pytest
+      - name: Run S3 exploratory tests
+        run: |
+          pytest tests/s3_exploratory/test_s3_reduction.py --html=test-reports/s3-exploratory-report.html
+        if: always()
       - name: Install pytest-monitor
         run: pip install pytest-monitor
       - name: Run S3 performance tests
