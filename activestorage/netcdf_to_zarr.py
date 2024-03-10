@@ -80,9 +80,10 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
         )
         fs2 = fsspec.filesystem('')
         with fs.open(file_url, 'rb') as s3file:
-            # with fs.open(file_url, 'rb') as s3file_o_1:
-            # this block, together with the block down, is causing
-            # SegFaults; h5py backend very brittle: see below for reasoning behind this
+            # this block allows for Dataset/Group selection but is causing
+            # SegFaults in S3/Minio tests; h5py backend very brittle: see below for reasoning behind this
+            # since this case is only for the S3/Minio tests, it's OK to not have it, test files are small
+            # with fs.open(file_url, 'rb') as s3file_o_1:  # -> best to have unique name
             # s3file_r_1 = h5py.File(s3file_o_1, mode="r")
             # s3file_w_1 = h5py.File(s3file_o_1, mode="w")
             # if isinstance(s3file_r_1[varname], h5py.Dataset):
