@@ -7,11 +7,15 @@ import shutil
 import tempfile
 import unittest
 
+# TODO remove in stable
+import h5py
+import h5netcdf
+
 import pyfive
 
 from netCDF4 import Dataset
 
-from activestorage.active import Active
+from activestorage.active import Active, load_from_s3
 from activestorage.config import *
 from activestorage import dummy_data as dd
 
@@ -194,17 +198,24 @@ def test_validmax(tmp_path):
     assert unmasked_numpy_mean != masked_numpy_mean
     print("Numpy masked result (mean)", masked_numpy_mean)
 
+    # load files via external protocols
+    y = Dataset(testfile)
+    z = h5py.File(testfile)
+    a = h5netcdf.File(testfile)
+
     # write file to storage
     testfile = utils.write_to_storage(testfile)
-    x = pyfive.File(testfile)
-    y = Dataset(testfile)
+
+    # load file via our protocols
+    if USE_S3:
+        x = load_from_s3(testfile)
+    else:
+        x = pyfive.File(testfile)
+
+    # print for Bryan
     print('bnl',y['data'].getncattr('valid_max'))
     print('bnl',x['data'].attrs.get('valid_max'))
-    import h5py
-    z = h5py.File(testfile)
     print('bnl',z['data'].attrs.get('valid_max'))
-    import h5netcdf
-    a = h5netcdf.File(testfile)
     print('bnl',a['data'].attrs.get('valid_max'))
 
 
