@@ -4,6 +4,7 @@ import numpy as np
 import pathlib
 import urllib
 import pyfive
+import time
 
 import s3fs
 
@@ -148,6 +149,10 @@ class Active:
         self._max_threads = max_threads
         self.missing = None
         self.ds = None
+        self.metrics =  False
+
+    def toggle_metrics(self):
+        self.metrics = not self.metrics
 
     def __load_nc_file(self):
         """ Get the netcdf file and it's b-tree"""
@@ -331,7 +336,13 @@ class Active:
         # wouldn't need to do it before the first one.
         
         if ds.chunks is not None:
+            t1 = time.time()
             ds._get_chunk_addresses()
+            t2 = time.time()
+            if self.metrics:
+                chunk_count = 0
+                print(f'Index time: {t2-t1:.1}s ({len(ds._zchunk_index)} chunk entries)')
+        t1 = time.time()
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_threads) as executor:
             futures = []
             # Submit chunks for processing.
@@ -348,6 +359,8 @@ class Active:
                 except Exception as exc:
                     raise
                 else:
+                    if self.metrics:
+                        chunk_count +=1
                     if method is not None:
                         result, count = result
                         out.append(result)
@@ -393,6 +406,9 @@ class Active:
                     # size.
                     out = out / np.sum(counts).reshape(shape1)
 
+        if self.metrics:
+            t2 = time.time()
+            print(f'Reduction over {chunk_count} chunks took {t2-t1:.1}s')
         return out
 
     def _get_endpoint_url(self):
