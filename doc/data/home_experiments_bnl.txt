@@ -138,8 +138,10 @@ Overall time (version 1) - 7e+00s
 124.58749127388 : Active Regular
 7.2448132038116455 : Active Remote
 
+
 bnl/ch330a.pc19790301-bnl.nc, 3400 chunk entries
 
+Reduction over 1 chunks took 0.4s
 Overall time (version 1) - 4e+01s
 54.81114602088928 : Regular
 40.206737995147705 : Active Regular
