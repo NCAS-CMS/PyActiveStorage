@@ -54,16 +54,23 @@ def ex_test(ncfile, var):
         ofile
     )
     print("S3 Test file path:", test_file_uri)
-    active = Active(test_file_uri, var, storage_type="s3",
-                    storage_options=storage_options,
-                    active_storage_url=active_storage_url)
 
-    active._version = 2
-    active._method = "min"
+    for av in [0,1,2]:
 
-    result = active[0:2,4:6,7:9]
-    assert nc_min == result
-    assert result == 239.25946044921875
+        active = Active(test_file_uri, var, storage_type="s3",
+                        storage_options=storage_options,
+                        active_storage_url=active_storage_url)
+
+        active._version = av
+        if av > 0: 
+            active._method = "min"
+
+        result = active[0:2,4:6,7:9]
+        print(active.metric_data)
+        if av == 0:
+            result = np.min(result)
+        assert nc_min == result
+        assert result == 239.25946044921875
 
 
 

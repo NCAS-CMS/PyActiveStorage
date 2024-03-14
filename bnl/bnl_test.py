@@ -18,27 +18,30 @@ def mytest():
     ncfile, v = "cesm2_native.nc","TREFHT"
     ncfile, v  = "CMIP6-test.nc", 'tas'
     #ncfile, v = "chunked.hdf5", "dataset1"
-    ncfile, v = 'daily_data.nc', 'ta'
+    #ncfile, v = 'daily_data.nc', 'ta'
     mypath = Path(__file__).parent
     uri = str(mypath/ncfile)
-    active = Active(uri, v, None)
-    active._version = 0
-    if v == "dataset1":
-        d = active[2,:]
-    else:
-        d = active[4:5, 1:2]
-    mean_result = np.mean(d)
-    active = Active(uri, v, None)
-    active._version = 2
-    active.method = "mean"
-    active.components = True
-    if  v == "dataset1":
-        result2 = active[2,:]
-    else:
-        result2 = active[4:5, 1:2]
-    print(result2, ncfile)
+    results = []
+    for av in [0,1,2]:
+
+        active = Active(uri, v, None)
+        active._version = av
+        if av > 0:
+            active.method="mean"
+        if v == "dataset1":
+            d = active[2,:]
+        else:
+            d = active[4:5, 1:2]
+        print(active.metric_data)
+        if av == 0:
+            d = np.mean(d)
+        results.append(d)
+
+
     # check for active
-    np.testing.assert_allclose(mean_result, result2["sum"]/result2["n"], rtol=1e-6)
+    np.testing.assert_allclose(results[0],results[1], rtol=1e-6)
+    np.testing.assert_allclose(results[1],results[2], rtol=1e-6)
+
 
 
 if __name__=="__main__":

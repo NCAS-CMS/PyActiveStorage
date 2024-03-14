@@ -10,7 +10,7 @@ import s3fs
 
 from activestorage.config import *
 from activestorage import reductionist
-from activestorage.storage import reduce_chunk
+from activestorage.storage import reduce_chunk, reduce_opens3_chunk
 from activestorage.hdf2numcodec import decode_filters
 
 
@@ -338,7 +338,7 @@ class Active:
             counts = None  # should never get touched with no method!
 
         # Create a shared session object.
-        if self.storage_type == "s3":
+        if self.storage_type == "s3" and self._version==2:
             if self.storage_options is not None:
                 key, secret = None, None
                 if "key" in self.storage_options:
@@ -468,8 +468,16 @@ class Active:
         offset, size, filter_mask = ds.get_chunk_details(chunk_coords)
         self.data_read += size
 
-        # S3: pass in pre-configured storage options (credentials)
-        if self.storage_type == "s3":
+        if self.storage_type == 'S3' and self._version == 1:
+
+            tmp, count = reduce_opens3_chunk(self.ds._fh, offset, size, compressor, filters,
+                            self.missing, ds.dtype,
+                            chunks, ds.order,
+                            chunk_selection, method=self.method
+            )
+
+        elif self.storage_type == "s3" and self._version==2:
+            # S3: pass in pre-configured storage options (credentials)
             # print("S3 rfile is:", self.filename)
             parsed_url = urllib.parse.urlparse(self.filename)
             bucket = parsed_url.netloc
@@ -513,6 +521,9 @@ class Active:
                                                        ds.order,
                                                        chunk_selection,
                                                        operation=self._method)
+        elif self.storage_type=='ActivePosix' and self.version==2:
+            # This is where the DDN Fuse and Infinia wrappers go
+            raise NotImplementedError
         else:
             # note there is an ongoing discussion about this interface, and what it returns
             # see https://github.com/valeriupredoi/PyActiveStorage/issues/33
