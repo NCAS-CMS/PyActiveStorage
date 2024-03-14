@@ -38,45 +38,62 @@ def load_from_s3(uri, storage_options=None):
     else:
         fs = s3fs.S3FileSystem(**storage_options)  # use passed-in dictionary
    
+    t1=time.time()   
     s3file = fs.open(uri, 'rb')
+    t2=time.time()
     ds = pyfive.File(s3file)
-    print(f"Dataset loaded from S3 with s3fs and Pyfive: {uri}")
+    t3=time.time()
+    print(f"Dataset loaded from S3 with s3fs and Pyfive: {uri} ({t2-t1:.2},{t3-t2:.2})")
     return ds
 
+def _metricise(method):
+    """ Decorator for class methods loads into metric_data"""
+    def timed(self, *args, **kw):
+        ts = time.time()
+        metric_name=''
+        if '__metric_name' in kw:
+            metric_name = kw['__metric_name']
+            del kw['__metric_name']
+        result = method(self,*args, **kw)
+        te = time.time()
+        if metric_name:
+            self.metric_data[metric_name] = te-ts
+        return result
+    return timed
+
+
 def get_missing_attributes(ds):
-        """" 
-        Load all the missing attributes we need from a netcdf file
-        """
+    """" 
+    Load all the missing attributes we need from a netcdf file
+    """
 
-        def hfix(x):
-            '''
-            return item if single element list/array
-            see https://github.com/h5netcdf/h5netcdf/issues/116
-            '''
-            if x is None:
-                return x
-            if not np.isscalar(x) and len(x) == 1:
-                return x[0]
+    def hfix(x):
+        '''
+        return item if single element list/array
+        see https://github.com/h5netcdf/h5netcdf/issues/116
+        '''
+        if x is None:
             return x
+        if not np.isscalar(x) and len(x) == 1:
+            return x[0]
+        return x
 
-        _FillValue = hfix(ds.attrs.get('_FillValue'))
-        missing_value = ds.attrs.get('missing_value')
-        valid_min = hfix(ds.attrs.get('valid_min'))
-        valid_max = hfix(ds.attrs.get('valid_max'))
-        valid_range = hfix(ds.attrs.get('valid_range'))
-        if valid_max is not None or valid_min is not None:
-            if valid_range is not None:
-                raise ValueError(
-                    "Invalid combination in the file of valid_min, "
-                    "valid_max, valid_range: "
-                    f"{valid_min}, {valid_max}, {valid_range}"
-                )
-        elif valid_range is not None:            
-            valid_min, valid_max = valid_range
-        
-        return _FillValue, missing_value, valid_min, valid_max
-
-
+    _FillValue = hfix(ds.attrs.get('_FillValue'))
+    missing_value = ds.attrs.get('missing_value')
+    valid_min = hfix(ds.attrs.get('valid_min'))
+    valid_max = hfix(ds.attrs.get('valid_max'))
+    valid_range = hfix(ds.attrs.get('valid_range'))
+    if valid_max is not None or valid_min is not None:
+        if valid_range is not None:
+            raise ValueError(
+                "Invalid combination in the file of valid_min, "
+                "valid_max, valid_range: "
+                f"{valid_min}, {valid_max}, {valid_range}"
+            )
+    elif valid_range is not None:            
+        valid_min, valid_max = valid_range
+    
+    return _FillValue, missing_value, valid_min, valid_max
 
 class Active:
     """ 
@@ -149,11 +166,10 @@ class Active:
         self._max_threads = max_threads
         self.missing = None
         self.ds = None
-        self.metrics =  False
+        self.metric_data = {}
+        self.data_read = 0
 
-    def toggle_metrics(self):
-        self.metrics = not self.metrics
-
+    @_metricise
     def __load_nc_file(self):
         """ Get the netcdf file and it's b-tree"""
         ncvar = self.ncvar
@@ -177,32 +193,40 @@ class Active:
         Provides support for a standard get item.
         #FIXME-BNL: Why is the argument index?
         """
+        self.metric_data = {}
         if self.ds is None:
-            self.__load_nc_file()
-        # In version one this is done by explicitly looping over each chunk in the file
-        # and returning the requested slice ourselves. In version 2, we can pass this
-        # through to the default method.
+            self.__load_nc_file(__metric_name='load nc time')
+            #self.__metricise('Load','__load_nc_file')
         
         self.missing = self.__get_missing_attributes()
+
+        self.data_read = 0
         
         if self.method is None and self._version == 0:
-            
+        
             # No active operation
-            data = self.ds[index]    
-            data = self._mask_data(data)
-            return data
+            return self._get_vanilla(index, __metric_name='vanilla_time')
 
         elif self._version == 1:
 
             #FIXME: is the difference between version 1 and 2 still honoured?
-            return self._get_selection(index)
+            return self._get_selection(index, __metric_name='selection 1 time (s)')
         
         elif self._version  == 2:
 
-            return self._get_selection(index)
+            return self._get_selection(index, __metric_name='selection 2 time (s)')
           
         else:
             raise ValueError(f'Version {self._version} not supported')
+
+    @_metricise
+    def _get_vanilla(self, index):
+        """ 
+        Get the data without any active operation
+        """
+        data = self.ds[index]    
+        data = self._mask_data(data)
+        return data
 
     @property
     def components(self):
@@ -269,7 +293,7 @@ class Active:
         """
         raise NotImplementedError
  
-
+    @_metricise
     def _get_selection(self, *args):
         """ 
         At this point we have a Dataset object, but all the important information about
@@ -286,6 +310,9 @@ class Active:
         array = pyfive.ZarrArrayStub(self.ds.shape, self.ds.chunks)
         ds = self.ds._dataobjects
         
+        self.metric_data['args'] = args
+        self.metric_data['dataset shape'] = self.ds.shape
+        self.metric_data['dataset chunks'] = self.ds.chunks
         if ds.filter_pipeline is None:
             compressor, filters = None, None
         else:
@@ -338,10 +365,10 @@ class Active:
         if ds.chunks is not None:
             t1 = time.time()
             ds._get_chunk_addresses()
-            t2 = time.time()
-            if self.metrics:
-                chunk_count = 0
-                print(f'Index time: {t2-t1:.1}s ({len(ds._zchunk_index)} chunk entries)')
+            t2 = time.time() - t1
+            self.metric_data['indexing time (s)'] = t2
+            self.metric_data['chunk number'] = len(ds._zchunk_index)
+        chunk_count = 0
         t1 = time.time()
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_threads) as executor:
             futures = []
@@ -359,8 +386,7 @@ class Active:
                 except Exception as exc:
                     raise
                 else:
-                    if self.metrics:
-                        chunk_count +=1
+                    chunk_count +=1
                     if method is not None:
                         result, count = result
                         out.append(result)
@@ -406,9 +432,10 @@ class Active:
                     # size.
                     out = out / np.sum(counts).reshape(shape1)
 
-        if self.metrics:
-            t2 = time.time()
-            print(f'Reduction over {chunk_count} chunks took {t2-t1:.1}s')
+        t2 = time.time()
+        self.metric_data['reduction time (s)'] = t2-t1
+        self.metric_data['chunks processed'] = chunk_count
+        self.metric_data['storage read (B)'] = self.data_read
         return out
 
     def _get_endpoint_url(self):
@@ -439,6 +466,7 @@ class Active:
         """
         
         offset, size, filter_mask = ds.get_chunk_details(chunk_coords)
+        self.data_read += size
 
         # S3: pass in pre-configured storage options (credentials)
         if self.storage_type == "s3":
