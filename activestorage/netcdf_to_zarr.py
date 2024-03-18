@@ -127,6 +127,9 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
             # for active storage, we don't want anything inline
             with fs.open(outf, 'wb') as f:
                 content = h5chunks.translate()
+                content = _correct_compressor_and_filename(content,
+                                                           varname,
+                                                           bryan_bucket=False)
                 f.write(ujson.dumps(content).encode())
 
     zarray =  ujson.loads(content['refs'][f"{varname}/.zarray"])
