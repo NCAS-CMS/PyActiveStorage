@@ -468,9 +468,9 @@ class Active:
         offset, size, filter_mask = ds.get_chunk_details(chunk_coords)
         self.data_read += size
 
-        if self.storage_type == 'S3' and self._version == 1:
+        if self.storage_type == 's3' and self._version == 1:
 
-            tmp, count = reduce_opens3_chunk(self.ds._fh, offset, size, compressor, filters,
+            tmp, count = reduce_opens3_chunk(ds.fh, offset, size, compressor, filters,
                             self.missing, ds.dtype,
                             chunks, ds.order,
                             chunk_selection, method=self.method
@@ -535,11 +535,11 @@ class Active:
                                       chunk_selection, method=self.method)
 
         if self.method is not None:
-            return tmp, count
+            return tmp, count 
         else:
             if drop_axes:
                 tmp = np.squeeze(tmp, axis=drop_axes)
-            return tmp, out_selection
+            return tmp, out_selection 
 
     def _mask_data(self, data):
         """ 
