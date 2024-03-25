@@ -62,7 +62,7 @@ def test_compression_and_filters_cmip6_data(storage_options, active_storage_url)
     active = Active(test_file_uri, 'tas', utils.get_storage_type(),
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
-    active._version = 1
+    active._version = 2
     active._method = "min"
 
     if USE_S3:
