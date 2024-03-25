@@ -157,7 +157,7 @@ def test_reductionist_connection(mock_reduce, mock_load, tmp_path):
     make_vanilla_ncdata(test_file)
 
     active = Active(uri, "data", "s3")
-    active._version = 1
+    active._version = 2
     active._method = "max"
 
     with pytest.raises(requests.exceptions.ConnectTimeout):
