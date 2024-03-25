@@ -103,13 +103,8 @@ def test_compression_and_filters_cmip6_forced_s3_from_local(storage_options, act
     active._version = 1
     active._method = "min"
 
-    # for now anon=True S3 buckets are not supported by Reductionist
-    with pytest.raises(RedErr) as rederr:
-        result = active[0:2,4:6,7:9]
-    access_denied_err = 'code: \\"AccessDenied\\"'
-    assert access_denied_err in str(rederr.value)
-    # assert nc_min == result
-    # assert result == 239.25946044921875
+    result = active[0:2,4:6,7:9]
+    assert result == 239.25946044921875
 
 
 def test_compression_and_filters_cmip6_forced_s3_from_local_2():
