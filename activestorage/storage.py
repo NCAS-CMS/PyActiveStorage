@@ -44,8 +44,9 @@ def reduce_chunk(rfile,
     if method:
         if missing != (None, None, None, None):
             tmp = remove_missing(tmp, missing)
-        # check on size of tmp; method(empty) returns nan
-        if tmp.any():
+        # Check on size of tmp; method(empty) fails or gives incorrect
+        # results
+        if tmp.size:
             return method(tmp), tmp.size
         else:
             return tmp, None
