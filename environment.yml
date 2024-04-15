@@ -1,6 +1,7 @@
 ---
 name: activestorage
 channels:
+  - conda-forge/label/numpy_dev
   - conda-forge
   - nodefaults
 
@@ -13,7 +14,7 @@ dependencies:
   - kerchunk >=0.2.4  # issues with numcodecs in 0.2.3 and API change in 0.2.4
   - netcdf4
   - numcodecs >=0.12  # github.com/valeriupredoi/PyActiveStorage/issues/162
-  - numpy !=1.24.3  # severe masking bug
+  - numpy==2.0.0rc1  #  !=1.24.3  # severe masking bug
   - pip !=21.3
   - s3fs >=2024.2.0  # loose s3fs deps leading to old aiobotocore for <2024.2.0
   # pin Zarr to avoid using old KVStore interface
