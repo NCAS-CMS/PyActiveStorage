@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - numpy2-dev
   schedule:
     - cron: '0 0 * * *'  # nightly
 
