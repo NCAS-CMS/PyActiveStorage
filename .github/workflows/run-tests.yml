@@ -35,7 +35,9 @@ jobs:
           use-mamba: true
       - run: conda --version
       - run: python -V
+      - run: mamba install https://anaconda.org/conda-forge/numpy/2.0.0rc1/download/linux-64/numpy-2.0.0rc1-py312h995c7d2_0.conda
       - run: pip install -e .
+      - run: conda list
       - run: pytest -n 2
 
   osx:
