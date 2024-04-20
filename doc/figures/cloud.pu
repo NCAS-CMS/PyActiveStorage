@@ -1,0 +1,68 @@
+@startuml
+skinparam backgroundColor white
+'skinparam handwritten true
+skinparam notebackgroundcolor white
+
+skinparam sequence {
+    participantBackgroundColor White
+    BackgroundColor White
+}
+
+
+hide footbox
+title High Availability Configuration
+
+box python client #mintcream
+participant Application 
+participant Active
+end box
+boundary "RAL Network"
+box external cloud #mintcream
+queue "host activeh\nhaproxy" as haproxy
+participant "host activeh\nreductionist1" as r1
+control "private\nnetwork" as p
+participant "host active2\nreductionist2" as r2
+participant  "host active3\nreductionist3" as r3
+end box
+control firewall
+box internal cloud  #mintcream
+participant S3
+database storage
+end box
+
+
+Application -> Active: nth\nReduction\nRequest
+
+Active -> haproxy: reduce\nfirst chunk
+haproxy --> haproxy: choose host\n(next in\nround robin
+haproxy -> r3: Request2
+r3 -> S3: Chunk Read2
+S3 -> storage : Chunk2 Read
+storage -> S3: Chunk2
+S3 -> r3: Chunk2
+r3 --> r3: Reduce chunk
+r3 -> haproxy: Result2
+haproxy -> Active: Result2 
+
+
+Active -> haproxy: reduce\nsecond chunk
+haproxy --> haproxy: choose host\n(next in\nround robin)
+haproxy -> r1: Request1
+r1 -> S3 : Chunk1 Read
+S3 -> storage : Chunk1 Read
+storage -> S3: Chunk1
+S3 -> r1: Chunk1
+r1 --> r1: Reduce Chunk1
+r1 -> haproxy: Result1
+haproxy -> Active: Result1
+
+Active --> Active: Reduce chunks
+Active -> Application: Overall\nResult
+
+
+
+
+
+
+
+@enduml

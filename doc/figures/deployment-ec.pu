@@ -1,0 +1,41 @@
+@startuml
+
+frame JASMIN {
+
+frame "external cloud" {
+
+    interface hnic
+    component hypervisor {
+    component VM
+    interface vnic 
+    VM - vnic
+    }
+    
+    hypervisor -- hnic
+    vnic - hnic : "shared"
+
+interface "leaf\nswitch" as switch1
+}
+
+cloud "JASMIN\nCLOS\nnetwork" as switch2 
+interface "Outbound" as switch3
+
+frame "JASMIN Storage" {
+
+    component "HPOS Content\nGateway\n4 Servers" as HPOS
+    interface S3
+
+    HPOS -- S3 : "100 Gb x 4"
+
+}
+
+switch1 - hnic #line:red;line.bold;text:red : "Uknown NIC\nbandwidth"
+switch1 -- switch2 #line:red;line.bold;text:red :  "Unknown\nbandwidth"
+S3 -- switch2 : "100 Gb"
+switch2 -- switch3 #line:red;line.bold;text:red : "10 Gb ?"
+
+}
+
+
+
+@enduml
