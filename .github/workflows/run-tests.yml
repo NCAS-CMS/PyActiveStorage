@@ -34,6 +34,7 @@ jobs:
           use-mamba: true
       - run: conda --version
       - run: python -V
+      - run: conda list
       - run: pip install -e .
       - run: pytest -n 2
 
@@ -58,5 +59,7 @@ jobs:
           use-mamba: true
       - run: conda --version
       - run: python -V
+      - run: conda list
+      - run: mamba install -c conda-forge git
       - run: pip install -e .
       - run: pytest
