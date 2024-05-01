@@ -35,6 +35,7 @@ jobs:
           use-mamba: true
       - run: conda --version
       - run: python -V
+      - run: conda list
       - run: pip install -e .
       - run: pytest -n 2
 
