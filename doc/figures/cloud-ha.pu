@@ -1,0 +1,76 @@
+@startuml
+
+skinparam ComponentBackgroundColor MintCream
+skinparam DatabaseBackgroundColor Green
+skinparam DatabaseFontColor White
+
+'three changes needed to change layout
+'to go back to vertical, 
+'   comment out the direction line next here,
+'   swap the comments on block of request/chunk edges 
+'   swpa the comments on the AS edge
+left to right direction
+
+frame JASMIN {
+frame "External Cloud" {
+
+    component vm2 {
+        component reductionist2
+    }
+    component vm3 {
+        component reductionist3
+    }
+    component vm1 {
+       
+        component haproxy
+        component reductionist1
+      
+    }
+     interface "public IP" as pip
+       pip -- haproxy
+   
+
+    reductionist1 <- haproxy  : "<color: blue>request3             "  
+    haproxy --> reductionist2 : <color: blue> request1
+    haproxy --> reductionist3 : <color: blue> request2
+    reductionist1 -> haproxy  : "<color: red>     reduced\n<color: red>    chunk 3"
+    haproxy <-- reductionist2 : <color: red>reduced\n<color: red>chunk 1
+    haproxy <-- reductionist3 : <color: red>reduced\n<color: red>chunk 2
+
+    'reductionist1 <- haproxy  : <color: blue>request3
+    'haproxy --> reductionist2 : <color: blue> request1
+    'haproxy --> reductionist3 : <color: blue> request2
+    'reductionist1 -> haproxy  : <color: red>reduced\n<color: red>chunk 3
+    'haproxy <-- reductionist2 : <color: red>reduced\n<color: red>chunk 1
+    'haproxy <-- reductionist3 : <color: red>reduced\n<color: red>chunk 2
+  
+}
+
+
+frame "Internal Cloud" {
+    component "    S3\nGateway" as s3
+    database Storage
+    s3 - Storage 
+
+}
+}
+rectangle "User Application" {   
+    component "PyActiveStorage" as AS
+}
+
+'AS <-> pip: series of requests for reduced chunks
+AS <-> pip: series\nof\nrequests\nfor\nreduced\nchunks\n
+
+"User Application" -[hidden]- "External Cloud" 
+
+
+
+reductionist1 <--> s3: get\n data
+reductionist2 <--> s3: get\ndata
+reductionist3 <--> s3: get\ndata\n
+
+
+
+
+
+@enduml
