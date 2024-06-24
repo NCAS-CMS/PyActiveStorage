@@ -1,7 +1,6 @@
 ---
 name: activestorage
 channels:
-  # - conda-forge/label/numpy_dev
   - conda-forge
   - nodefaults
 
