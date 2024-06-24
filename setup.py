@@ -36,9 +36,10 @@ REQUIREMENTS = {
         'pytest-metadata>=1.5.1',
         'pytest-xdist',
         # for documentation
-        'autodocsumm',
-        'sphinx>=5',
-        'sphinx_rtd_theme',
+        # re-add when we deploy the docs
+        # 'autodocsumm',
+        # 'sphinx>=5',
+        # 'sphinx_rtd_theme',
     ],
 }
 
