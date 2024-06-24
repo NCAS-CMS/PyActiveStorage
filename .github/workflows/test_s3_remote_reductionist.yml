@@ -7,7 +7,6 @@ on:
   push:
     branches:
       - main  # keep this at all times
-      - numpy2-dev
   pull_request:
   schedule:
     - cron: '0 0 * * *'  # nightly
