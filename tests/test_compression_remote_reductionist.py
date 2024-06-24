@@ -151,6 +151,8 @@ def test_compression_and_filters_cmip6_forced_s3_from_local_2():
     assert result == 239.25946044921875
 
 
+# CMIP6_test.nc keeps being unavailable due to BNL bucket unavailable
+@pytest.mark.xfail(reason='JASMIN messing about with SOF.')
 @pytest.mark.skipif(not USE_S3, reason="we need only localhost Reductionist in GA CI")
 @pytest.mark.skipif(REMOTE_RED, reason="we need only localhost Reductionist in GA CI")
 def test_compression_and_filters_cmip6_forced_s3_using_local_Reductionist():
