@@ -27,6 +27,9 @@ storage_options_paramlist = [
 # otherwise, bucket is extracted automatically from full file uri
 S3_BUCKET = "bnl"
 
+
+# CMIP6_test.nc keeps being unavailable due to BNL bucket unavailable
+@pytest.mark.xfail(reason='JASMIN messing about with SOF.')
 @pytest.mark.parametrize("storage_options, active_storage_url", storage_options_paramlist)
 def test_compression_and_filters_cmip6_data(storage_options, active_storage_url):
     """
