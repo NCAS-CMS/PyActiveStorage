@@ -68,6 +68,48 @@ def _return_zcomponents(content, varname):
     return zarray, zattrs
 
 
+def _correct_compressor_and_filename(content, varname, bryan_bucket=False):
+    """
+    Correct the compressor type as it comes out of Kerchunk (>=0.2.4; pinned).
+    Also correct file name as Kerchnk now prefixes it with "s3://"
+    and for special buckets like Bryan's bnl the correct file is bnl/file.nc
+    not s3://bnl/file.nc
+    """
+    new_content = content.copy()
+
+    # prelimniary assembly
+    try:
+        new_zarray =  ujson.loads(new_content['refs'][f"{varname}/.zarray"])
+        group = False
+    except KeyError:
+        new_zarray =  ujson.loads(new_content['refs'][f"{varname} /{varname}/.zarray"])
+        group = True
+
+    # re-add the correct compressor if it's in the "filters" list
+    if new_zarray["compressor"] is None and new_zarray["filters"]:
+        for zfilter in new_zarray["filters"]:
+            if zfilter["id"] == "zlib":
+                new_zarray["compressor"] = zfilter
+                new_zarray["filters"].remove(zfilter)
+
+        if not group:
+            new_content['refs'][f"{varname}/.zarray"] = ujson.dumps(new_zarray)
+        else:
+            new_content['refs'][f"{varname} /{varname}/.zarray"] = ujson.dumps(new_zarray)
+
+    # FIXME TODO this is an absolute nightmate: the type of bucket on UOR ACES
+    # this is a HACK and it works only with the crazy Bryan S3 bucket "bnl/file.nc"
+    # the problem: filename gets written to JSON as "s3://bnl/file.nc" but Reductionist doesn't
+    # find it since it needs url=bnl/file.nc, with endpoint URL being extracted from the
+    # endpoint_url of storage_options. BAH!
+    if bryan_bucket:
+        for key in new_content['refs'].keys():
+            if varname in key and isinstance(new_content['refs'][key], list) and "s3://" in new_content['refs'][key][0]:
+                new_content['refs'][key][0] = new_content['refs'][key][0].replace("s3://", "")
+
+    return new_content
+
+
 def gen_json(file_url, varname, outf, storage_type, storage_options):
     """Generate a json file that contains the kerchunk-ed data for Zarr."""
     # S3 configuration presets
@@ -102,6 +144,7 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
                                         # storage_options=storage_options)
 
             # TODO absolute crap, this needs to go
+            # see comments in _correct_compressor_and_filename
             bryan_bucket = False
             if "bnl" in file_url:
                 bryan_bucket = True
@@ -158,6 +201,7 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
                 file_url = "s3://" + file_url
 
             # TODO absolute crap: this needs to go
+            # see comments in _correct_compressor_and_filename
             bryan_bucket = False
             if "bnl" in file_url:
                 bryan_bucket = True
@@ -198,6 +242,9 @@ def gen_json(file_url, varname, outf, storage_type, storage_options):
             # for active storage, we don't want anything inline
             with fs.open(outf, 'wb') as f:
                 content = h5chunks.translate()
+                content = _correct_compressor_and_filename(content,
+                                                           varname,
+                                                           bryan_bucket=False)
                 f.write(ujson.dumps(content).encode())
 
         zarray, zattrs = _return_zcomponents(content, varname)
