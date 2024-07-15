@@ -26,6 +26,7 @@ REQUIREMENTS = {
         'netcdf4',
         'numcodecs>=0.12',  # github/issues/162
         'numpy!=1.24.3',  # severe masking bug
+        'requests',
         's3fs>=2024.2.0',  # see environment.yml for pin reason
         # pin Zarr to use new FSStore instead of KVStore
         'zarr>=2.13.3', # github.com/zarr-developers/zarr-python/issues/1362
@@ -36,9 +37,10 @@ REQUIREMENTS = {
         'pytest-metadata>=1.5.1',
         'pytest-xdist',
         # for documentation
-        'autodocsumm',
-        'sphinx>=5',
-        'sphinx_rtd_theme',
+        # re-add when we deploy the docs
+        # 'autodocsumm',
+        # 'sphinx>=5',
+        # 'sphinx_rtd_theme',
     ],
 }
 
