@@ -62,6 +62,18 @@ def _metricise(method):
     return timed
 
 
+def thread_time(method):
+    """ 
+    Wraps thread calls to get timing information
+    """
+    def _wrapped(*args, **kwargs):
+        t1 = time.time()
+        res = method(*args, **kwargs)
+        t2 = time.time() - t1
+        return t2, res
+    return _wrapped
+
+
 def get_missing_attributes(ds):
     """" 
     Load all the missing attributes we need from a netcdf file
@@ -307,7 +319,7 @@ class Active:
         name = self.ds.name
         dtype = np.dtype(self.ds.dtype)
         # hopefully fix pyfive to get a dtype directly
-        array = pyfive.ZarrArrayStub(self.ds.shape, self.ds.chunks)
+        array = pyfive.indexing.ZarrArrayStub(self.ds.shape, self.ds.chunks)
         ds = self.ds._dataobjects
         
         self.metric_data['args'] = args
@@ -318,7 +330,7 @@ class Active:
         else:
             compressor, filters = decode_filters(ds.filter_pipeline , dtype.itemsize, name)
         
-        indexer = pyfive.OrthogonalIndexer(*args, array)
+        indexer = pyfive.indexing.OrthogonalIndexer(*args, array)
         out_shape = indexer.shape
         #stripped_indexer = [(a, b, c) for a,b,c in indexer]
         drop_axes = indexer.drop_axes and keepdims
@@ -368,8 +380,8 @@ class Active:
             t2 = time.time() - t1
             self.metric_data['indexing time (s)'] = t2
             self.metric_data['chunk number'] = len(ds._zchunk_index)
-        chunk_count = 0
         t1 = time.time()
+        thread_times = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_threads) as executor:
             futures = []
             # Submit chunks for processing.
@@ -382,11 +394,12 @@ class Active:
             # Wait for completion.
             for future in concurrent.futures.as_completed(futures):
                 try:
-                    result = future.result()
+                    r = future.result()
+                    elapsed, result = r
                 except Exception as exc:
                     raise
                 else:
-                    chunk_count +=1
+                    thread_times.append(elapsed)
                     if method is not None:
                         result, count = result
                         out.append(result)
@@ -396,9 +409,18 @@ class Active:
                         result, selection = result
                         out[selection] = result
 
+        print('Thread times', thread_times)
+        chunk_count = len(thread_times)
+
         if method is not None:
             # Apply the method (again) to aggregate the result
-            out = method(out)
+            try:
+                out = method(out)
+            except ValueError:
+                print('Failure Diagnosis')
+                print(out.shape)
+                print(out)
+                print
             shape1 = (1,) * len(out_shape)
                 
             if self._components:
@@ -452,6 +474,7 @@ class Active:
 
         return f"http://{urllib.parse.urlparse(self.filename).netloc}"
 
+    @thread_time
     def _process_chunk(self, session, ds, chunks, chunk_coords, chunk_selection, counts,
                        out_selection, compressor, filters, drop_axes=None):
         """
@@ -506,7 +529,7 @@ class Active:
                 # special case for "anon=True" buckets that work only with e.g.
                 # fs = s3fs.S3FileSystem(anon=True, client_kwargs={'endpoint_url': S3_URL})
                 # where file uri = bucketX/fileY.mc
-                print("S3 Storage options to Reductionist:", self.storage_options)
+                # print("S3 Storage options to Reductionist:", self.storage_options)
                 if self.storage_options.get("anon", None) == True:
                     bucket = os.path.dirname(parsed_url.path)  # bucketX
                     object = os.path.basename(parsed_url.path)  # fileY
