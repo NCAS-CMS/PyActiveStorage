@@ -27,6 +27,9 @@ storage_options_paramlist = [
 # otherwise, bucket is extracted automatically from full file uri
 S3_BUCKET = "bnl"
 
+
+# CMIP6_test.nc keeps being unavailable due to BNL bucket unavailable
+@pytest.mark.xfail(reason='JASMIN messing about with SOF.')
 @pytest.mark.parametrize("storage_options, active_storage_url", storage_options_paramlist)
 def test_compression_and_filters_cmip6_data(storage_options, active_storage_url):
     """
@@ -79,6 +82,8 @@ def test_compression_and_filters_cmip6_data(storage_options, active_storage_url)
         assert result == 239.25946044921875
 
 
+# CMIP6_test.nc keeps being unavailable due to BNL bucket unavailable
+@pytest.mark.xfail(reason='JASMIN messing about with SOF.')
 @pytest.mark.parametrize("storage_options, active_storage_url", storage_options_paramlist)
 def test_compression_and_filters_cmip6_forced_s3_from_local(storage_options, active_storage_url):
     """
@@ -107,6 +112,8 @@ def test_compression_and_filters_cmip6_forced_s3_from_local(storage_options, act
     assert result == 239.25946044921875
 
 
+# CMIP6_test.nc keeps being unavailable due to BNL bucket unavailable
+@pytest.mark.xfail(reason='JASMIN messing about with SOF.')
 def test_compression_and_filters_cmip6_forced_s3_from_local_2():
     """
     Test use of datasets with compression and filters applied for a real
@@ -143,6 +150,8 @@ def test_compression_and_filters_cmip6_forced_s3_from_local_2():
     assert result == 239.25946044921875
 
 
+# CMIP6_test.nc keeps being unavailable due to BNL bucket unavailable
+@pytest.mark.xfail(reason='JASMIN messing about with SOF.')
 @pytest.mark.skipif(not USE_S3, reason="we need only localhost Reductionist in GA CI")
 @pytest.mark.skipif(REMOTE_RED, reason="we need only localhost Reductionist in GA CI")
 def test_compression_and_filters_cmip6_forced_s3_using_local_Reductionist():
