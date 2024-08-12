@@ -18,7 +18,7 @@ REQUIREMENTS = {
     # Installation dependencies
     # Use with pip install . to install from source
     'install': [
-        'dask',
+        'dask!=2024.8.0',  # github.com/dask/dask/issues/11296
         'fsspec',
         'h5netcdf',
         'h5py',  # needed by Kerchunk
