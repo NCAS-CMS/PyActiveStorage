@@ -32,7 +32,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           miniforge-version: "latest"
-          miniforge-variant: Mambaforge
           use-mamba: true
       - name: Get conda and Python versions
         run: |
@@ -50,7 +49,6 @@ jobs:
           environment-file: environment.yml
           python-version: ${{ matrix.python-version }}
           miniforge-version: "latest"
-          miniforge-variant: Mambaforge
           use-mamba: true
       - name: Install PyActiveStorage
         run: |
