@@ -31,7 +31,6 @@ jobs:
           environment-file: environment.yml
           python-version: ${{ matrix.python-version }}
           miniforge-version: "latest"
-          miniforge-variant: Mambaforge
           use-mamba: true
       - run: conda --version
       - run: python -V
@@ -64,7 +63,6 @@ jobs:
           environment-file: environment.yml
           python-version: ${{ matrix.python-version }}
           miniforge-version: "latest"
-          miniforge-variant: Mambaforge
           use-mamba: true
       - run: conda --version
       - run: python -V
