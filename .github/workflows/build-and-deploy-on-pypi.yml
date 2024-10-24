@@ -7,7 +7,7 @@ on:
   push:
     branches:
       - main
-      - update_action_setup-python
+      - python313
 
 jobs:
   build-n-publish:
@@ -17,10 +17,10 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Set up Python 3.12
+      - name: Set up Python 3.13
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - name: Install pep517
         run: >-
           python -m
