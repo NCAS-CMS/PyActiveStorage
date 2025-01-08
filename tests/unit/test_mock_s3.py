@@ -32,12 +32,15 @@ def spoof_s3(bucket, file_name, file_path):
     print(os.path.isfile(target_file))
 
     # "access" file "remotely" with s3fs
-    fs = s3fs.S3FileSystem()
+    fs = s3fs.S3FileSystem(anon=True)
     with open('testobj.nc', 'wb') as ncdata:
         object.download_fileobj(ncdata)
     with open('testobj.nc', 'rb') as ncdata:
         ncfile = h5netcdf.File(ncdata, 'r', invalid_netcdf=True)
         print(ncfile)  # it works but...
+    # correct coupling between boto3 and s3fs requires yielding
+    # an s3fs Filesystem,
+    # see https://stackoverflow.com/questions/75902766/how-to-access-my-own-fake-bucket-with-s3filesystem-pytest-and-moto
 
     return res
 
