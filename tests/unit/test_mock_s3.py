@@ -1,46 +1,45 @@
 import os
 import s3fs
 import pathlib
-from tempfile import NamedTemporaryFile
-import logging
 import boto3
 import moto
 import pyfive
 import pytest
-from botocore.exceptions import ClientError
+import h5netcdf
+
+from tempfile import NamedTemporaryFile
 
 
-def file_upload(upload_file_bucket, file_name, file_path):
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as f:
-                xml = f.read()
-        else:
-            logging.error("File '%s' does not exist." % file_path)
-            tools.exit_gracefully(botocore.log)
-        try:
+def spoof_s3(bucket, file_name, file_path):
+    # "put" file
+    if os.path.exists(file_path):
+        with open(file_path, "rb") as file_contents:
             conn = boto3.session.Session()
             s3 = conn.resource('s3')
-            object = s3.Object(upload_file_bucket, file_name)
-            result = object.put(Body=xml)
+            object = s3.Object(bucket, file_name)
+            result = object.put(Body=file_contents)
             res = result.get('ResponseMetadata')
             if res.get('HTTPStatusCode') == 200:
-                logging.info('File Uploaded Successfully')
+                print('File Uploaded Successfully')
             else:
-                logging.info('File Not Uploaded Successfully')
-            return res
-        except ClientError as e:
-            logging.error(e)
+                print('File Not Uploaded Successfully')
 
+    # "download" file
+    s3 = boto3.resource('s3')
+    # arg0: file in bucket; arg1: file to download to
+    target_file = "test.nc"
+    s3file = s3.Bucket(bucket).download_file(file_name, target_file)
+    print(os.path.isfile(target_file))
 
-def file_load(bucket, file_name):
-    conn = boto3.session.Session()
-    s3 = conn.resource('s3')
-    object = s3.Object(bucket, file_name)
-    result = object.get(Range="0=2")
-    print("S3 Test mock file:", result)
+    # "access" file "remotely" with s3fs
+    fs = s3fs.S3FileSystem()
+    with open('testobj.nc', 'wb') as ncdata:
+        object.download_fileobj(ncdata)
+    with open('testobj.nc', 'rb') as ncdata:
+        ncfile = h5netcdf.File(ncdata, 'r', invalid_netcdf=True)
+        print(ncfile)  # it works but...
 
-    ds = pyfive.File(result)
-    return ds
+    return res
 
 
 @pytest.fixture(scope='session')
@@ -54,8 +53,7 @@ def aws_credentials():
 
     try:
         tmp = NamedTemporaryFile(delete=False)
-        # you many need to change 'aws_prof_dev_qa' to be your profile name
-        tmp.write(b"""[aws_prof_dev_qa]
+        tmp.write(b"""[wild weasel]
 aws_access_key_id = testing
 aws_secret_access_key = testing""")
         tmp.close()
@@ -77,12 +75,9 @@ def empty_bucket(aws_credentials):
         moto_fake.stop()
 
 
-def test_file_upload(empty_bucket):
-    with NamedTemporaryFile() as tmp:
-        tmp.write(b'Hi')
-        file_name = pathlib.Path(tmp.name).name
-
-        result = file_upload("MY_BUCKET", file_name, tmp.name)
-        result2 = file_load("MY_BUCKET", file_name)
-
-        assert result.get('HTTPStatusCode') == 200
+def test_s3file_spoofing(empty_bucket):
+    ncfile = "./tests/test_data/daily_data.nc"
+    file_path = pathlib.Path(ncfile)
+    file_name = pathlib.Path(ncfile).name
+    result = spoof_s3("MY_BUCKET", file_name, file_path)
+    assert result.get('HTTPStatusCode') == 200
