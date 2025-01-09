@@ -3,12 +3,12 @@ import s3fs
 import pathlib
 import json
 import moto
-import pyfive
 import pytest
 import h5netcdf
 
 from tempfile import NamedTemporaryFile
 from moto.moto_server.threaded_moto_server import ThreadedMotoServer
+from activestorage.active import load_from_s3
 
 
 # some spoofy server parameters
@@ -200,9 +200,18 @@ def test_s3file_with_s3fs(s3fs_s3):
     s3 = s3fs.S3FileSystem(
         anon=False, version_aware=True, client_kwargs={"endpoint_url": endpoint_uri}
     )
+
+    # test load by h5netcdf
     with s3.open(os.path.join("MY_BUCKET", file_name), "rb") as f:
+        print("File path", f.path)
         ncfile = h5netcdf.File(f, 'r', invalid_netcdf=True)
         print("File loaded from spoof S3 with h5netcdf:", ncfile)
         print(ncfile["ta"])
-
     assert "ta" in ncfile
+
+    # test Active
+    storage_options = dict(anon=False, version_aware=True,
+                           client_kwargs={"endpoint_url": endpoint_uri})
+    with load_from_s3(os.path.join("MY_BUCKET", file_name), storage_options) as ac_file:
+        print(ac_file)
+        assert "ta" in ac_file
