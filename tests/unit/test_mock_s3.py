@@ -8,6 +8,30 @@ import pytest
 import h5netcdf
 
 from tempfile import NamedTemporaryFile
+from test_s3fs import s3 as tests3
+from moto.moto_server.threaded_moto_server import ThreadedMotoServer
+
+# some spoofy server parameters
+port = 5555
+endpoint_uri = "http://127.0.0.1:%s/" % port
+
+@pytest.fixture(scope="module")
+def s3_base():
+    # writable local S3 system
+
+    # This fixture is module-scoped, meaning that we can re-use the MotoServer across all tests
+    server = ThreadedMotoServer(ip_address="127.0.0.1", port=port)
+    server.start()
+    if "AWS_SECRET_ACCESS_KEY" not in os.environ:
+        os.environ["AWS_SECRET_ACCESS_KEY"] = "foo"
+    if "AWS_ACCESS_KEY_ID" not in os.environ:
+        os.environ["AWS_ACCESS_KEY_ID"] = "foo"
+    os.environ.pop("AWS_PROFILE", None)
+
+    print("server up")
+    yield
+    print("moto done")
+    server.stop()
 
 
 def spoof_s3(bucket, file_name, file_path):
@@ -77,10 +101,38 @@ def empty_bucket(aws_credentials):
     finally:
         moto_fake.stop()
 
-
+@pytest.mark.skip(reason="This test is now obsolete")
 def test_s3file_spoofing(empty_bucket):
     ncfile = "./tests/test_data/daily_data.nc"
     file_path = pathlib.Path(ncfile)
     file_name = pathlib.Path(ncfile).name
+    # partial spoofing with only boto3+moto
     result = spoof_s3("MY_BUCKET", file_name, file_path)
+
+    with s3.open(os.path.join("MY_BUCKET", file_name), "rb") as f:
+        ncfile = h5netcdf.File(f, 'r', invalid_netcdf=True)
     assert result.get('HTTPStatusCode') == 200
+
+
+def test_s3file_spoofing_2(tests3):
+    """
+    This test spoofs a complete s3fs FileSystem,
+    creates a mock bucket inside it, then puts a REAL netCDF4 file in it,
+    then it loads it as if it was an S3 file. This is proper
+    Wild Weasel stuff right here.
+    """
+    ncfile = "./tests/test_data/daily_data.nc"
+    file_path = pathlib.Path(ncfile)
+    file_name = pathlib.Path(ncfile).name
+
+    # use s3fs proper
+    bucket = "MY_BUCKET"
+    tests3.mkdir(bucket)
+    tests3.put(file_path, bucket)
+    s3 = s3fs.S3FileSystem(
+        anon=False, version_aware=True, client_kwargs={"endpoint_url": endpoint_uri}
+    )
+    with s3.open(os.path.join("MY_BUCKET", file_name), "rb") as f:
+        ncfile = h5netcdf.File(f, 'r', invalid_netcdf=True)
+        print("File loaded from spoof S3 with h5netcdf:", ncfile)
+        print(x)
