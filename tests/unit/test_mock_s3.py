@@ -1,25 +1,38 @@
 import os
 import s3fs
 import pathlib
-import boto3
+import json
 import moto
 import pyfive
 import pytest
 import h5netcdf
 
 from tempfile import NamedTemporaryFile
-from test_s3fs import s3 as tests3
 from moto.moto_server.threaded_moto_server import ThreadedMotoServer
+
 
 # some spoofy server parameters
 port = 5555
 endpoint_uri = "http://127.0.0.1:%s/" % port
+test_bucket_name = "test"
+versioned_bucket_name = "test-versioned"
+secure_bucket_name = "test-secure"
+
+def get_boto3_client():
+    from botocore.session import Session
+
+    # NB: we use the sync botocore client for setup
+    session = Session()
+    return session.create_client("s3", endpoint_url=endpoint_uri)
 
 @pytest.fixture(scope="module")
 def s3_base():
     # writable local S3 system
 
     # This fixture is module-scoped, meaning that we can re-use the MotoServer across all tests
+    #####
+    # lifted from https://github.com/fsspec/s3fs/blob/main/s3fs/tests/test_s3fs.py
+    #####
     server = ThreadedMotoServer(ip_address="127.0.0.1", port=port)
     server.start()
     if "AWS_SECRET_ACCESS_KEY" not in os.environ:
@@ -34,7 +47,58 @@ def s3_base():
     server.stop()
 
 
-def spoof_s3(bucket, file_name, file_path):
+@pytest.fixture()
+def s3fs_s3(s3_base):
+    """
+    Create a fully functional "virtual" S3 FileSystem compatible with fsspec/s3fs.
+    Method inspired by https://github.com/fsspec/s3fs/blob/main/s3fs/tests/test_s3fs.py
+    """
+    client = get_boto3_client()
+    client.create_bucket(Bucket=test_bucket_name, ACL="public-read")
+
+    client.create_bucket(Bucket=versioned_bucket_name, ACL="public-read")
+    client.put_bucket_versioning(
+        Bucket=versioned_bucket_name, VersioningConfiguration={"Status": "Enabled"}
+    )
+
+    # initialize secure bucket
+    client.create_bucket(Bucket=secure_bucket_name, ACL="public-read")
+    policy = json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Id": "PutObjPolicy",
+            "Statement": [
+                {
+                    "Sid": "DenyUnEncryptedObjectUploads",
+                    "Effect": "Deny",
+                    "Principal": "*",
+                    "Action": "s3:PutObject",
+                    "Resource": "arn:aws:s3:::{bucket_name}/*".format(
+                        bucket_name=secure_bucket_name
+                    ),
+                    "Condition": {
+                        "StringNotEquals": {
+                            "s3:x-amz-server-side-encryption": "aws:kms"
+                        }
+                    },
+                }
+            ],
+        }
+    )
+
+    client.put_bucket_policy(Bucket=secure_bucket_name, Policy=policy)
+    s3fs.S3FileSystem.clear_instance_cache()
+    s3 = s3fs.S3FileSystem(anon=False, client_kwargs={"endpoint_url": endpoint_uri})
+    s3.invalidate_cache()
+
+    yield s3
+
+
+def spoof_boto3_s3(bucket, file_name, file_path):
+    # this is a pure boto3 implementation
+    # I am leaving it here just in case we'll ever need it in the future
+    # NOTE: we are NOT including boto3 as dependency yet, until we ever need it
+
     # "put" file
     if os.path.exists(file_path):
         with open(file_path, "rb") as file_contents:
@@ -61,17 +125,18 @@ def spoof_s3(bucket, file_name, file_path):
         object.download_fileobj(ncdata)
     with open('testobj.nc', 'rb') as ncdata:
         ncfile = h5netcdf.File(ncdata, 'r', invalid_netcdf=True)
-        print(ncfile)  # it works but...
-    # correct coupling between boto3 and s3fs requires yielding
-    # an s3fs Filesystem,
-    # see https://stackoverflow.com/questions/75902766/how-to-access-my-own-fake-bucket-with-s3filesystem-pytest-and-moto
+        print(ncfile)
 
     return res
 
 
 @pytest.fixture(scope='session')
 def aws_credentials():
-    """Mocked AWS Credentials for moto."""
+    """
+    Mocked AWS Credentials for moto.
+    NOTE: Used ONLY by the pure boto3 test method spoof_boto3_s3.
+    """
+    # NOTE: Used ONLY by the pure boto3 test method spoof_boto3_s3
     os.environ['AWS_ACCESS_KEY_ID'] = 'testing'
     os.environ['AWS_SECRET_ACCESS_KEY'] = 'testing'
     os.environ['AWS_SECURITY_TOKEN'] = 'testing'
@@ -81,8 +146,8 @@ def aws_credentials():
     try:
         tmp = NamedTemporaryFile(delete=False)
         tmp.write(b"""[wild weasel]
-aws_access_key_id = testing
-aws_secret_access_key = testing""")
+                  aws_access_key_id = testing
+                  aws_secret_access_key = testing""")
         tmp.close()
         os.environ['AWS_SHARED_CREDENTIALS_FILE'] = str(tmp.name)
         yield
@@ -92,6 +157,8 @@ aws_secret_access_key = testing""")
 
 @pytest.fixture(scope='function')
 def empty_bucket(aws_credentials):
+    """Create an empty bucket."""
+    # NOTE: Used ONLY by the pure boto3 test method spoof_boto3_s3
     moto_fake = moto.mock_aws()
     try:
         moto_fake.start()
@@ -101,38 +168,41 @@ def empty_bucket(aws_credentials):
     finally:
         moto_fake.stop()
 
-@pytest.mark.skip(reason="This test is now obsolete")
-def test_s3file_spoofing(empty_bucket):
+
+@pytest.mark.skip(reason="This test uses the pure boto3 implement which we don't need at the moment.")
+def test_s3file_with_pure_boto3(empty_bucket):
     ncfile = "./tests/test_data/daily_data.nc"
     file_path = pathlib.Path(ncfile)
     file_name = pathlib.Path(ncfile).name
     # partial spoofing with only boto3+moto
     result = spoof_s3("MY_BUCKET", file_name, file_path)
-
     with s3.open(os.path.join("MY_BUCKET", file_name), "rb") as f:
         ncfile = h5netcdf.File(f, 'r', invalid_netcdf=True)
     assert result.get('HTTPStatusCode') == 200
 
 
-def test_s3file_spoofing_2(tests3):
+def test_s3file_with_s3fs(s3fs_s3):
     """
-    This test spoofs a complete s3fs FileSystem,
+    This test spoofs a complete s3fs FileSystem via s3fs_s3,
     creates a mock bucket inside it, then puts a REAL netCDF4 file in it,
     then it loads it as if it was an S3 file. This is proper
     Wild Weasel stuff right here.
     """
+    # set up physical file and Path properties
     ncfile = "./tests/test_data/daily_data.nc"
     file_path = pathlib.Path(ncfile)
     file_name = pathlib.Path(ncfile).name
 
-    # use s3fs proper
+    # use mocked s3fs
     bucket = "MY_BUCKET"
-    tests3.mkdir(bucket)
-    tests3.put(file_path, bucket)
+    s3fs_s3.mkdir(bucket)
+    s3fs_s3.put(file_path, bucket)
     s3 = s3fs.S3FileSystem(
         anon=False, version_aware=True, client_kwargs={"endpoint_url": endpoint_uri}
     )
     with s3.open(os.path.join("MY_BUCKET", file_name), "rb") as f:
         ncfile = h5netcdf.File(f, 'r', invalid_netcdf=True)
         print("File loaded from spoof S3 with h5netcdf:", ncfile)
-        print(x)
+        print(ncfile["ta"])
+
+    assert "ta" in ncfile
