@@ -31,6 +31,7 @@ REQUIREMENTS = {
         # pin Zarr to use new FSStore instead of KVStore
         'zarr>=2.13.3', # github.com/zarr-developers/zarr-python/issues/1362
         # for testing
+        'moto',  # mock S3 tests
         'pytest',
         'pytest-cov>=2.10.1',
         'pytest-html!=2.1.0',
