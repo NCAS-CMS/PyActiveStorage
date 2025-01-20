@@ -18,7 +18,7 @@ class MockActive:
             self.f = pyfive.File(f)
         ds = self.f[v]
         self.dtype = np.dtype(ds.dtype)
-        self.array = pyfive.ZarrArrayStub(ds.shape, ds.chunks or ds.shape)
+        self.array = pyfive.indexing.ZarrArrayStub(ds.shape, ds.chunks or ds.shape)
         self.missing = get_missing_attributes(ds)
         ds = ds._dataobjects
         self.ds = ds
