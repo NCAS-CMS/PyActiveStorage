@@ -307,8 +307,8 @@ class Active:
         name = self.ds.name
         dtype = np.dtype(self.ds.dtype)
         # hopefully fix pyfive to get a dtype directly
-        array = pyfive.ZarrArrayStub(self.ds.shape, self.ds.chunks)
-        ds = self.ds._dataobjects
+        array = pyfive.indexing.ZarrArrayStub(self.ds.shape, self.ds.chunks)
+        ds = self.ds.id
         
         self.metric_data['args'] = args
         self.metric_data['dataset shape'] = self.ds.shape
@@ -318,7 +318,7 @@ class Active:
         else:
             compressor, filters = decode_filters(ds.filter_pipeline , dtype.itemsize, name)
         
-        indexer = pyfive.OrthogonalIndexer(*args, array)
+        indexer = pyfive.indexing.OrthogonalIndexer(*args, array)
         out_shape = indexer.shape
         #stripped_indexer = [(a, b, c) for a,b,c in indexer]
         drop_axes = indexer.drop_axes and keepdims
@@ -364,10 +364,10 @@ class Active:
         
         if ds.chunks is not None:
             t1 = time.time()
-            ds._get_chunk_addresses()
+            # ds._get_chunk_addresses()
             t2 = time.time() - t1
             self.metric_data['indexing time (s)'] = t2
-            self.metric_data['chunk number'] = len(ds._zchunk_index)
+            # self.metric_data['chunk number'] = len(ds._zchunk_index)
         chunk_count = 0
         t1 = time.time()
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_threads) as executor:
@@ -464,8 +464,9 @@ class Active:
         #FIXME: Do, we, it's not actually used?
 
         """
-        
-        offset, size, filter_mask = ds.get_chunk_details(chunk_coords)
+        # This should contain all the valid chunks
+        print(ds._index.keys(), len(ds._index.keys()))
+        offset, size, filter_mask = ds._index[chunk_coords]
         self.data_read += size
 
         if self.storage_type == 's3' and self._version == 1:
