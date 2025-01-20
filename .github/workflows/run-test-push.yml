@@ -13,14 +13,14 @@ jobs:
     runs-on: "ubuntu-latest"
     strategy:
       matrix:
-        python-version: ["3.12"]  # latest only
+        python-version: ["3.13"]  # latest only
       fail-fast: false
     name: Linux Python ${{ matrix.python-version }}
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: activestorage
           environment-file: environment.yml
