@@ -473,9 +473,9 @@ class Active:
 
         if self.storage_type == 's3' and self._version == 1:
 
-            tmp, count = reduce_opens3_chunk(ds.fh, offset, size, compressor, filters,
+            tmp, count = reduce_opens3_chunk(ds._fh, offset, size, compressor, filters,
                             self.missing, ds.dtype,
-                            chunks, ds_order,
+                            chunks, ds._order,
                             chunk_selection, method=self.method
             )
 

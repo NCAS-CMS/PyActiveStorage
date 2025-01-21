@@ -20,7 +20,7 @@ class MockActive:
         self.dtype = np.dtype(ds.dtype)
         self.array = pyfive.indexing.ZarrArrayStub(ds.shape, ds.chunks or ds.shape)
         self.missing = get_missing_attributes(ds)
-        ds = ds._dataobjects
+        ds = ds.id
         self.ds = ds
     def __getitem__(self, args):
         if self.ds.filter_pipeline is None:
@@ -30,12 +30,13 @@ class MockActive:
         if self.ds.chunks is not None:
             self.ds._get_chunk_addresses()
 
-        indexer = pyfive.OrthogonalIndexer(args, self.array)
+        indexer = pyfive.indexing.OrthogonalIndexer(args, self.array)
         for chunk_coords, chunk_selection, out_selection in indexer:
-            offset, size, filter_mask = self.ds.get_chunk_details(chunk_coords)
+            storeinfo = self.ds.get_chunk_info_from_chunk_coord(chunk_coords)
+            offset, size = storeinfo.byte_offset, storeinfo.size
             jd = reductionist.build_request_data('a','b','c',
                                 offset, size, compressor, filters, self.missing, self.dtype,
-                                self.array._chunks,self.ds.order,chunk_selection)
+                                self.array._chunks,self.ds._order,chunk_selection)
             js = json.dumps(jd)
         return None
 
