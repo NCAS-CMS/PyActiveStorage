@@ -5,7 +5,6 @@ import pathlib
 import urllib
 import pyfive
 import time
-from operator import mul
 from pyfive.h5d import StoreInfo
 
 import s3fs
