@@ -466,11 +466,9 @@ class Active:
         #FIXME: Do, we, it's not actually used?
 
         """
-        # map into correct coordinate space for h5py/pyfive
-        chunk_coords = tuple(map(mul, chunk_coords, chunks))
+
         # retrieve coordinates from chunk index
-        storeinfo = ds._index[chunk_coords]
-        # extract what we need here.
+        storeinfo = ds.get_chunk_info_from_chunk_coord(chunk_coords)
         offset, size = storeinfo.byte_offset, storeinfo.size
         self.data_read += size
 
