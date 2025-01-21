@@ -5,6 +5,8 @@ import pathlib
 import urllib
 import pyfive
 import time
+from operator import mul
+from pyfive.h5d import StoreInfo
 
 import s3fs
 
@@ -334,7 +336,7 @@ class Active:
             out = []
             counts = []
         else:
-            out = np.empty(out_shape, dtype=out_dtype, order=ds.order)
+            out = np.empty(out_shape, dtype=out_dtype, order=ds._order)
             counts = None  # should never get touched with no method!
 
         # Create a shared session object.
@@ -464,16 +466,19 @@ class Active:
         #FIXME: Do, we, it's not actually used?
 
         """
-        # This should contain all the valid chunks
-        print(ds._index.keys(), len(ds._index.keys()))
-        offset, size, filter_mask = ds._index[chunk_coords]
+        # map into correct coordinate space for h5py/pyfive
+        chunk_coords = tuple(map(mul, chunk_coords, chunks))
+        # retrieve coordinates from chunk index
+        storeinfo = ds._index[chunk_coords]
+        # extract what we need here.
+        offset, size = storeinfo.byte_offset, storeinfo.size
         self.data_read += size
 
         if self.storage_type == 's3' and self._version == 1:
 
             tmp, count = reduce_opens3_chunk(ds.fh, offset, size, compressor, filters,
                             self.missing, ds.dtype,
-                            chunks, ds.order,
+                            chunks, ds_order,
                             chunk_selection, method=self.method
             )
 
@@ -500,7 +505,7 @@ class Active:
                                                        size, compressor, filters,
                                                        self.missing, np.dtype(ds.dtype),
                                                        chunks,
-                                                       ds.order,
+                                                       ds._order,
                                                        chunk_selection,
                                                        operation=self._method)
             else:
@@ -519,7 +524,7 @@ class Active:
                                                        size, compressor, filters,
                                                        self.missing, np.dtype(ds.dtype),
                                                        chunks,
-                                                       ds.order,
+                                                       ds._order,
                                                        chunk_selection,
                                                        operation=self._method)
         elif self.storage_type=='ActivePosix' and self.version==2:
@@ -532,7 +537,7 @@ class Active:
             # although we will version changes.
             tmp, count = reduce_chunk(self.filename, offset, size, compressor, filters,
                                       self.missing, ds.dtype,
-                                      chunks, ds.order,
+                                      chunks, ds._order,
                                       chunk_selection, method=self.method)
 
         if self.method is not None:
