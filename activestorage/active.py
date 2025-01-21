@@ -5,6 +5,7 @@ import pathlib
 import urllib
 import pyfive
 import time
+from pyfive.h5d import StoreInfo
 
 import s3fs
 
@@ -307,8 +308,8 @@ class Active:
         name = self.ds.name
         dtype = np.dtype(self.ds.dtype)
         # hopefully fix pyfive to get a dtype directly
-        array = pyfive.ZarrArrayStub(self.ds.shape, self.ds.chunks)
-        ds = self.ds._dataobjects
+        array = pyfive.indexing.ZarrArrayStub(self.ds.shape, self.ds.chunks)
+        ds = self.ds.id
         
         self.metric_data['args'] = args
         self.metric_data['dataset shape'] = self.ds.shape
@@ -318,7 +319,7 @@ class Active:
         else:
             compressor, filters = decode_filters(ds.filter_pipeline , dtype.itemsize, name)
         
-        indexer = pyfive.OrthogonalIndexer(*args, array)
+        indexer = pyfive.indexing.OrthogonalIndexer(*args, array)
         out_shape = indexer.shape
         #stripped_indexer = [(a, b, c) for a,b,c in indexer]
         drop_axes = indexer.drop_axes and keepdims
@@ -334,7 +335,7 @@ class Active:
             out = []
             counts = []
         else:
-            out = np.empty(out_shape, dtype=out_dtype, order=ds.order)
+            out = np.empty(out_shape, dtype=out_dtype, order=ds._order)
             counts = None  # should never get touched with no method!
 
         # Create a shared session object.
@@ -364,10 +365,10 @@ class Active:
         
         if ds.chunks is not None:
             t1 = time.time()
-            ds._get_chunk_addresses()
+            # ds._get_chunk_addresses()
             t2 = time.time() - t1
             self.metric_data['indexing time (s)'] = t2
-            self.metric_data['chunk number'] = len(ds._zchunk_index)
+            # self.metric_data['chunk number'] = len(ds._zchunk_index)
         chunk_count = 0
         t1 = time.time()
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_threads) as executor:
@@ -464,15 +465,17 @@ class Active:
         #FIXME: Do, we, it's not actually used?
 
         """
-        
-        offset, size, filter_mask = ds.get_chunk_details(chunk_coords)
+
+        # retrieve coordinates from chunk index
+        storeinfo = ds.get_chunk_info_from_chunk_coord(chunk_coords)
+        offset, size = storeinfo.byte_offset, storeinfo.size
         self.data_read += size
 
         if self.storage_type == 's3' and self._version == 1:
 
-            tmp, count = reduce_opens3_chunk(ds.fh, offset, size, compressor, filters,
+            tmp, count = reduce_opens3_chunk(ds._fh, offset, size, compressor, filters,
                             self.missing, ds.dtype,
-                            chunks, ds.order,
+                            chunks, ds._order,
                             chunk_selection, method=self.method
             )
 
@@ -499,7 +502,7 @@ class Active:
                                                        size, compressor, filters,
                                                        self.missing, np.dtype(ds.dtype),
                                                        chunks,
-                                                       ds.order,
+                                                       ds._order,
                                                        chunk_selection,
                                                        operation=self._method)
             else:
@@ -518,7 +521,7 @@ class Active:
                                                        size, compressor, filters,
                                                        self.missing, np.dtype(ds.dtype),
                                                        chunks,
-                                                       ds.order,
+                                                       ds._order,
                                                        chunk_selection,
                                                        operation=self._method)
         elif self.storage_type=='ActivePosix' and self.version==2:
@@ -531,7 +534,7 @@ class Active:
             # although we will version changes.
             tmp, count = reduce_chunk(self.filename, offset, size, compressor, filters,
                                       self.missing, ds.dtype,
-                                      chunks, ds.order,
+                                      chunks, ds._order,
                                       chunk_selection, method=self.method)
 
         if self.method is not None:

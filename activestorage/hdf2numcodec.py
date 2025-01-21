@@ -28,7 +28,7 @@ def decode_filters(filter_pipeline, itemsize, name):
     for filter in filter_pipeline:
 
         filter_id=filter['filter_id']
-        properties = filter['client_data_values']
+        properties = filter['client_data']
 
 
         # We suppor the following
