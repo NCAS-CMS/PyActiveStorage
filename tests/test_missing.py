@@ -212,11 +212,11 @@ def test_validmax(tmp_path):
     else:
         x = pyfive.File(testfile)
 
-    # print for Bryan
-    print('bnl',y['data'].getncattr('valid_max'))
-    print('bnl',x['data'].attrs.get('valid_max'))
-    print('bnl',z['data'].attrs.get('valid_max'))
-    print('bnl',a['data'].attrs.get('valid_max'))
+    # print stuff
+    print('y-valid-max', y['data'].getncattr('valid_max'))
+    print('x-valid-max', x['data'].attrs.get('valid_max'))
+    print('z-valid-max', z['data'].attrs.get('valid_max'))
+    print('a-valid-max', a['data'].attrs.get('valid_max'))
 
 
 
