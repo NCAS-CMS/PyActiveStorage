@@ -1,6 +1,8 @@
 """Active storage module."""
 import numpy as np
 
+import time
+
 from numcodecs.compat import ensure_ndarray
 
 def reduce_chunk(rfile, 
@@ -111,8 +113,13 @@ def reduce_opens3_chunk(fh,
     deep in the bowels of H5py/pyfive. The reason for doing this is
     so we can get per chunk metrics
     """
+    t0 = time.time()
     fh.seek(offset)
+    # tiny O(1e-6)
+    # print("Seek chunk time", time.time() - t0)
     chunk_buffer = fh.read(size)
+    # dominant O(2-5s) 99% of total time of _process_chunk()
+    print("fh read chunk time", time.time() - t0)
     chunk = filter_pipeline(chunk_buffer, compression, filters)
     # make it a numpy array of bytes
     chunk = ensure_ndarray(chunk)
