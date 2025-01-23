@@ -44,7 +44,7 @@ def load_from_s3(uri, storage_options=None):
     t2=time.time()
     ds = pyfive.File(s3file)
     t3=time.time()
-    print(f"Dataset loaded from S3 with s3fs and Pyfive: {uri} ({t2-t1:.2},{t3-t2:.2})")
+    print(f"Dataset loaded from S3 with s3fs and Pyfive: {uri} {t3-t1:.2}")
     return ds
 
 def _metricise(method):
@@ -465,11 +465,16 @@ class Active:
         #FIXME: Do, we, it's not actually used?
 
         """
+        # get timing
+        tc1 = time.time()
 
         # retrieve coordinates from chunk index
         storeinfo = ds.get_chunk_info_from_chunk_coord(chunk_coords)
         offset, size = storeinfo.byte_offset, storeinfo.size
         self.data_read += size
+        tcs = time.time()
+        # tiny O(1e-5)
+        # print("V1 Storeinfo S3 Chunk processing time via _process_chunk()", tcs - tc1)
 
         if self.storage_type == 's3' and self._version == 1:
 
@@ -478,6 +483,9 @@ class Active:
                             chunks, ds._order,
                             chunk_selection, method=self.method
             )
+            tc2 = time.time()
+            # dominant O(2-5s)
+            print("V1 S3 Chunk processing time via _process_chunk()", tc2 - tc1)
 
         elif self.storage_type == "s3" and self._version==2:
             # S3: pass in pre-configured storage options (credentials)
@@ -524,6 +532,8 @@ class Active:
                                                        ds._order,
                                                        chunk_selection,
                                                        operation=self._method)
+            tc3 = time.time()
+            print("V2 S3 Chunk processing time via _process_chunk()", tc3 - tc1)
         elif self.storage_type=='ActivePosix' and self.version==2:
             # This is where the DDN Fuse and Infinia wrappers go
             raise NotImplementedError
