@@ -84,4 +84,5 @@ jobs:
         with:
           name: html-report
           path: test-reports/
+          overwrite: true
         if: always()
