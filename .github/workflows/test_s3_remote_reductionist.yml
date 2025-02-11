@@ -60,8 +60,9 @@ jobs:
         run: |
           pytest tests/test_compression_remote_reductionist.py
       - name: Upload HTML report artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: html-report
           path: test-reports/
+          overwrite: true
         if: always()
