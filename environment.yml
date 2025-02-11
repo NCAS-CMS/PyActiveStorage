@@ -19,7 +19,7 @@ dependencies:
   - s3fs >=2024.2.0  # loose s3fs deps leading to old aiobotocore for <2024.2.0
   # pin Zarr to avoid using old KVStore interface
   # see github.com/zarr-developers/zarr-python/issues/1362
-  - zarr >=2.13.6  # KVStore to FSStore
+  - zarr >=2.13.6,<3  # KVStore to FSStore, zarr=3 massive refactoring
   # Python packages for testing
   - moto  # mock S3 tests
   - pytest
