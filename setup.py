@@ -29,7 +29,8 @@ REQUIREMENTS = {
         'requests',
         's3fs>=2024.2.0',  # see environment.yml for pin reason
         # pin Zarr to use new FSStore instead of KVStore
-        'zarr>=2.13.3', # github.com/zarr-developers/zarr-python/issues/1362
+        # also pin to avoid massive refactoring with zarr>=3
+        'zarr>=2.13.3,<3', # gh/zarr-developers/zarr-python/issues/1362
         # for testing
         'moto',  # mock S3 tests
         'pytest',
