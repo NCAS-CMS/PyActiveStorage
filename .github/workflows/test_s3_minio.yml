@@ -88,8 +88,9 @@ jobs:
         run: tests/s3_exploratory/minio_scripts/minio-stop
         if: always()
       - name: Upload HTML report artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: html-report
           path: test-reports/
+          overwrite: true
         if: always()
