@@ -56,12 +56,12 @@ jobs:
           python-version: ${{ matrix.python-version }}
           miniforge-version: "latest"
           use-mamba: true
-      - name: Install development version of NCAS-CMS/Pyfive:h5netcdf
+      - name: Install development version of NCAS-CMS/Pyfive:wacasoft
         run: |
           cd ..
           git clone https://github.com/NCAS-CMS/pyfive.git
           cd pyfive
-          git checkout h5netcdf
+          git checkout wacasoft
           pip install -e .
       - name: Install PyActiveStorage
         run: |
