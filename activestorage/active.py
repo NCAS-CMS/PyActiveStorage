@@ -167,10 +167,10 @@ class Active:
         self._max_threads = max_threads
         self.missing = None
         self.ds = None
+        self.netCDF4Dataset = None
         self.metric_data = {}
         self.data_read = 0
 
-    @_metricise
     def __load_nc_file(self):
         """ Get the netcdf file and it's b-tree"""
         ncvar = self.ncvar
@@ -183,6 +183,11 @@ class Active:
         self.filename = self.uri
 
         self.ds = nc[ncvar]
+        return self.ds
+
+    def _netCDF4Dataset(self):
+        if not self.netCDF4Dataset:
+            return self.__load_nc_file()
 
     def __get_missing_attributes(self):
         if self.ds is None:
@@ -566,3 +571,16 @@ class Active:
             data = np.ma.masked_less(data, valid_min)
 
         return data
+
+
+class ActiveVariable():
+    """
+    A netCDF4.Dataset-like variable built on top of the
+    Active class. It preserves all properties and methods
+    a regular netCDF4.Dataset has, but some of them are custom
+    built with Active Storage functionality in mind.
+    """
+    def __init__(self, active):
+        self.ds = active._netCDF4Dataset()
+    
+    
