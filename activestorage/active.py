@@ -161,8 +161,6 @@ class Active:
         self._max_threads = max_threads
         self.missing = None
         self.ds = None
-        self.netCDF4Dataset = None
-        self.metric_data = {}
         self.data_read = 0
 
     def __load_nc_file(self):
@@ -179,10 +177,6 @@ class Active:
         self.ds = nc[ncvar]
         return self.ds
 
-    def _netCDF4Dataset(self):
-        if not self.netCDF4Dataset:
-            return self.__load_nc_file()
-
     def __get_missing_attributes(self):
         if self.ds is None:
             self.__load_nc_file()
@@ -193,7 +187,6 @@ class Active:
         Provides support for a standard get item.
         #FIXME-BNL: Why is the argument index?
         """
-        self.metric_data = {}
         if self.ds is None:
             self.__load_nc_file()
         
@@ -307,10 +300,6 @@ class Active:
         # hopefully fix pyfive to get a dtype directly
         array = pyfive.indexing.ZarrArrayStub(self.ds.shape, self.ds.chunks)
         ds = self.ds.id
-        
-        self.metric_data['args'] = args
-        self.metric_data['dataset shape'] = self.ds.shape
-        self.metric_data['dataset chunks'] = self.ds.chunks
         if ds.filter_pipeline is None:
             compressor, filters = None, None
         else:
@@ -359,13 +348,6 @@ class Active:
         # Because we do this, we need to read the dataset b-tree now, not as we go, so
         # it is already in cache. If we remove the thread pool from here, we probably
         # wouldn't need to do it before the first one.
-        
-        if ds.chunks is not None:
-            t1 = time.time()
-            # ds._get_chunk_addresses()
-            t2 = time.time() - t1
-            self.metric_data['indexing time (s)'] = t2
-            # self.metric_data['chunk number'] = len(ds._zchunk_index)
         chunk_count = 0
         t1 = time.time()
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_threads) as executor:
@@ -430,10 +412,6 @@ class Active:
                     # size.
                     out = out / np.sum(counts).reshape(shape1)
 
-        t2 = time.time()
-        self.metric_data['reduction time (s)'] = t2-t1
-        self.metric_data['chunks processed'] = chunk_count
-        self.metric_data['storage read (B)'] = self.data_read
         return out
 
     def _get_endpoint_url(self):
