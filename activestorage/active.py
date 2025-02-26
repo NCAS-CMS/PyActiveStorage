@@ -125,6 +125,7 @@ class Active:
         :param storage_options: s3fs.S3FileSystem options
         :param active_storage_url: Reductionist server URL
         """
+        self.ds = None
         input_variable = False
         if dataset is None:
             raise ValueError(f"Must use a valid file or variable string for dataset. Got {dataset}")
@@ -133,6 +134,8 @@ class Active:
         if not isinstance(dataset, Path) and not isinstance(dataset, str):
             print(f"Treating input {dataset} as variable object.")
             input_variable = True
+            self.ds = dataset
+            self.filename = None
         self.uri = dataset
 
 
@@ -160,11 +163,10 @@ class Active:
         self._method = None
         self._max_threads = max_threads
         self.missing = None
-        self.ds = None
         self.data_read = 0
 
     def __load_nc_file(self):
-        """ Get the netcdf file and it's b-tree"""
+        """ Get the netcdf file and its b-tree"""
         ncvar = self.ncvar
         # in all cases we need an open netcdf file to get at attributes
         # we keep it open because we need it's b-tree
@@ -173,8 +175,8 @@ class Active:
         elif self.storage_type == "s3":
             nc = load_from_s3(self.uri, self.storage_options)
         self.filename = self.uri
-
         self.ds = nc[ncvar]
+
         return self.ds
 
     def __get_missing_attributes(self):
