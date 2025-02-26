@@ -110,7 +110,7 @@ class Active:
     def __init__(
         self,
         dataset: Optional[str | Path | object] ,
-        ncvar: str,
+        ncvar: str = None,
         storage_type: str = None,
         max_threads: int = 100,
         storage_options: dict = None,
@@ -152,7 +152,7 @@ class Active:
                 raise ValueError(f"Must use existing file for uri. {self.uri} not found")
 
         self.ncvar = ncvar
-        if self.ncvar is None:
+        if self.ncvar is None and not input_variable:
             raise ValueError("Must set a netCDF variable name to slice")
 
         self._version = 1
