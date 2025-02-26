@@ -86,8 +86,8 @@ def test_active():
 def test_activevariable_netCDF4():
     uri = "tests/test_data/cesm2_native.nc"
     ncvar = "TREFHT"
-    ds = Dataset(uri)
-    av = Active(ds[ncvar])
+    ds = Dataset(uri)[ncvar]
+    av = Active(ds)
     av._method = "min"
     assert av.method([3,444]) == 3
 
@@ -95,10 +95,11 @@ def test_activevariable_netCDF4():
 def test_activevariable_pyfive():
     uri = "tests/test_data/cesm2_native.nc"
     ncvar = "TREFHT"
-    ds = pyfive.File(uri)
-    av = Active(ds[ncvar])
+    ds = pyfive.File(uri)[ncvar]
+    av = Active(ds)
     av._method = "min"
     assert av.method([3,444]) == 3
+    assert av[3:5] == 3
 
 
 @pytest.mark.xfail(reason="We don't employ locks with Pyfive anymore, yet.")
