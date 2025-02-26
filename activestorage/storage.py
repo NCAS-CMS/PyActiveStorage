@@ -3,9 +3,7 @@ import numpy as np
 
 from numcodecs.compat import ensure_ndarray
 
-def reduce_chunk(rfile, 
-                 offset, size, compression, filters, missing, dtype, shape, 
-                 order, chunk_selection, method=None):
+def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shape, order, chunk_selection, axis, method=None):
     """ We do our own read of chunks and decoding etc 
     
     rfile - the actual file with the data 
@@ -20,6 +18,7 @@ def reduce_chunk(rfile,
                         (slice(0, 2, 1), slice(1, 3, 1), slice(0, 1, 1))
                         this defines the part of the chunk which is to be obtained
                         or operated upon.
+    axis - tuple of the axes to reduce (non-negative integers)
     method - computation desired 
             (in this Python version it's an actual method, in 
             storage implementations we'll change to controlled vocabulary)
@@ -41,18 +40,15 @@ def reduce_chunk(rfile,
         chunk = chunk.reshape(shape, order=order)
 
     tmp = chunk[chunk_selection]
-    if method:
-        if missing != (None, None, None, None):
-            tmp = remove_missing(tmp, missing)
-        # Check on size of tmp; method(empty) fails or gives incorrect
-        # results
-        if tmp.size:
-            return method(tmp), tmp.size
-        else:
-            return tmp, 0
-    else:
-        return tmp, None
+    tmp = mask_missing(tmp, missing)
 
+    if method:
+        N = np.ma.count(tmp, axis=axis, keepdims=True)
+        tmp = method(tmp, axis=axis, keepdims=True)
+    else:
+        N = None
+
+    return tmp, N
 
 def filter_pipeline(chunk, compression, filters):
     """
@@ -72,6 +68,24 @@ def filter_pipeline(chunk, compression, filters):
         chunk = filter.decode(chunk)
     return chunk
 
+
+def mask_missing(data, missing):
+    """ 
+    As we are using numpy, we can use a masked array, storage implementations
+    will have to do this by hand 
+    """
+    fill_value, missing_value, valid_min, valid_max = missing
+
+    if fill_value:
+        data = np.ma.masked_equal(data, fill_value)
+    if missing_value:
+        data = np.ma.masked_equal(data, missing_value)
+    if valid_max:
+        data = np.ma.masked_greater(data, valid_max)
+    if valid_min:
+        data = np.ma.masked_less(data, valid_min)
+
+    return data
 
 def remove_missing(data, missing):
     """ 

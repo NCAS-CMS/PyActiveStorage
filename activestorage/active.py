@@ -111,12 +111,12 @@ class Active:
         """Store reduction methods."""
         instance = super().__new__(cls)
         instance._methods = {
-            "min": np.min,
-            "max": np.max,
-            "sum": np.sum,
+            "min": np.ma.min,
+            "max": np.ma.max,
+            "sum": np.ma.sum,
             # For the unweighted mean we calulate the sum and divide
             # by the number of non-missing elements
-            "mean": np.sum,
+            "mean": np.ma.sum,
         }
         return instance
 
@@ -124,6 +124,7 @@ class Active:
         self,
         uri,
         ncvar,
+        axis=None,
         storage_type=None,
         max_threads=100,
         storage_options=None,
@@ -161,6 +162,16 @@ class Active:
         if self.ncvar is None:
             raise ValueError("Must set a netCDF variable name to slice")
 
+        # Parse axis (note, if axis is None then we'll work out how
+        # many dimensions there are at the time of an active
+        # __getitem__ call).
+        if axis is not None:
+            if isinstance(axis, int):
+                axis = (axis,)
+            else:
+                axis = tuple(axis)
+
+        self._axis = axis
         self._version = 1
         self._components = False
         self._method = None
@@ -293,7 +304,7 @@ class Active:
         an array returned via getitem.
         """
         raise NotImplementedError
- 
+
     @_metricise
     def _get_selection(self, *args):
         """ 
@@ -311,6 +322,9 @@ class Active:
         array = pyfive.indexing.ZarrArrayStub(self.ds.shape, self.ds.chunks)
         ds = self.ds.id
         
+        if self._axis is None:                
+            self._axis = tuple(range(len(ds.shape)))
+
         self.metric_data['args'] = args
         self.metric_data['dataset shape'] = self.ds.shape
         self.metric_data['dataset chunks'] = self.ds.chunks
@@ -324,20 +338,30 @@ class Active:
         #stripped_indexer = [(a, b, c) for a,b,c in indexer]
         drop_axes = indexer.drop_axes and keepdims
 
-        # we use array._chunks rather than ds.chunks, as the latter is none in the case of
-        # unchunked data, and we need to tell the storage the array dimensions in this case.
-        return self._from_storage(ds, indexer, array._chunks, out_shape, dtype, compressor, filters, drop_axes)
+        # we use array._chunks rather than ds.chunks, as the latter is
+        # none in the case of unchunked data, and we need to tell the
+        # storage the array dimensions in this case.
+        return self._from_storage(ds, indexer, array._chunks, out_shape, dtype, compressor, filters, drop_axes, self._axis)
 
-    def _from_storage(self, ds, indexer, chunks, out_shape, out_dtype, compressor, filters, drop_axes):
+    def _from_storage(self, ds, indexer, chunks, out_shape, out_dtype, compressor, filters, drop_axes, axis):
         method = self.method
-       
+        need_counts = self.components or self._method == "mean"
+        
         if method is not None:
-            out = []
-            counts = []
+            # Replace the size of each reduced axis with the number of
+            # chunks along that axis
+            out_shape = list(out_shape)
+            for i in axis:
+                out_shape[i] = indexer.dim_indexers[i].nchunks
+                    
+            out = np.ma.empty(out_shape, dtype=out_dtype, order=ds._order)
+            if need_counts:
+                counts = np.ma.empty(
+                    out_shape, dtype=out_dtype, order=ds._order
+                )
         else:
             out = np.empty(out_shape, dtype=out_dtype, order=ds._order)
-            counts = None  # should never get touched with no method!
-
+            
         # Create a shared session object.
         if self.storage_type == "s3" and self._version==2:
             if self.storage_options is not None:
@@ -378,29 +402,32 @@ class Active:
                 future = executor.submit(
                     self._process_chunk,
                     session,  ds, chunks, chunk_coords, chunk_selection,
-                    counts, out_selection, compressor, filters, drop_axes=drop_axes)
+                    out_selection, compressor, filters, drop_axes=drop_axes)
                 futures.append(future)
+
             # Wait for completion.
             for future in concurrent.futures.as_completed(futures):
                 try:
-                    result = future.result()
+                    result, count, out_selection = future.result()
                 except Exception as exc:
                     raise
-                else:
-                    chunk_count +=1
-                    if method is not None:
-                        result, count = result
-                        out.append(result)
-                        counts.append(count)
-                    else:
-                        # store selected data in output
-                        result, selection = result
-                        out[selection] = result
+
+                chunk_count += 1
+                
+                # Store the selected data
+                out[out_selection] = result
+                
+                # Store the counts for the selected data
+                if need_counts:
+                    counts[out_selection] = count
 
         if method is not None:
             # Apply the method (again) to aggregate the result
-            out = method(out)
-            shape1 = (1,) * len(out_shape)
+            out = method(out, axis=axis, keepdims=True)
+            
+            # Aggregate the counts
+            if need_counts:
+                n = np.ma.sum(counts, axis=axis, keepdims=True)         
                 
             if self._components:
                 # Return a dictionary of components containing the
@@ -415,9 +442,6 @@ class Active:
                 # reductions require the per-dask-chunk partial
                 # reductions to retain these dimensions so that
                 # partial results can be concatenated correctly.)
-                out = out.reshape(shape1)
-
-                n = np.sum(counts).reshape(shape1)
                 if self._method == "mean":
                     # For the average, the returned component is
                     # "sum", not "mean"
@@ -431,7 +455,11 @@ class Active:
                     # For the average, it is actually the sum that has
                     # been created, so we need to divide by the sample
                     # size.
-                    out = out / np.sum(counts).reshape(shape1)
+                    #
+                    # Note: It's OK if an element of 'n' is zero,
+                    #       because it will necessarily correspond to
+                    #       a masked value in 'out'.
+                    out = out / n
 
         t2 = time.time()
         self.metric_data['reduction time (s)'] = t2-t1
@@ -453,16 +481,13 @@ class Active:
 
         return f"http://{urllib.parse.urlparse(self.filename).netloc}"
 
-    def _process_chunk(self, session, ds, chunks, chunk_coords, chunk_selection, counts,
+    def _process_chunk(self, session, ds, chunks, chunk_coords, chunk_selection, 
                        out_selection, compressor, filters, drop_axes=None):
         """
         Obtain part or whole of a chunk.
 
         This is done by taking binary data from storage and filling
         the output array.
-
-        Note the need to use counts for some methods
-        #FIXME: Do, we, it's not actually used?
 
         """
 
@@ -471,6 +496,8 @@ class Active:
         offset, size = storeinfo.byte_offset, storeinfo.size
         self.data_read += size
 
+        axis = self._axis
+        
         if self.storage_type == 's3' and self._version == 1:
 
             tmp, count = reduce_opens3_chunk(ds._fh, offset, size, compressor, filters,
@@ -483,6 +510,7 @@ class Active:
             # S3: pass in pre-configured storage options (credentials)
             # print("S3 rfile is:", self.filename)
             parsed_url = urllib.parse.urlparse(self.filename)
+
             bucket = parsed_url.netloc
             object = parsed_url.path
         
@@ -504,6 +532,7 @@ class Active:
                                                        chunks,
                                                        ds._order,
                                                        chunk_selection,
+                                                       axis, 
                                                        operation=self._method)
             else:
                 # special case for "anon=True" buckets that work only with e.g.
@@ -523,6 +552,7 @@ class Active:
                                                        chunks,
                                                        ds._order,
                                                        chunk_selection,
+                                                       axis,
                                                        operation=self._method)
         elif self.storage_type=='ActivePosix' and self.version==2:
             # This is where the DDN Fuse and Infinia wrappers go
@@ -532,17 +562,38 @@ class Active:
             # see https://github.com/valeriupredoi/PyActiveStorage/issues/33
             # so neither the returned data or the interface should be considered stable
             # although we will version changes.
+
             tmp, count = reduce_chunk(self.filename, offset, size, compressor, filters,
                                       self.missing, ds.dtype,
                                       chunks, ds._order,
-                                      chunk_selection, method=self.method)
-
+                                      chunk_selection, axis, method=self.method)
+            
         if self.method is not None:
-            return tmp, count 
+            # Replace the index corresponding to each reduced axis
+            # with its size-1 position in chunk-space.
+            #
+            # E.g. if 'out_selection' is (slice(0,12), slice(20,60)),
+            #      'chunk_coord' is (1, 3), and 'axis' is (1,); then
+            #      'out_selection' will become (slice(0,12),
+            #      slice(3,4)). If 'axis' were instead (0, 1) then
+            #      'out_selection' would become (slice(1,2),
+            #      slice(3,4)).
+            #
+            # This makes sure that 'out_selection' puts 'tmp' in the
+            # correct place of the numpy array defined by the method
+            # that collates the 'tmp's for each chunk (currently
+            # `_from_storage`).
+            out_selection = list(out_selection)
+            for i in axis:
+                n = chunk_coords[i]
+                out_selection[i] = slice(n, n+1)
+                
+            return tmp, count, tuple(out_selection)
         else:
             if drop_axes:
                 tmp = np.squeeze(tmp, axis=drop_axes)
-            return tmp, out_selection 
+                
+            return tmp, None, out_selection
 
     def _mask_data(self, data):
         """ 
