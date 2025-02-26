@@ -3,18 +3,19 @@ import numpy as np
 import pytest
 import threading
 
-from activestorage.active import Active, ActiveVariable
+from activestorage.active import Active
 from activestorage.active import load_from_s3
 from activestorage.config import *
 from botocore.exceptions import EndpointConnectionError as botoExc
 from botocore.exceptions import NoCredentialsError as NoCredsExc
+from netCDF4 import Dataset
 
 
 def test_uri_none():
     """Unit test for class:Active."""
     # test invalid uri
     some_file = None
-    expected = "Must use a valid file for uri. Got None"
+    expected = "Must use a valid file or variable string for dataset. Got None"
     with pytest.raises(ValueError) as exc:
         active = Active(some_file, ncvar="")
     assert str(exc.value) == expected
@@ -78,15 +79,16 @@ def test_active():
     uri = "tests/test_data/cesm2_native.nc"
     ncvar = "TREFHT"
     active = Active(uri, ncvar=ncvar)
-    init = active.__init__(uri=uri, ncvar=ncvar)
+    init = active.__init__(dataset=uri, ncvar=ncvar)
 
 
 def test_activevariable():
     uri = "tests/test_data/cesm2_native.nc"
     ncvar = "TREFHT"
-    active = Active(uri, ncvar=ncvar)
-    av = ActiveVariable(active)
-    assert av.ds.shape == (12, 4, 8)
+    ds = Dataset(uri)
+    av = Active(ds, ncvar)
+    av._method = "min"
+    assert av.method([3,444]) == 3
 
 
 @pytest.mark.xfail(reason="We don't employ locks with Pyfive anymore, yet.")
