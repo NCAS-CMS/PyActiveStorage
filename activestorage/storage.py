@@ -3,7 +3,7 @@ import numpy as np
 
 from numcodecs.compat import ensure_ndarray
 
-def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shape, order, chunk_selection, method=None):
+def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shape, order, chunk_selection, axis, method=None):
     """ We do our own read of chunks and decoding etc 
     
     rfile - the actual file with the data 
@@ -39,17 +39,28 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
         chunk = chunk.reshape(shape, order=order)
 
     tmp = chunk[chunk_selection]
+    tmp = mask_missing(tmp, missing)
+#    print ('tmp0', tmp)
     if method:
-        if missing != (None, None, None, None):
-            tmp = remove_missing(tmp, missing)
-        # check on size of tmp; method(empty) returns nan
-        if tmp.any():
-            return method(tmp), tmp.size
-        else:
-            return tmp, None
-    else:
-        return tmp, None
+        N = np.ma.count(tmp, axis=axis, keepdims=True)
+        tmp = method(tmp, axis=axis, keepdims=True)
+#        print ('tmp', tmp)
+#        print (chunk_selection, axis, 'N', N)
+        return tmp, N
 
+    return tmp, None
+#
+#    if method:
+#        if missing != (None, None, None, None):
+#            tmp = remove_missing(tmp, missing)
+#        # check on size of tmp; method(empty) returns nan
+#        if tmp.any():
+#            return method(tmp), tmp.size
+#        else:
+#            return tmp, None
+#    else:
+#        return tmp, None
+#
 
 def filter_pipeline(chunk, compression, filters):
     """
@@ -69,6 +80,24 @@ def filter_pipeline(chunk, compression, filters):
         chunk = filter.decode(chunk)
     return chunk
 
+
+def mask_missing(data, missing):
+    """ 
+    As we are using numpy, we can use a masked array, storage implementations
+    will have to do this by hand 
+    """
+    fill_value, missing_value, valid_min, valid_max = missing
+
+    if fill_value:
+        data = np.ma.masked_equal(data, fill_value)
+    if missing_value:
+        data = np.ma.masked_equal(data, missing_value)
+    if valid_max:
+        data = np.ma.masked_greater(data, valid_max)
+    if valid_min:
+        data = np.ma.masked_less(data, valid_min)
+
+    return data
 
 def remove_missing(data, missing):
     """ 

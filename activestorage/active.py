@@ -64,12 +64,12 @@ class Active:
         """Store reduction methods."""
         instance = super().__new__(cls)
         instance._methods = {
-            "min": np.min,
-            "max": np.max,
-            "sum": np.sum,
+            "min": np.ma.min,
+            "max": np.ma.max,
+            "sum": np.ma.sum,
             # For the unweighted mean we calulate the sum and divide
             # by the number of non-missing elements
-            "mean": np.sum,
+            "mean": np.ma.sum,
         }
         return instance
 
@@ -77,6 +77,7 @@ class Active:
         self,
         uri,
         ncvar,
+        axis=None,
         storage_type=None,
         max_threads=100,
         storage_options=None,
@@ -115,6 +116,13 @@ class Active:
             raise ValueError("Must set a netCDF variable name to slice")
         self.zds = None
 
+        if axis is not None:
+            if isinstance(axis, int):
+                axis = (axis,)
+            else:
+                axis = tuple(axis)
+
+        self._axis = axis
         self._version = 1
         self._components = False
         self._method = None
@@ -269,7 +277,7 @@ class Active:
                 self.storage_type,
                 self.storage_options,
             )
-            # The following is a hangove from exploration
+            # The following is a hangover from exploration
             # and is needed if using the original doing it ourselves
             # self.zds = make_an_array_instance_active(ds)
             self.zds = ds
@@ -284,6 +292,9 @@ class Active:
             # FIXME: We do not get the correct byte order on the Zarr
             # Array's dtype when using S3, so capture it here.
             self._dtype = np.dtype(zarray['dtype'])
+
+        if self._axis is None:                
+            self._axis = tuple(range(len(self.zds.shape)))
             
         return self._get_selection(index)
 
@@ -333,17 +344,23 @@ class Active:
         # fsref = self.zds.chunk_store._mutable_mapping.fs.references 
         fsref = self.zds.chunk_store.fs.references
 
+        print ('axis=', self._axis)
         return self._from_storage(stripped_indexer, drop_axes, out_shape,
-                                  out_dtype, compressor, filters, missing, fsref)
-
+                                  out_dtype, compressor, filters, missing, fsref,
+                                  axis=self._axis)
+    
     def _from_storage(self, stripped_indexer, drop_axes, out_shape, out_dtype,
-                      compressor, filters, missing, fsref):
+                      compressor, filters, missing, fsref, axis):
         method = self.method
         if method is not None:
-            out = []
-            counts = []
+            out_shape = list(out_shape)
+            for i in axis:
+                out_shape[i] = 1 
+                    
+            out = np.ma.empty(out_shape, dtype=out_dtype, order=self.zds._order)
+            counts = np.ma.empty(out_shape, dtype=out_dtype, order=self.zds._order)
         else:
-            out = np.empty(out_shape, dtype=out_dtype, order=self.zds._order)
+            out = np.ma.empty(out_shape, dtype=out_dtype, order=self.zds._order)
             counts = None  # should never get touched with no method!
 
         # Create a shared session object.
@@ -381,23 +398,24 @@ class Active:
             # Wait for completion.
             for future in concurrent.futures.as_completed(futures):
                 try:
-                    result = future.result()
+                    result, count, out_selection = future.result()
                 except Exception as exc:
                     raise
-                else:
-                    if method is not None:
-                        result, count = result
-                        out.append(result)
-                        counts.append(count)
-                    else:
-                        # store selected data in output
-                        result, selection = result
-                        out[selection] = result
 
+                print (out.shape,result.shape, count.shape, out_selection) 
+                out[out_selection] = result
+                if method is not None:
+                    out[out_selection] = result
+                    counts[out_selection] = count
+                else:
+                    # store selected data in output
+                    out[out_selection] = result
+        print (888, out.shape)
         if method is not None:
             # Apply the method (again) to aggregate the result
-            out = method(out)
-            shape1 = (1,) * len(out_shape)
+            out = method(out, axis=axis, keepdims=True)
+            if self._components or self._method == "mean":
+                n = np.ma.sum(counts, axis=axis, keepdims=True)         
                 
             if self._components:
                 # Return a dictionary of components containing the
@@ -412,9 +430,6 @@ class Active:
                 # reductions require the per-dask-chunk partial
                 # reductions to retain these dimensions so that
                 # partial results can be concatenated correctly.)
-                out = out.reshape(shape1)
-
-                n = np.sum(counts).reshape(shape1)
                 if self._method == "mean":
                     # For the average, the returned component is
                     # "sum", not "mean"
@@ -428,7 +443,7 @@ class Active:
                     # For the average, it is actually the sum that has
                     # been created, so we need to divide by the sample
                     # size.
-                    out = out / np.sum(counts).reshape(shape1)
+                    out = out / n # TODO
 
         return out
 
@@ -462,6 +477,8 @@ class Active:
         key = f"{self.ncvar}/{coord}"
         rfile, offset, size = tuple(fsref[key])
 
+        axis = self._axis
+            
         # S3: pass in pre-configured storage options (credentials)
         if self.storage_type == "s3":
             print("S3 rfile is:", rfile)
@@ -516,14 +533,26 @@ class Active:
             tmp, count = reduce_chunk(rfile, offset, size, compressor, filters,
                                       missing, self.zds._dtype,
                                       self.zds._chunks, self.zds._order,
-                                      chunk_selection, method=self.method)
+                                      chunk_selection, axis, method=self.method)
 
         if self.method is not None:
-            return tmp, count
+            out_selection = list(out_selection)
+            for i in axis:
+                out_selection[i] = slice(0,1)
+                
+            return tmp, count, tuple(out_selection)
         else:
             if drop_axes:
                 tmp = np.squeeze(tmp, axis=drop_axes)
-            return tmp, out_selection
+                
+            return tmp, None, out_selection
+        
+#        if self.method is not None:
+#            return tmp, count
+#        else:
+#            if drop_axes:
+#                tmp = np.squeeze(tmp, axis=drop_axes)
+#            return tmp, out_selection
 
     def _mask_data(self, data, ds_var):
         """ppp"""
