@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pyfive
 import pytest
 import threading
 
@@ -82,11 +83,20 @@ def test_active():
     init = active.__init__(dataset=uri, ncvar=ncvar)
 
 
-def test_activevariable():
+def test_activevariable_netCDF4():
     uri = "tests/test_data/cesm2_native.nc"
     ncvar = "TREFHT"
     ds = Dataset(uri)
-    av = Active(ds, ncvar)
+    av = Active(ds[ncvar])
+    av._method = "min"
+    assert av.method([3,444]) == 3
+
+
+def test_activevariable_pyfive():
+    uri = "tests/test_data/cesm2_native.nc"
+    ncvar = "TREFHT"
+    ds = pyfive.File(uri)
+    av = Active(ds[ncvar])
     av._method = "min"
     assert av.method([3,444]) == 3
 
