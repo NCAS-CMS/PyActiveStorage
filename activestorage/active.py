@@ -4,10 +4,12 @@ import numpy as np
 import pathlib
 import urllib
 import pyfive
-import time
-from pyfive.h5d import StoreInfo
-
 import s3fs
+import time
+
+from pathlib import Path
+from pyfive.h5d import StoreInfo
+from typing import Optional
 
 from activestorage.config import *
 from activestorage import reductionist
@@ -46,21 +48,6 @@ def load_from_s3(uri, storage_options=None):
     t3=time.time()
     print(f"Dataset loaded from S3 with s3fs and Pyfive: {uri} ({t2-t1:.2},{t3-t2:.2})")
     return ds
-
-def _metricise(method):
-    """ Decorator for class methods loads into metric_data"""
-    def timed(self, *args, **kw):
-        ts = time.time()
-        metric_name=''
-        if '__metric_name' in kw:
-            metric_name = kw['__metric_name']
-            del kw['__metric_name']
-        result = method(self,*args, **kw)
-        te = time.time()
-        if metric_name:
-            self.metric_data[metric_name] = te-ts
-        return result
-    return timed
 
 
 def get_missing_attributes(ds):
@@ -122,13 +109,13 @@ class Active:
 
     def __init__(
         self,
-        uri,
-        ncvar,
-        storage_type=None,
-        max_threads=100,
-        storage_options=None,
-        active_storage_url=None
-    ):
+        dataset: Optional[str | Path | object] ,
+        ncvar: str,
+        storage_type: str = None,
+        max_threads: int = 100,
+        storage_options: dict = None,
+        active_storage_url: str = None
+    ) -> None:
         """
         Instantiate with a NetCDF4 dataset URI and the variable of interest within that file.
         (We need the variable, because we need variable specific metadata from within that
@@ -138,15 +125,21 @@ class Active:
         :param storage_options: s3fs.S3FileSystem options
         :param active_storage_url: Reductionist server URL
         """
-        # Assume NetCDF4 for now
-        self.uri = uri
-        if self.uri is None:
-            raise ValueError(f"Must use a valid file for uri. Got {uri}")
+        input_variable = False
+        if dataset is None:
+            raise ValueError(f"Must use a valid file or variable string for dataset. Got {dataset}")
+        if isinstance(dataset, Path) and not dataset.exists():
+            raise ValueError(f"Path to input file {dataset} does not exist.")
+        if not isinstance(dataset, Path) and not isinstance(dataset, str):
+            print(f"Treating input {dataset} as variable object.")
+            input_variable = True
+        self.uri = dataset
+
 
         # still allow for a passable storage_type
         # for special cases eg "special-POSIX" ie DDN
         if not storage_type and storage_options is not None:
-            storage_type = urllib.parse.urlparse(uri).scheme
+            storage_type = urllib.parse.urlparse(dataset).scheme
         self.storage_type = storage_type
 
         # get storage_options
@@ -154,8 +147,9 @@ class Active:
         self.active_storage_url = active_storage_url
 
         # basic check on file
-        if not os.path.isfile(self.uri) and not self.storage_type:
-            raise ValueError(f"Must use existing file for uri. {self.uri} not found")
+        if not input_variable:
+            if not os.path.isfile(self.uri) and not self.storage_type:
+                raise ValueError(f"Must use existing file for uri. {self.uri} not found")
 
         self.ncvar = ncvar
         if self.ncvar is None:
@@ -201,8 +195,7 @@ class Active:
         """
         self.metric_data = {}
         if self.ds is None:
-            self.__load_nc_file(__metric_name='load nc time')
-            #self.__metricise('Load','__load_nc_file')
+            self.__load_nc_file()
         
         self.missing = self.__get_missing_attributes()
 
@@ -211,21 +204,20 @@ class Active:
         if self.method is None and self._version == 0:
         
             # No active operation
-            return self._get_vanilla(index, __metric_name='vanilla_time')
+            return self._get_vanilla(index)
 
         elif self._version == 1:
 
             #FIXME: is the difference between version 1 and 2 still honoured?
-            return self._get_selection(index, __metric_name='selection 1 time (s)')
+            return self._get_selection(index)
         
         elif self._version  == 2:
 
-            return self._get_selection(index, __metric_name='selection 2 time (s)')
+            return self._get_selection(index)
           
         else:
             raise ValueError(f'Version {self._version} not supported')
 
-    @_metricise
     def _get_vanilla(self, index):
         """ 
         Get the data without any active operation
@@ -299,7 +291,7 @@ class Active:
         """
         raise NotImplementedError
  
-    @_metricise
+
     def _get_selection(self, *args):
         """ 
         At this point we have a Dataset object, but all the important information about
@@ -571,16 +563,3 @@ class Active:
             data = np.ma.masked_less(data, valid_min)
 
         return data
-
-
-class ActiveVariable():
-    """
-    A netCDF4.Dataset-like variable built on top of the
-    Active class. It preserves all properties and methods
-    a regular netCDF4.Dataset has, but some of them are custom
-    built with Active Storage functionality in mind.
-    """
-    def __init__(self, active):
-        self.ds = active._netCDF4Dataset()
-    
-    
