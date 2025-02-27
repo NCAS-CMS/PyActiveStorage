@@ -147,6 +147,12 @@ class Active:
             storage_type = urllib.parse.urlparse(dataset).scheme
         self.storage_type = storage_type
 
+        # set correct filename attr
+        if input_variable and not self.storage_type:
+            self.filename = self.ds
+        elif input_variable and self.storage_type == "s3":
+            self.filename = self.ds.id._filename
+
         # get storage_options
         self.storage_options = storage_options
         self.active_storage_url = active_storage_url
