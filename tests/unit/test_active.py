@@ -87,9 +87,10 @@ def test_activevariable_netCDF4():
     uri = "tests/test_data/cesm2_native.nc"
     ncvar = "TREFHT"
     ds = Dataset(uri)[ncvar]
-    av = Active(ds)
-    av._method = "min"
-    assert av.method([3,444]) == 3
+    exc_str = "Variable object dataset can only be pyfive.high_level.Dataset"
+    with pytest.raises(TypeError) as exc:
+        av = Active(ds)
+    assert exc_str in str(exc)
 
 
 def test_activevariable_pyfive():
