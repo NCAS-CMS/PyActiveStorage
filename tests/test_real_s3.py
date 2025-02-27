@@ -6,7 +6,7 @@ from activestorage.active import load_from_s3
 
 S3_BUCKET = "bnl"
 
-
+# TODO Remove after full testing and right before deployment
 def test_s3_dataset():
     """Run somewhat as the 'gold' test."""
     storage_options = {
