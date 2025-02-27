@@ -184,8 +184,6 @@ class Active:
         self.filename = self.uri
         self.ds = nc[ncvar]
 
-        return self.ds
-
     def __get_missing_attributes(self):
         if self.ds is None:
             self.__load_nc_file()
