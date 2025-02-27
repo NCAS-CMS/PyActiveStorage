@@ -100,7 +100,11 @@ def test_activevariable_pyfive():
     av = Active(ds)
     av._method = "min"
     assert av.method([3,444]) == 3
-    assert av[3:5] == 3
+    av_slice_min = av[3:5]
+    assert av_slice_min == np.array(258.62814, dtype="float32")
+    # test with Numpy
+    np_slice_min = np.min(ds[3:5])
+    assert av_slice_min == np_slice_min
 
 
 @pytest.mark.xfail(reason="We don't employ locks with Pyfive anymore, yet.")
