@@ -3,7 +3,6 @@ import numpy as np
 import pyfive
 
 from numcodecs.compat import ensure_ndarray
-from pyfive.dataobjects import DatasetID
 
 
 def reduce_chunk(rfile, 
