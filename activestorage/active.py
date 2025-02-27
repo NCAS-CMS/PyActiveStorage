@@ -137,7 +137,6 @@ class Active:
                 raise TypeError(f"Variable object dataset can only be pyfive.high_level.Dataset. Got {dataset}")
             input_variable = True
             self.ds = dataset
-            self.filename = self.ds
         self.uri = dataset
 
 
