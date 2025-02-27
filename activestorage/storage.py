@@ -28,11 +28,13 @@ def reduce_chunk(rfile,
             storage implementations we'll change to controlled vocabulary)
                     
     """
-    
-    #FIXME: for the moment, open the file every time ... we might want to do that, or not
     obj_type = type(rfile)
     print(f"Reducing chunk of object {obj_type}")
+
     if not obj_type is pyfive.high_level.Dataset:
+        #FIXME: for the moment, open the file every time ... we might want to do that, or not
+        # we could just use an instance of pyfive.high_level.Dataset.id
+        # passed directly from active.py, as below
         with open(rfile,'rb') as open_file:
             # get the data
             chunk = read_block(open_file, offset, size)
