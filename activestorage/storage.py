@@ -27,6 +27,8 @@ def reduce_chunk(rfile,
     """
     
     #FIXME: for the moment, open the file every time ... we might want to do that, or not
+    obj_type = type(rfile)
+    print(f"Reducing chunk of object {obj_type}")
     with open(rfile,'rb') as open_file:
         # get the data
         chunk = read_block(open_file, offset, size)
