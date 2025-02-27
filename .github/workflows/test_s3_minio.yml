@@ -6,7 +6,8 @@ on:
   push:
     branches:
       - main  # keep this at all times
-      - pyfive
+      # - pyfive  # reinstate
+      - new_api_pyfive
   pull_request:
   schedule:
     - cron: '0 0 * * *'  # nightly
