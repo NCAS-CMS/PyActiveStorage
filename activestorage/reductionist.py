@@ -49,7 +49,7 @@ def reduce_chunk(session, server, source, bucket, object,
                             1), slice(1, 3, 1), slice(0, 1, 1))
                             this defines the part of the chunk which is to be
                             obtained or operated upon.
-    :param axis: tuple of the axes to reduce (non-negative integers)
+    :param axis: tuple of the axes to be reduced (non-negative integers)
     :param operation: name of operation to perform
     :returns: the reduced data as a numpy array or scalar
     :raises ReductionistError: if the request to Reductionist fails

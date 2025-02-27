@@ -322,7 +322,9 @@ class Active:
         array = pyfive.indexing.ZarrArrayStub(self.ds.shape, self.ds.chunks)
         ds = self.ds.id
         
-        if self._axis is None:                
+        if self._axis is None:
+            # 'axis' is None, so work out how many dimensions there
+            # are from the variable.
             self._axis = tuple(range(len(ds.shape)))
 
         self.metric_data['args'] = args
@@ -345,23 +347,46 @@ class Active:
 
     def _from_storage(self, ds, indexer, chunks, out_shape, out_dtype, compressor, filters, drop_axes, axis):
         method = self.method
+
+        # Whether or not we need to store reduction counts
         need_counts = self.components or self._method == "mean"
-        
+
         if method is not None:
-            # Replace the size of each reduced axis with the number of
-            # chunks along that axis
+            # Get the number of chunks per axis
+            nchunks = []
+            dim_indexers = indexer.dim_indexers
+            for i, d in enumerate(dim_indexers):
+                try:
+                    nchunks.append(d.nchunks)
+                except AttributeError:
+                    # If 'd' doesn't have an 'nchunks' attribute then
+                    # it must be for an integer index that results in
+                    # a droped axis.
+                    raise IndexError(
+                        "Can't do an active reduction when the index for "
+                        f"axis {i!r} drops the axis."
+                    )
+
+            # Replace the size of each reduced axis with the total
+            # number of chunks along that axis
             out_shape = list(out_shape)
             for i in axis:
-                out_shape[i] = indexer.dim_indexers[i].nchunks
-                    
+                try:
+                    out_shape[i] = nchunks[i]
+                except IndexError:
+                    raise ValueError(
+                        "Can't do an active reduction for an "
+                        f"out-of-range axis: {i!r}"
+                    )
+
             out = np.ma.empty(out_shape, dtype=out_dtype, order=ds._order)
+            out.mask = True
             if need_counts:
-                counts = np.ma.empty(
-                    out_shape, dtype=out_dtype, order=ds._order
-                )
+                counts = np.ma.empty(out_shape, dtype='int64', order=ds._order)
+                counts.mask = True
         else:
-            out = np.empty(out_shape, dtype=out_dtype, order=ds._order)
-            
+            out = np.ma.empty(out_shape, dtype=out_dtype, order=ds._order)
+
         # Create a shared session object.
         if self.storage_type == "s3" and self._version==2:
             if self.storage_options is not None:
@@ -413,22 +438,23 @@ class Active:
                     raise
 
                 chunk_count += 1
-                
+
                 # Store the selected data
                 out[out_selection] = result
-                
+
                 # Store the counts for the selected data
                 if need_counts:
                     counts[out_selection] = count
 
         if method is not None:
-            # Apply the method (again) to aggregate the result
+            # Apply the method (again) to aggregate the result along
+            # the reduction axes
             out = method(out, axis=axis, keepdims=True)
-            
-            # Aggregate the counts
+
+            # Aggregate the counts along the reduction axes
             if need_counts:
-                n = np.ma.sum(counts, axis=axis, keepdims=True)         
-                
+                n = np.ma.sum(counts, axis=axis, keepdims=True)
+
             if self._components:
                 # Return a dictionary of components containing the
                 # reduced data and the sample size ('n'). (Rationale:
@@ -457,8 +483,8 @@ class Active:
                     # size.
                     #
                     # Note: It's OK if an element of 'n' is zero,
-                    #       because it will necessarily correspond to
-                    #       a masked value in 'out'.
+                    #       because it will, by definition, correspond
+                    #       to a masked value in 'out'.
                     out = out / n
 
         t2 = time.time()
@@ -481,7 +507,7 @@ class Active:
 
         return f"http://{urllib.parse.urlparse(self.filename).netloc}"
 
-    def _process_chunk(self, session, ds, chunks, chunk_coords, chunk_selection, 
+    def _process_chunk(self, session, ds, chunks, chunk_coords, chunk_selection,
                        out_selection, compressor, filters, drop_axes=None):
         """
         Obtain part or whole of a chunk.
@@ -496,8 +522,9 @@ class Active:
         offset, size = storeinfo.byte_offset, storeinfo.size
         self.data_read += size
 
+        # Axes over which to apply a reduction
         axis = self._axis
-        
+
         if self.storage_type == 's3' and self._version == 1:
 
             tmp, count = reduce_opens3_chunk(ds._fh, offset, size, compressor, filters,
@@ -532,7 +559,7 @@ class Active:
                                                        chunks,
                                                        ds._order,
                                                        chunk_selection,
-                                                       axis, 
+                                                       axis,
                                                        operation=self._method)
             else:
                 # special case for "anon=True" buckets that work only with e.g.
@@ -567,32 +594,33 @@ class Active:
                                       self.missing, ds.dtype,
                                       chunks, ds._order,
                                       chunk_selection, axis, method=self.method)
-            
+
         if self.method is not None:
-            # Replace the index corresponding to each reduced axis
-            # with its size-1 position in chunk-space.
+            # For a reduced axis, replace the index in 'out_selection'
+            # with the corresponding position of the chunk in
+            # chunks-space.
             #
             # E.g. if 'out_selection' is (slice(0,12), slice(20,60)),
             #      'chunk_coord' is (1, 3), and 'axis' is (1,); then
             #      'out_selection' will become (slice(0,12),
-            #      slice(3,4)). If 'axis' were instead (0, 1) then
+            #      slice(3,4)). If 'axis' were instead (0, 1), then
             #      'out_selection' would become (slice(1,2),
             #      slice(3,4)).
             #
             # This makes sure that 'out_selection' puts 'tmp' in the
             # correct place of the numpy array defined by the method
-            # that collates the 'tmp's for each chunk (currently
-            # `_from_storage`).
+            # (currently `_from_storage`) that collates the 'tmp'
+            # arrays from each chunk.
             out_selection = list(out_selection)
             for i in axis:
                 n = chunk_coords[i]
-                out_selection[i] = slice(n, n+1)
-                
+                out_selection[i] = slice(n, n + 1)
+
             return tmp, count, tuple(out_selection)
         else:
             if drop_axes:
                 tmp = np.squeeze(tmp, axis=drop_axes)
-                
+
             return tmp, None, out_selection
 
     def _mask_data(self, data):

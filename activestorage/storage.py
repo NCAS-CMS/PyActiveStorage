@@ -18,7 +18,7 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
                         (slice(0, 2, 1), slice(1, 3, 1), slice(0, 1, 1))
                         this defines the part of the chunk which is to be obtained
                         or operated upon.
-    axis - tuple of the axes to reduce (non-negative integers)
+    axis - tuple of the axes to be reduced (non-negative integers)
     method - computation desired 
             (in this Python version it's an actual method, in 
             storage implementations we'll change to controlled vocabulary)
@@ -70,40 +70,22 @@ def filter_pipeline(chunk, compression, filters):
 
 
 def mask_missing(data, missing):
-    """ 
-    As we are using numpy, we can use a masked array, storage implementations
-    will have to do this by hand 
+    """Mask an array.
+
     """
     fill_value, missing_value, valid_min, valid_max = missing
 
-    if fill_value:
+    if fill_value is not None:
         data = np.ma.masked_equal(data, fill_value)
-    if missing_value:
+
+    if missing_value is not None:
         data = np.ma.masked_equal(data, missing_value)
-    if valid_max:
+
+    if valid_max is not None:
         data = np.ma.masked_greater(data, valid_max)
-    if valid_min:
+
+    if valid_min is not None:
         data = np.ma.masked_less(data, valid_min)
-
-    return data
-
-def remove_missing(data, missing):
-    """ 
-    As we are using numpy, we can use a masked array, storage implementations
-    will have to do this by hand 
-    """
-    fill_value, missing_value, valid_min, valid_max = missing
-
-    if fill_value:
-        data = np.ma.masked_equal(data, fill_value)
-    if missing_value:
-        data = np.ma.masked_equal(data, missing_value)
-    if valid_max:
-        data = np.ma.masked_greater(data, valid_max)
-    if valid_min:
-        data = np.ma.masked_less(data, valid_min)
-
-    data = np.ma.compressed(data)
 
     return data
 
@@ -119,7 +101,7 @@ def read_block(open_file, offset, size):
 
 def reduce_opens3_chunk(fh, 
         offset, size, compression, filters, missing, dtype, shape, 
-        order, chunk_selection, method=None):
+        order, chunk_selection, axis, method=None):
     """ 
     Same function as reduce_chunk, but this mimics what is done
     deep in the bowels of H5py/pyfive. The reason for doing this is
@@ -137,14 +119,12 @@ def reduce_opens3_chunk(fh,
     chunk = chunk.reshape(shape, order=order)
 
     tmp = chunk[chunk_selection]
-    if method:
-        if missing != (None, None, None, None):
-            tmp = remove_missing(tmp, missing)
-        # check on size of tmp; method(empty) returns nan
-        if tmp.any():
-            return method(tmp), tmp.size
-        else:
-            return tmp, None
-    else:
-        return tmp, None
+    tmp = mask_missing(tmp, missing)
 
+    if method:
+        N = np.ma.count(tmp, axis=axis, keepdims=True)
+        tmp = method(tmp, axis=axis, keepdims=True)
+    else:
+        N = None
+
+    return tmp, N
