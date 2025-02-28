@@ -130,7 +130,7 @@ class Active:
         if dataset is None:
             raise ValueError(f"Must use a valid file name or variable object for dataset. Got {dataset!r}")
         if isinstance(dataset, Path) and not dataset.exists():
-            raise ValueError(f"Path to input file {dataset} does not exist.")
+            raise ValueError(f"Path to input file {dataset!r} does not exist.")
         if not isinstance(dataset, Path) and not isinstance(dataset, str):
             print(f"Treating input {dataset} as variable object.")
             if not type(dataset) is pyfive.high_level.Dataset:
