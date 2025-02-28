@@ -16,7 +16,7 @@ def test_uri_none():
     """Unit test for class:Active."""
     # test invalid uri
     some_file = None
-    expected = "Must use a valid file or variable string for dataset. Got None"
+    expected = "Must use a valid file name or variable object for dataset. Got None"
     with pytest.raises(ValueError) as exc:
         active = Active(some_file, ncvar="")
     assert str(exc.value) == expected
