@@ -310,7 +310,6 @@ class Active:
 
         name = self.ds.name
         dtype = np.dtype(self.ds.dtype)
-        # hopefully fix pyfive to get a dtype directly
         array = pyfive.indexing.ZarrArrayStub(self.ds.shape, self.ds.chunks)
         ds = self.ds.id
         if ds.filter_pipeline is None:
