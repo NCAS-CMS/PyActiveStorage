@@ -173,10 +173,16 @@ class Active:
         self.data_read = 0
 
     def __load_nc_file(self):
-        """ Get the netcdf file and its b-tree"""
+        """
+        Get the netcdf file and its b-tree.
+
+        This private method is used only if the input to Active
+        is not a pyfive.high_level.Dataset object. In that case,
+        any file opening is skipped, and ncvar is not used. The
+        Dataset object will have already contained the b-tree,
+        and `_filename` attribute.
+        """
         ncvar = self.ncvar
-        # in all cases we need an open netcdf file to get at attributes
-        # we keep it open because we need it's b-tree
         if self.storage_type is None:
             nc = pyfive.File(self.uri)
         elif self.storage_type == "s3":
