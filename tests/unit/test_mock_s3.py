@@ -1,11 +1,13 @@
 import os
 import s3fs
 import pathlib
+import pyfive
 import pytest
 import h5netcdf
+import numpy as np
 
 from tempfile import NamedTemporaryFile
-from activestorage.active import load_from_s3
+from activestorage.active import load_from_s3, Active
 
 
 # needed by the spoofed s3 filesystem
@@ -133,7 +135,7 @@ def test_s3file_with_s3fs(s3fs_s3):
         anon=False, version_aware=True, client_kwargs={"endpoint_url": endpoint_uri}
     )
 
-    # test load by h5netcdf
+    # test load by standard h5netcdf
     with s3.open(os.path.join("MY_BUCKET", file_name), "rb") as f:
         print("File path", f.path)
         ncfile = h5netcdf.File(f, 'r', invalid_netcdf=True)
@@ -141,9 +143,21 @@ def test_s3file_with_s3fs(s3fs_s3):
         print(ncfile["ta"])
     assert "ta" in ncfile
 
-    # test Active
+    # test active.load_from_s3
     storage_options = dict(anon=False, version_aware=True,
                            client_kwargs={"endpoint_url": endpoint_uri})
     with load_from_s3(os.path.join("MY_BUCKET", file_name), storage_options) as ac_file:
         print(ac_file)
         assert "ta" in ac_file
+
+    # test loading with Pyfive and passing the Dataset to Active
+    with s3.open(os.path.join("MY_BUCKET", file_name), "rb") as f:
+        print("File path", f.path)
+        pie_ds = pyfive.File(f, 'r')
+        print("File loaded from spoof S3 with Pyfive:", pie_ds)
+        print("Pyfive dataset:", pie_ds["ta"])
+        av = Active(pie_ds["ta"])
+        av._method = "min"
+        assert av.method([3,444]) == 3
+        av_slice_min = av[3:5]
+        assert av_slice_min == np.array(249.6583, dtype="float32")
