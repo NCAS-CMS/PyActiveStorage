@@ -128,7 +128,7 @@ class Active:
         self.ds = None
         input_variable = False
         if dataset is None:
-            raise ValueError(f"Must use a valid file or variable string for dataset. Got {dataset}")
+            raise ValueError(f"Must use a valid file name or variable object for dataset. Got {dataset!r}")
         if isinstance(dataset, Path) and not dataset.exists():
             raise ValueError(f"Path to input file {dataset} does not exist.")
         if not isinstance(dataset, Path) and not isinstance(dataset, str):
