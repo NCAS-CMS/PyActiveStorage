@@ -6,6 +6,8 @@ on:
   push:
     branches:
       - main  # keep this at all times
+      # - pyfive  # reinstate
+      - new_api_pyfive
   pull_request:
   schedule:
     - cron: '0 0 * * *'  # nightly
@@ -55,6 +57,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
           miniforge-version: "latest"
           use-mamba: true
+      - name: Install development version of NCAS-CMS/Pyfive:wacasoft
+        run: |
+          cd ..
+          git clone https://github.com/NCAS-CMS/pyfive.git
+          cd pyfive
+          git checkout wacasoft
+          pip install -e .
       - name: Install PyActiveStorage
         run: |
           conda --version
