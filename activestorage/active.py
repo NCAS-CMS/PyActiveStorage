@@ -357,9 +357,6 @@ class Active:
             session = None
 
         # Process storage chunks using a thread pool.
-        # Because we do this, we need to read the dataset b-tree now, not as we go, so
-        # it is already in cache. If we remove the thread pool from here, we probably
-        # wouldn't need to do it before the first one.
         chunk_count = 0
         t1 = time.time()
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_threads) as executor:
