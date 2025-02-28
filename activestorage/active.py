@@ -4,10 +4,12 @@ import numpy as np
 import pathlib
 import urllib
 import pyfive
-import time
-from pyfive.h5d import StoreInfo
-
 import s3fs
+import time
+
+from pathlib import Path
+from pyfive.h5d import StoreInfo
+from typing import Optional
 
 from activestorage.config import *
 from activestorage import reductionist
@@ -46,21 +48,6 @@ def load_from_s3(uri, storage_options=None):
     t3=time.time()
     print(f"Dataset loaded from S3 with s3fs and Pyfive: {uri} ({t2-t1:.2},{t3-t2:.2})")
     return ds
-
-def _metricise(method):
-    """ Decorator for class methods loads into metric_data"""
-    def timed(self, *args, **kw):
-        ts = time.time()
-        metric_name=''
-        if '__metric_name' in kw:
-            metric_name = kw['__metric_name']
-            del kw['__metric_name']
-        result = method(self,*args, **kw)
-        te = time.time()
-        if metric_name:
-            self.metric_data[metric_name] = te-ts
-        return result
-    return timed
 
 
 def get_missing_attributes(ds):
@@ -122,13 +109,13 @@ class Active:
 
     def __init__(
         self,
-        uri,
-        ncvar,
-        storage_type=None,
-        max_threads=100,
-        storage_options=None,
-        active_storage_url=None
-    ):
+        dataset: Optional[str | Path | object] ,
+        ncvar: str = None,
+        storage_type: str = None,
+        max_threads: int = 100,
+        storage_options: dict = None,
+        active_storage_url: str = None
+    ) -> None:
         """
         Instantiate with a NetCDF4 dataset URI and the variable of interest within that file.
         (We need the variable, because we need variable specific metadata from within that
@@ -138,27 +125,44 @@ class Active:
         :param storage_options: s3fs.S3FileSystem options
         :param active_storage_url: Reductionist server URL
         """
-        # Assume NetCDF4 for now
-        self.uri = uri
-        if self.uri is None:
-            raise ValueError(f"Must use a valid file for uri. Got {uri}")
+        self.ds = None
+        input_variable = False
+        if dataset is None:
+            raise ValueError(f"Must use a valid file name or variable object for dataset. Got {dataset!r}")
+        if isinstance(dataset, Path) and not dataset.exists():
+            raise ValueError(f"Path to input file {dataset!r} does not exist.")
+        if not isinstance(dataset, Path) and not isinstance(dataset, str):
+            print(f"Treating input {dataset} as variable object.")
+            if not type(dataset) is pyfive.high_level.Dataset:
+                raise TypeError(f"Variable object dataset can only be pyfive.high_level.Dataset. Got {dataset!r}")
+            input_variable = True
+            self.ds = dataset
+        self.uri = dataset
+
 
         # still allow for a passable storage_type
         # for special cases eg "special-POSIX" ie DDN
         if not storage_type and storage_options is not None:
-            storage_type = urllib.parse.urlparse(uri).scheme
+            storage_type = urllib.parse.urlparse(dataset).scheme
         self.storage_type = storage_type
+
+        # set correct filename attr
+        if input_variable and not self.storage_type:
+            self.filename = self.ds
+        elif input_variable and self.storage_type == "s3":
+            self.filename = self.ds.id._filename
 
         # get storage_options
         self.storage_options = storage_options
         self.active_storage_url = active_storage_url
 
         # basic check on file
-        if not os.path.isfile(self.uri) and not self.storage_type:
-            raise ValueError(f"Must use existing file for uri. {self.uri} not found")
+        if not input_variable:
+            if not os.path.isfile(self.uri) and not self.storage_type:
+                raise ValueError(f"Must use existing file for uri. {self.uri} not found")
 
         self.ncvar = ncvar
-        if self.ncvar is None:
+        if self.ncvar is None and not input_variable:
             raise ValueError("Must set a netCDF variable name to slice")
 
         self._version = 1
@@ -166,22 +170,24 @@ class Active:
         self._method = None
         self._max_threads = max_threads
         self.missing = None
-        self.ds = None
-        self.metric_data = {}
         self.data_read = 0
 
-    @_metricise
     def __load_nc_file(self):
-        """ Get the netcdf file and it's b-tree"""
+        """
+        Get the netcdf file and its b-tree.
+
+        This private method is used only if the input to Active
+        is not a pyfive.high_level.Dataset object. In that case,
+        any file opening is skipped, and ncvar is not used. The
+        Dataset object will have already contained the b-tree,
+        and `_filename` attribute.
+        """
         ncvar = self.ncvar
-        # in all cases we need an open netcdf file to get at attributes
-        # we keep it open because we need it's b-tree
         if self.storage_type is None:
             nc = pyfive.File(self.uri)
         elif self.storage_type == "s3":
             nc = load_from_s3(self.uri, self.storage_options)
         self.filename = self.uri
-
         self.ds = nc[ncvar]
 
     def __get_missing_attributes(self):
@@ -194,10 +200,8 @@ class Active:
         Provides support for a standard get item.
         #FIXME-BNL: Why is the argument index?
         """
-        self.metric_data = {}
         if self.ds is None:
-            self.__load_nc_file(__metric_name='load nc time')
-            #self.__metricise('Load','__load_nc_file')
+            self.__load_nc_file()
         
         self.missing = self.__get_missing_attributes()
 
@@ -206,21 +210,20 @@ class Active:
         if self.method is None and self._version == 0:
         
             # No active operation
-            return self._get_vanilla(index, __metric_name='vanilla_time')
+            return self._get_vanilla(index)
 
         elif self._version == 1:
 
             #FIXME: is the difference between version 1 and 2 still honoured?
-            return self._get_selection(index, __metric_name='selection 1 time (s)')
+            return self._get_selection(index)
         
         elif self._version  == 2:
 
-            return self._get_selection(index, __metric_name='selection 2 time (s)')
+            return self._get_selection(index)
           
         else:
             raise ValueError(f'Version {self._version} not supported')
 
-    @_metricise
     def _get_vanilla(self, index):
         """ 
         Get the data without any active operation
@@ -294,7 +297,7 @@ class Active:
         """
         raise NotImplementedError
  
-    @_metricise
+
     def _get_selection(self, *args):
         """ 
         At this point we have a Dataset object, but all the important information about
@@ -307,13 +310,8 @@ class Active:
 
         name = self.ds.name
         dtype = np.dtype(self.ds.dtype)
-        # hopefully fix pyfive to get a dtype directly
         array = pyfive.indexing.ZarrArrayStub(self.ds.shape, self.ds.chunks)
         ds = self.ds.id
-        
-        self.metric_data['args'] = args
-        self.metric_data['dataset shape'] = self.ds.shape
-        self.metric_data['dataset chunks'] = self.ds.chunks
         if ds.filter_pipeline is None:
             compressor, filters = None, None
         else:
@@ -359,16 +357,6 @@ class Active:
             session = None
 
         # Process storage chunks using a thread pool.
-        # Because we do this, we need to read the dataset b-tree now, not as we go, so
-        # it is already in cache. If we remove the thread pool from here, we probably
-        # wouldn't need to do it before the first one.
-        
-        if ds.chunks is not None:
-            t1 = time.time()
-            # ds._get_chunk_addresses()
-            t2 = time.time() - t1
-            self.metric_data['indexing time (s)'] = t2
-            # self.metric_data['chunk number'] = len(ds._zchunk_index)
         chunk_count = 0
         t1 = time.time()
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_threads) as executor:
@@ -433,10 +421,6 @@ class Active:
                     # size.
                     out = out / np.sum(counts).reshape(shape1)
 
-        t2 = time.time()
-        self.metric_data['reduction time (s)'] = t2-t1
-        self.metric_data['chunks processed'] = chunk_count
-        self.metric_data['storage read (B)'] = self.data_read
         return out
 
     def _get_endpoint_url(self):
