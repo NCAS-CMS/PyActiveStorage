@@ -134,7 +134,7 @@ class Active:
         if not isinstance(dataset, Path) and not isinstance(dataset, str):
             print(f"Treating input {dataset} as variable object.")
             if not type(dataset) is pyfive.high_level.Dataset:
-                raise TypeError(f"Variable object dataset can only be pyfive.high_level.Dataset. Got {dataset}")
+                raise TypeError(f"Variable object dataset can only be pyfive.high_level.Dataset. Got {dataset!r}")
             input_variable = True
             self.ds = dataset
         self.uri = dataset
