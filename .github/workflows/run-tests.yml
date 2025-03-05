@@ -22,7 +22,7 @@ jobs:
       fail-fast: false
     name: Linux Python ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: conda-incubator/setup-miniconda@v3
@@ -32,6 +32,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           miniforge-version: "latest"
           use-mamba: true
+          mamba-version: "2.0.5"  # https://github.com/conda-incubator/setup-miniconda/issues/392
       - run: conda --version
       - run: python -V
       - name: Install development version of NCAS-CMS/Pyfive:wacasoft
@@ -54,7 +55,7 @@ jobs:
       fail-fast: false
     name: OSX Python ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: conda-incubator/setup-miniconda@v3
@@ -64,6 +65,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           miniforge-version: "latest"
           use-mamba: true
+          mamba-version: "2.0.5"  # https://github.com/conda-incubator/setup-miniconda/issues/392
       - run: conda --version
       - run: python -V
       - name: Install development version of NCAS-CMS/Pyfive:wacasoft
