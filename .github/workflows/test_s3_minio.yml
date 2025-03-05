@@ -26,7 +26,7 @@ jobs:
       fail-fast: false
     name: Linux Python ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: conda-incubator/setup-miniconda@v3
@@ -90,10 +90,10 @@ jobs:
       - name: Stop minio object storage
         run: tests/s3_exploratory/minio_scripts/minio-stop
         if: always()
-      - name: Upload HTML report artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: html-report
-          path: test-reports/
-          overwrite: true
-        if: always()
+      #- name: Upload HTML report artifact
+      #  uses: actions/upload-artifact@v4
+      #  with:
+      #    name: html-report
+      #    path: test-reports/
+      #    overwrite: true
+      #  if: always()
