@@ -6,8 +6,7 @@ on:
   push:
     branches:
       - main  # keep this at all times
-      # - pyfive  # reinstate
-      - tlc1
+      - pyfive
   pull_request:
   schedule:
     - cron: '0 0 * * *'  # nightly
