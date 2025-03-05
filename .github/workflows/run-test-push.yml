@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
     name: Linux Python ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: conda-incubator/setup-miniconda@v3
@@ -27,9 +27,17 @@ jobs:
           python-version: ${{ matrix.python-version }}
           miniforge-version: "latest"
           use-mamba: true
+          mamba-version: "2.0.5"  # https://github.com/conda-incubator/setup-miniconda/issues/392
       - run: conda --version
       - run: python -V
+      - name: Install development version of NCAS-CMS/Pyfive:wacasoft
+        run: |
+          cd ..
+          git clone https://github.com/NCAS-CMS/pyfive.git
+          cd pyfive
+          git checkout wacasoft
+          pip install -e .
       - run: pip install -e .
       - run: conda list
       - run: pytest -n 2 --junitxml=report-1.xml
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v5
