@@ -40,4 +40,4 @@ jobs:
       - run: pip install -e .
       - run: conda list
       - run: pytest -n 2 --junitxml=report-1.xml
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v5
