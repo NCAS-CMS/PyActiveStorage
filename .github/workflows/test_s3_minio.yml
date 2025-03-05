@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
     name: Linux Python ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: conda-incubator/setup-miniconda@v3
@@ -32,6 +32,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           miniforge-version: "latest"
           use-mamba: true
+          mamba-version: "2.0.5"  # https://github.com/conda-incubator/setup-miniconda/issues/392
       - name: Get conda and Python versions
         run: |
           conda --version
@@ -55,6 +56,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
           miniforge-version: "latest"
           use-mamba: true
+          mamba-version: "2.0.5"  # https://github.com/conda-incubator/setup-miniconda/issues/392
+      - name: Install development version of NCAS-CMS/Pyfive:wacasoft
+        run: |
+          cd ..
+          git clone https://github.com/NCAS-CMS/pyfive.git
+          cd pyfive
+          git checkout wacasoft
+          pip install -e .
       - name: Install PyActiveStorage
         run: |
           conda --version
@@ -79,10 +88,10 @@ jobs:
       - name: Stop minio object storage
         run: tests/s3_exploratory/minio_scripts/minio-stop
         if: always()
-      - name: Upload HTML report artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: html-report
-          path: test-reports/
-          overwrite: true
-        if: always()
+      #- name: Upload HTML report artifact
+      #  uses: actions/upload-artifact@v4
+      #  with:
+      #    name: html-report
+      #    path: test-reports/
+      #    overwrite: true
+      #  if: always()
