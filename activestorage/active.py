@@ -1,5 +1,6 @@
 import concurrent.futures
 import os
+import fsspec
 import numpy as np
 import pathlib
 import urllib
@@ -47,6 +48,18 @@ def load_from_s3(uri, storage_options=None):
     ds = pyfive.File(s3file)
     t3=time.time()
     print(f"Dataset loaded from S3 with s3fs and Pyfive: {uri} ({t2-t1:.2},{t3-t2:.2})")
+    return ds
+
+
+def load_from_https(uri):
+    """
+    Load a Dataset from a netCDF4 file on an https server (NGINX).
+    """
+    #TODO need to test if NGINX server behind https://
+    fs = fsspec.filesystem('http')
+    http_file = fs.open(uri, 'rb')
+    ds = pyfive.File(http_file)
+    print(f"Dataset loaded from https with Pyfive: {uri}")
     return ds
 
 
@@ -187,6 +200,8 @@ class Active:
             nc = pyfive.File(self.uri)
         elif self.storage_type == "s3":
             nc = load_from_s3(self.uri, self.storage_options)
+        elif self.storage_type == "https":
+            nc = load_from_https(self.uri)
         self.filename = self.uri
         self.ds = nc[ncvar]
 
