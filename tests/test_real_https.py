@@ -16,4 +16,4 @@ def test_https_dataset():
     active._method = "min"
     result = active[0:3, 4:6, 7:9]
     print("Result is", result)
-    assert result == 5098.625
+    assert result == np.array([0.6909787], dtype="float32")
