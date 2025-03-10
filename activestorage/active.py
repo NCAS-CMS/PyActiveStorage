@@ -164,6 +164,8 @@ class Active:
             self.filename = self.ds
         elif input_variable and self.storage_type == "s3":
             self.filename = self.ds.id._filename
+        elif input_variable and self.storage_type == "https":
+            self.filename = self.ds
 
         # get storage_options
         self.storage_options = storage_options
