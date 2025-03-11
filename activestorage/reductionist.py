@@ -54,7 +54,8 @@ def reduce_chunk(session, server, source, bucket, object,
     :raises ReductionistError: if the request to Reductionist fails
     """
 
-    request_data = build_request_data(source, bucket, object, offset, size, compression, filters, missing, dtype, shape, order, chunk_selection)
+    request_data = build_request_data(source, bucket, object, offset, size, compression,
+                                      filters, missing, dtype, shape, order, chunk_selection)
     if DEBUG:
         print(f"Reductionist request data dictionary: {request_data}")
     api_operation = "sum" if operation == "mean" else operation or "select"
