@@ -180,6 +180,9 @@ class Active:
                 check_uri = self.uri
             else:
                 check_uri = self.ds.id._filename
+
+            # "special" case when we have to deal
+            # with storage_options['client_kwargs']["endpoint_url"]
             if storage_options is not None and 'client_kwargs' in storage_options:
                 if "endpoint_url" in storage_options['client_kwargs']:
                     base_url = storage_options['client_kwargs']["endpoint_url"]
@@ -239,6 +242,9 @@ class Active:
         elif self.storage_type == "s3":
             nc = load_from_s3(self.uri, self.storage_options)
         elif self.storage_type == "https":
+            nc = load_from_https(self.uri)
+        # testing only
+        elif self.storage_type == "https-Reductionist":
             nc = load_from_https(self.uri)
         self.filename = self.uri
         self.ds = nc[ncvar]
@@ -561,6 +567,26 @@ class Active:
                                                        ds._order,
                                                        chunk_selection,
                                                        operation=self._method)
+        # this is for testing ONLY until Reductionist is able to handle https
+        # located files; after that, we can pipe any regular https file through
+        # to Reductionist, provided the https server is "closer" to Reductionist
+        elif self.storage_type == "https-Reductionist" and self._version==2:
+            # build a simple session
+            session = requests.Session()
+            session.auth = (None, None)
+            session.verify = False
+            bucket = "https"
+
+            tmp, count = reductionist.reduce_chunk(session,
+                                                   "https://192.171.169.113:8080",
+                                                   self.filename,
+                                                   bucket, self.filename, offset,
+                                                   size, compressor, filters,
+                                                   self.missing, np.dtype(ds.dtype),
+                                                   chunks,
+                                                   ds._order,
+                                                   chunk_selection,
+                                                   operation=self._method)
         elif self.storage_type=='ActivePosix' and self.version==2:
             # This is where the DDN Fuse and Infinia wrappers go
             raise NotImplementedError
