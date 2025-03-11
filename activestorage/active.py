@@ -19,11 +19,23 @@ from activestorage.storage import reduce_chunk, reduce_opens3_chunk
 from activestorage.hdf2numcodec import decode_filters
 
 
-def storage_is_s3(uri):
-    resp = requests.head(uri)
-    response = resp.headers["gateway-protocol"]
-    if response == "s3":
-        return True
+def return_storage_type(uri):
+    """
+    Extract the gateway-protocol to infer what type of storage
+    """
+    try:
+        resp = requests.head(uri)
+    except requests.exceptions.MissingSchema:  # eg local file
+        return
+    response = resp.headers
+
+    # https files on NGINX don't have "gateway-protocol" key
+    if "gateway-protocol" in response:
+        if response["gateway-protocol"] == "s3":
+            print("Gateway protocol indicates S3 storage.")
+            return "s3"
+    else:
+        return "https"
 
 
 def load_from_s3(uri, storage_options=None):
@@ -161,6 +173,13 @@ class Active:
             self.ds = dataset
         self.uri = dataset
 
+        # determine the storage type in the most generic way
+        if not storage_type:
+            if not input_variable:
+                check_uri = self.uri
+            else:
+                check_uri = self.ds.id._filename
+            storage_type = return_storage_type(check_uri)
 
         # still allow for a passable storage_type
         # for special cases eg "special-POSIX" ie DDN
