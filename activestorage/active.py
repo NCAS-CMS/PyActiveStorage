@@ -173,12 +173,20 @@ class Active:
             self.ds = dataset
         self.uri = dataset
 
-        # determine the storage type in the most generic way
+        # determine the storage_type
+        # based on what we have available
         if not storage_type:
             if not input_variable:
                 check_uri = self.uri
             else:
                 check_uri = self.ds.id._filename
+            if storage_options is not None and 'client_kwargs' in storage_options:
+                if "endpoint_url" in storage_options['client_kwargs']:
+                    base_url = storage_options['client_kwargs']["endpoint_url"]
+                    if not input_variable:
+                        check_uri = os.path.join(base_url, self.uri)
+                    else:
+                        check_uri = os.path.join(base_url, self.ds.id._filename)
             storage_type = return_storage_type(check_uri)
 
         # still allow for a passable storage_type
