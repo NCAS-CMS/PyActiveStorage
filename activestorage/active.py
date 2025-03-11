@@ -5,6 +5,7 @@ import numpy as np
 import pathlib
 import urllib
 import pyfive
+import requests
 import s3fs
 import time
 
@@ -16,6 +17,13 @@ from activestorage.config import *
 from activestorage import reductionist
 from activestorage.storage import reduce_chunk, reduce_opens3_chunk
 from activestorage.hdf2numcodec import decode_filters
+
+
+def storage_is_s3(uri):
+    resp = requests.head(uri)
+    response = resp.headers["gateway-protocol"]
+    if response == "s3":
+        return True
 
 
 def load_from_s3(uri, storage_options=None):
@@ -53,7 +61,8 @@ def load_from_s3(uri, storage_options=None):
 
 def load_from_https(uri):
     """
-    Load a Dataset from a netCDF4 file on an https server (NGINX).
+    Load a pyfive.high_level.Dataset from a
+    netCDF4 file on an https server (NGINX).
     """
     #TODO need to test if NGINX server behind https://
     fs = fsspec.filesystem('http')
