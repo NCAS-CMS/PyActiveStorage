@@ -1,5 +1,7 @@
 import os
 import numpy as np
+import activestorage
+import pytest
 
 from activestorage.active import Active
 from activestorage.active import load_from_https
@@ -15,6 +17,19 @@ def test_https():
     result = active[0:3, 4:6, 7:9]
     print("Result is", result)
     assert result == np.array([0.6909787], dtype="float32")
+
+
+def test_https_reductionist():
+    """Run a true test with a https FILE."""
+    test_file_uri = "https://esgf.ceda.ac.uk/thredds/fileServer/esg_cmip6/CMIP6/AerChemMIP/MOHC/UKESM1-0-LL/ssp370SST-lowNTCF/r1i1p1f2/Amon/cl/gn/latest/cl_Amon_UKESM1-0-LL_ssp370SST-lowNTCF_r1i1p1f2_gn_205001-209912.nc"
+
+    with pytest.raises(activestorage.reductionist.ReductionistError):
+        active = Active(test_file_uri, "cl", storage_type="https-Reductionist")
+        active._version = 2
+        active._method = "min"
+        result = active[0:3, 4:6, 7:9]
+        print("Result is", result)
+        assert result == np.array([0.6909787], dtype="float32")
 
 
 def test_https_implicit_storage():
