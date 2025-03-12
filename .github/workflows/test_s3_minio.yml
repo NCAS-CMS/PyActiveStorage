@@ -73,7 +73,7 @@ jobs:
           pip install -e .
       - name: Run tests
         run: |
-          pytest
+          pytest -n 2
       - name: Run S3 exploratory tests
         run: |
           pytest tests/s3_exploratory/test_s3_reduction.py --html=test-reports/s3-exploratory-report.html
