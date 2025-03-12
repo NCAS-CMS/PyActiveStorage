@@ -243,9 +243,6 @@ class Active:
             nc = load_from_s3(self.uri, self.storage_options)
         elif self.storage_type == "https":
             nc = load_from_https(self.uri)
-        # testing only
-        elif self.storage_type == "https-Reductionist":
-            nc = load_from_https(self.uri)
         self.filename = self.uri
         self.ds = nc[ncvar]
 
@@ -522,7 +519,7 @@ class Active:
                             chunk_selection, method=self.method
             )
 
-        elif self.storage_type == "s3" and self._version==2:
+        elif self.storage_type == "s3" and self._version == 2:
             # S3: pass in pre-configured storage options (credentials)
             # print("S3 rfile is:", self.filename)
             parsed_url = urllib.parse.urlparse(self.filename)
@@ -570,13 +567,14 @@ class Active:
         # this is for testing ONLY until Reductionist is able to handle https
         # located files; after that, we can pipe any regular https file through
         # to Reductionist, provided the https server is "closer" to Reductionist
-        elif self.storage_type == "https-Reductionist" and self._version==2:
+        elif self.storage_type == "https" and self._version == 2:
             # build a simple session
             session = requests.Session()
             session.auth = (None, None)
             session.verify = False
             bucket = "https"
 
+            # note the extra "storage_type" kwarg
             tmp, count = reductionist.reduce_chunk(session,
                                                    "https://192.171.169.113:8080",
                                                    self.filename,
@@ -586,7 +584,8 @@ class Active:
                                                    chunks,
                                                    ds._order,
                                                    chunk_selection,
-                                                   operation=self._method)
+                                                   operation=self._method,
+                                                   storage_type="https")
         elif self.storage_type=='ActivePosix' and self.version==2:
             # This is where the DDN Fuse and Infinia wrappers go
             raise NotImplementedError

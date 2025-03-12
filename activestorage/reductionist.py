@@ -27,7 +27,7 @@ def get_session(username: str, password: str, cacert: typing.Optional[str]) -> r
 
 def reduce_chunk(session, server, source, bucket, object,
                  offset, size, compression, filters, missing, dtype, shape,
-                 order, chunk_selection, operation):
+                 order, chunk_selection, operation, storage_type=None):
     """Perform a reduction on a chunk using Reductionist.
 
     :param server: Reductionist server URL
@@ -50,12 +50,14 @@ def reduce_chunk(session, server, source, bucket, object,
                             this defines the part of the chunk which is to be
                             obtained or operated upon.
     :param operation: name of operation to perform
+    :param storage_type: optional testing flag to allow HTTPS reduction
     :returns: the reduced data as a numpy array or scalar
     :raises ReductionistError: if the request to Reductionist fails
     """
 
     request_data = build_request_data(source, bucket, object, offset, size, compression,
-                                      filters, missing, dtype, shape, order, chunk_selection)
+                                      filters, missing, dtype, shape, order, chunk_selection,
+                                      storage_type=storage_type)
     if DEBUG:
         print(f"Reductionist request data dictionary: {request_data}")
     api_operation = "sum" if operation == "mean" else operation or "select"
@@ -135,7 +137,7 @@ def encode_missing(missing):
 
 def build_request_data(source: str, bucket: str, object: str, offset: int,
                        size: int, compression, filters, missing, dtype, shape,
-                       order, selection) -> dict:
+                       order, selection, storage_type=None) -> dict:
     """Build request data for Reductionist API."""
     request_data = {
         'source': source,
@@ -146,6 +148,7 @@ def build_request_data(source: str, bucket: str, object: str, offset: int,
         'offset': int(offset),
         'size': int(size),
         'order': order,
+        'storage_type': storage_type,
     }
     if shape:
         request_data["shape"] = shape
