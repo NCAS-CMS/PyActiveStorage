@@ -147,6 +147,10 @@ def test_ps(tmp_path):
 
 
 def test_ps_implicit_storage_type(tmp_path):
+    """
+    Test a Minio S3 file that's not behind a HTTPS URI
+    s3://pyactivestorage/common_cl_a.nc
+    """
     ncfile = save_cl_file_with_a(tmp_path)
     active = Active(ncfile, "ps")
     active._version = 0
