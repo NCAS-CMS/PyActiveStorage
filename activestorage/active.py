@@ -27,6 +27,11 @@ def return_storage_type(uri):
         resp = requests.head(uri)
     except requests.exceptions.MissingSchema:  # eg local file
         return
+    except requests.exceptions.InvalidSchema:  # eg Minio file s3://pyactivestorage/common_cl_a.nc
+        if not uri.startswith("s3:"):
+            return
+        else:
+            return "s3"
     response = resp.headers
 
     # https files on NGINX don't have "gateway-protocol" key
