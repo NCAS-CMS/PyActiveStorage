@@ -572,9 +572,11 @@ class Active:
             session = requests.Session()
             session.auth = (None, None)
             session.verify = False
-            bucket = "https"
+            bucket = "https"  # really doesn't matter
 
             # note the extra "storage_type" kwarg
+            # this currently makes Reductionist throw a wobbly
+            # E           activestorage.reductionist.ReductionistError: Reductionist error: HTTP 400: {"error": {"message": "request data is not valid", "caused_by": ["Failed to deserialize the JSON body into the target type", "storage_type: unknown field `storage_type`, expected one of `source`, `bucket`, `object`, `dtype`, `byte_order`, `offset`, `size`, `shape`, `order`, `selection`, `compression`, `filters`, `missing` at line 1 column 550"]}}
             tmp, count = reductionist.reduce_chunk(session,
                                                    "https://192.171.169.113:8080",
                                                    self.filename,
