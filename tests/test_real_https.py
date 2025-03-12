@@ -12,7 +12,7 @@ def test_https():
     test_file_uri = "https://esgf.ceda.ac.uk/thredds/fileServer/esg_cmip6/CMIP6/AerChemMIP/MOHC/UKESM1-0-LL/ssp370SST-lowNTCF/r1i1p1f2/Amon/cl/gn/latest/cl_Amon_UKESM1-0-LL_ssp370SST-lowNTCF_r1i1p1f2_gn_205001-209912.nc"
 
     active = Active(test_file_uri, "cl", storage_type="https")
-    active._version = 2
+    active._version = 1
     active._method = "min"
     result = active[0:3, 4:6, 7:9]
     print("Result is", result)
@@ -23,8 +23,10 @@ def test_https_reductionist():
     """Run a true test with a https FILE."""
     test_file_uri = "https://esgf.ceda.ac.uk/thredds/fileServer/esg_cmip6/CMIP6/AerChemMIP/MOHC/UKESM1-0-LL/ssp370SST-lowNTCF/r1i1p1f2/Amon/cl/gn/latest/cl_Amon_UKESM1-0-LL_ssp370SST-lowNTCF_r1i1p1f2_gn_205001-209912.nc"
 
+    # added storage_type in request_data dict; Reductionist not liking it
+    # E           activestorage.reductionist.ReductionistError: Reductionist error: HTTP 400: {"error": {"message": "request data is not valid", "caused_by": ["Failed to deserialize the JSON body into the target type", "storage_type: unknown field `storage_type`, expected one of `source`, `bucket`, `object`, `dtype`, `byte_order`, `offset`, `size`, `shape`, `order`, `selection`, `compression`, `filters`, `missing` at line 1 column 550"]}}
     with pytest.raises(activestorage.reductionist.ReductionistError):
-        active = Active(test_file_uri, "cl", storage_type="https-Reductionist")
+        active = Active(test_file_uri, "cl")
         active._version = 2
         active._method = "min"
         result = active[0:3, 4:6, 7:9]
@@ -37,7 +39,7 @@ def test_https_implicit_storage():
     test_file_uri = "https://esgf.ceda.ac.uk/thredds/fileServer/esg_cmip6/CMIP6/AerChemMIP/MOHC/UKESM1-0-LL/ssp370SST-lowNTCF/r1i1p1f2/Amon/cl/gn/latest/cl_Amon_UKESM1-0-LL_ssp370SST-lowNTCF_r1i1p1f2_gn_205001-209912.nc"
 
     active = Active(test_file_uri, "cl")
-    active._version = 2
+    active._version = 1
     active._method = "min"
     result = active[0:3, 4:6, 7:9]
     print("Result is", result)
@@ -51,7 +53,7 @@ def test_https_dataset():
     av = dataset['cl']
 
     active = Active(av, storage_type="https")
-    active._version = 2
+    active._version = 1
     active._method = "min"
     result = active[0:3, 4:6, 7:9]
     print("Result is", result)
@@ -65,7 +67,7 @@ def test_https_dataset_implicit_storage():
     av = dataset['cl']
 
     active = Active(av)
-    active._version = 2
+    active._version = 1
     active._method = "min"
     result = active[0:3, 4:6, 7:9]
     print("Result is", result)
