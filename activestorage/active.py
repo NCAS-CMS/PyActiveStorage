@@ -32,6 +32,9 @@ def return_storage_type(uri):
             return
         else:
             return "s3"
+    except requests.exceptions.ConnectionError as exc:  # eg invalid link or offline
+        print(exc)
+        return
     response = resp.headers
 
     # https files on NGINX don't have "gateway-protocol" key
