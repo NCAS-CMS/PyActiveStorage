@@ -44,6 +44,7 @@ def test_reduce_chunk_defaults(mock_request):
     dtype = np.dtype("int32")
     shape = None
     order = None
+    axis = None
     chunk_selection = None
     operation = "min"
 
@@ -56,7 +57,7 @@ def test_reduce_chunk_defaults(mock_request):
                                            s3_url, bucket, object, offset,
                                            size, compression, filters, missing,
                                            dtype, shape, order,
-                                           chunk_selection, operation)
+                                           chunk_selection, axis, operation)
 
     assert tmp == result
     assert count == 2
@@ -103,6 +104,7 @@ def test_reduce_chunk_compression(mock_request, compression, filters):
     dtype = np.dtype("int32")
     shape = (32, )
     order = "C"
+    axis = (0,)
     chunk_selection = [slice(0, 2, 1)]
     operation = "min"
 
@@ -113,7 +115,7 @@ def test_reduce_chunk_compression(mock_request, compression, filters):
                                            s3_url, bucket, object, offset,
                                            size, compression, filters, missing,
                                            dtype, shape, order,
-                                           chunk_selection, operation)
+                                           chunk_selection, axis, operation)
 
     assert tmp == result
     assert count == 2
@@ -192,6 +194,7 @@ def test_reduce_chunk_missing(mock_request, missing):
     dtype = np.dtype("float32").newbyteorder()
     shape = (32, )
     order = "C"
+    axis = (0,)
     chunk_selection = [slice(0, 2, 1)]
     operation = "min"
 
@@ -200,7 +203,7 @@ def test_reduce_chunk_missing(mock_request, missing):
                                            bucket, object, offset, size,
                                            compression, filters, missing,
                                            dtype, shape, order,
-                                           chunk_selection, operation)
+                                           chunk_selection, axis, operation)
 
     assert tmp == result
     assert count == 2
@@ -245,6 +248,7 @@ def test_reduce_chunk_not_found(mock_request):
     missing = []
     dtype = np.dtype("int32")
     shape = (32, )
+    axis = (0,)
     order = "C"
     chunk_selection = [slice(0, 2, 1)]
     operation = "min"
@@ -254,7 +258,7 @@ def test_reduce_chunk_not_found(mock_request):
         reductionist.reduce_chunk(session, active_url, s3_url, bucket,
                                   object, offset, size, compression, filters,
                                   missing, dtype, shape, order,
-                                  chunk_selection, operation)
+                                  chunk_selection, axis, operation)
 
 
     assert str(exc.value) == 'Reductionist error: HTTP 404: "Not found"'

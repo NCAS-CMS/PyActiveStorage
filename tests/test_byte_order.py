@@ -38,7 +38,7 @@ def test_byte_order(tmp_path: str, byte_order: str):
     """
     test_file = create_byte_order_dataset(tmp_path, byte_order)
 
-    active = Active(test_file, 'data', utils.get_storage_type())
+    active = Active(test_file, 'data', storage_type=utils.get_storage_type())
     active._version = 1
     active._method = "min"
     result = active[0:2,4:6,7:9]

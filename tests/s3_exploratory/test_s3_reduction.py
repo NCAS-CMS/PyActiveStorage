@@ -67,7 +67,7 @@ def test_Active():
     print("S3 file uri", s3_testfile_uri)
 
     # run Active on s3 file
-    active = Active(s3_testfile_uri, "data", "s3")
+    active = Active(s3_testfile_uri, "data", storage_type="s3")
     active.method = "mean"
     result1 = active[0:2, 4:6, 7:9]
     print(result1)
@@ -115,7 +115,7 @@ def test_with_valid_netCDF_file(test_data_path):
     print("S3 file uri", s3_testfile_uri)
 
     # run Active on s3 file
-    active = Active(s3_testfile_uri, "TREFHT", "s3")
+    active = Active(s3_testfile_uri, "TREFHT", storage_type="s3")
     active._version = 2
     active.method = "mean"
     active.components = True
@@ -148,6 +148,6 @@ def test_reductionist_reduce_chunk():
                                            S3_URL, S3_BUCKET,
                                            object, offset, size, None, None,
                                            [], np.dtype("int32"), (32, ), "C",
-                                           [slice(0, 2, 1), ], "min")
+                                           [slice(0, 2, 1), ], None, "min")
     assert tmp == 134351386
     assert count == 2

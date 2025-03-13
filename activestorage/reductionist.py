@@ -9,6 +9,8 @@ import numpy as np
 import sys
 import typing
 
+REDUCTIONIST_AXIS_READY = False
+
 DEBUG = 0
 
 
@@ -27,7 +29,7 @@ def get_session(username: str, password: str, cacert: typing.Optional[str]) -> r
 
 def reduce_chunk(session, server, source, bucket, object,
                  offset, size, compression, filters, missing, dtype, shape,
-                 order, chunk_selection, operation, storage_type=None):
+                 order, chunk_selection, axis, operation, storage_type=None):
     """Perform a reduction on a chunk using Reductionist.
 
     :param server: Reductionist server URL
@@ -49,6 +51,7 @@ def reduce_chunk(session, server, source, bucket, object,
                             1), slice(1, 3, 1), slice(0, 1, 1))
                             this defines the part of the chunk which is to be
                             obtained or operated upon.
+    :param axis: tuple of the axes to be reduced (non-negative integers)
     :param operation: name of operation to perform
     :param storage_type: optional testing flag to allow HTTPS reduction
     :returns: the reduced data as a numpy array or scalar
@@ -57,7 +60,7 @@ def reduce_chunk(session, server, source, bucket, object,
 
     request_data = build_request_data(source, bucket, object, offset, size, compression,
                                       filters, missing, dtype, shape, order, chunk_selection,
-                                      storage_type=storage_type)
+                                      axis, storage_type=storage_type)
     if DEBUG:
         print(f"Reductionist request data dictionary: {request_data}")
     api_operation = "sum" if operation == "mean" else operation or "select"
@@ -137,7 +140,7 @@ def encode_missing(missing):
 
 def build_request_data(source: str, bucket: str, object: str, offset: int,
                        size: int, compression, filters, missing, dtype, shape,
-                       order, selection, storage_type=None) -> dict:
+                       order, selection, axis, storage_type=None) -> dict:
     """Build request data for Reductionist API."""
     request_data = {
         'source': source,
@@ -164,6 +167,13 @@ def build_request_data(source: str, bucket: str, object: str, offset: int,
     if any(missing):
         request_data["missing"] = encode_missing(missing)
 
+    if REDUCTIONIST_AXIS_READY:
+        request_data['axis'] = axis
+    elif axis is not None and len(axis) != len(shape):        
+        raise ValueError(
+            "Can't reduce over axis subset unitl reductionist is ready"
+        )
+
     return {k: v for k, v in request_data.items() if v is not None}
 
 
@@ -180,9 +190,18 @@ def decode_result(response):
     """Decode a successful response, return as a 2-tuple of (numpy array or scalar, count)."""
     dtype = response.headers['x-activestorage-dtype']
     shape = json.loads(response.headers['x-activestorage-shape'])
+
+    # Result
     result = np.frombuffer(response.content, dtype=dtype)
     result = result.reshape(shape)
+
+    # Counts
     count = json.loads(response.headers['x-activestorage-count'])
+    # TODO: When reductionist is ready, we need to fix 'count'
+    
+    # Mask the result
+    result = np.ma.masked_where(count == 0, result)
+    
     return result, count
 
 
