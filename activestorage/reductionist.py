@@ -9,6 +9,8 @@ import numpy as np
 import sys
 import typing
 
+REDUCTIONIST_AXIS_READY = False
+
 DEBUG = 0
 
 
@@ -146,7 +148,6 @@ def build_request_data(source: str, bucket: str, object: str, offset: int,
         'offset': int(offset),
         'size': int(size),
         'order': order,
-        'axis': axis,
     }
     if shape:
         request_data["shape"] = shape
@@ -161,6 +162,13 @@ def build_request_data(source: str, bucket: str, object: str, offset: int,
         request_data["filters"] = encode_filters(filters)
     if any(missing):
         request_data["missing"] = encode_missing(missing)
+
+    if REDUCTIONIST_AXIS_READY:
+        request_data['axis'] = axis
+    elif axis is not None and len(axis) != len(shape):        
+        raise ValueError(
+            "Can't reduce over axis subset unitl reductionist is ready"
+        )
 
     return {k: v for k, v in request_data.items() if v is not None}
 
@@ -178,10 +186,18 @@ def decode_result(response):
     """Decode a successful response, return as a 2-tuple of (numpy array or scalar, count)."""
     dtype = response.headers['x-activestorage-dtype']
     shape = json.loads(response.headers['x-activestorage-shape'])
+
+    # Result
     result = np.frombuffer(response.content, dtype=dtype)
     result = result.reshape(shape)
-    count = json.loads(response.headers['x-activestorage-count']) # TODO this is wrong for now!
-    count = np.frombuffer(response.content, dtype=dtype) # TODO this is wrong for now!
+
+    # Counts
+    count = json.loads(response.headers['x-activestorage-count'])
+    # TODO: When reductionist is ready, we need to fix 'count'
+    
+    # Mask the result
+    result = np.ma.masked_where(count == 0, result)
+    
     return result, count
 
 

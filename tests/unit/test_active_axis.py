@@ -26,8 +26,8 @@ ref = netCDF4.Dataset(rfile)[ncvar][...]
         (slice(None), slice(None), slice(0, 128, 4)),
         (slice(6, 7), slice(0, 64, 3), slice(0, 128, 4)),
         (slice(1,11, 2), slice(0, 64, 3), slice(0, 128, 4)),
-        (slice(None), [0, 1, 5, 7, 30, 33], slice(None)),
-        (slice(None), [0, 1, 5, 7, 30, 33, 50, 51, 53], slice(None)),
+        (slice(None), [0, 1, 5, 7, 30, 31], slice(None)),
+        (slice(None), [0, 1, 5, 7, 30, 31, 50, 51, 53], slice(None)),
     )
 )
 def test_active_axis_reduction(index):

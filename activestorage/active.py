@@ -549,6 +549,7 @@ class Active:
             # print("S3 bucket:", bucket)
             # print("S3 file:", object)
             if self.storage_options is None:
+              
                 # for the moment we need to force ds.dtype to be a numpy type
                 tmp, count = reductionist.reduce_chunk(session,
                                                        S3_ACTIVE_STORAGE_URL,
