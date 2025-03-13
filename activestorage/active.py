@@ -653,6 +653,7 @@ class Active:
                                                    chunks,
                                                    ds._order,
                                                    chunk_selection,
+                                                   axis,
                                                    operation=self._method,
                                                    storage_type="https")
         elif self.storage_type=='ActivePosix' and self.version==2:
