@@ -48,6 +48,7 @@ def test_s3(mock_reduce, mock_load, tmp_path):
         shape,
         order,
         chunk_selection,
+        axis,
         operation,
     ):
         return activestorage.storage.reduce_chunk(
@@ -61,6 +62,7 @@ def test_s3(mock_reduce, mock_load, tmp_path):
             shape,
             order,
             chunk_selection,
+            axis,
             np.max,
         )
 
@@ -71,7 +73,7 @@ def test_s3(mock_reduce, mock_load, tmp_path):
     test_file = str(tmp_path / "test.nc")
     make_vanilla_ncdata(test_file)
 
-    active = Active(uri, "data", "s3")
+    active = Active(uri, "data", storage_type="s3")
     active._version = 2
     active._method = "max"
 
@@ -104,6 +106,7 @@ def test_s3(mock_reduce, mock_load, tmp_path):
         mock.ANY,
         "C",
         mock.ANY,
+        mock.ANY,
         operation="max",
     )
 
@@ -121,7 +124,7 @@ def test_reductionist_version_0(mock_load, tmp_path):
     test_file = str(tmp_path / "test.nc")
     make_vanilla_ncdata(test_file)
 
-    active = Active(uri, "data", "s3")
+    active = Active(uri, "data", storage_type="s3")
     active._version = 0
 
     result = active[::]
@@ -138,7 +141,7 @@ def test_s3_load_failure(mock_load):
     mock_load.side_effect = FileNotFoundError
 
     with pytest.raises(FileNotFoundError):
-        Active(uri, "data", "s3")
+        Active(uri, "data", storage_type="s3")
 
 
 @mock.patch.object(activestorage.active, "load_from_s3")
@@ -156,7 +159,7 @@ def test_reductionist_connection(mock_reduce, mock_load, tmp_path):
     test_file = str(tmp_path / "test.nc")
     make_vanilla_ncdata(test_file)
 
-    active = Active(uri, "data", "s3")
+    active = Active(uri, "data", storage_type="s3")
     active._version = 2
     active._method = "max"
 
@@ -179,7 +182,7 @@ def test_reductionist_bad_request(mock_reduce, mock_load, tmp_path):
     test_file = str(tmp_path / "test.nc")
     make_vanilla_ncdata(test_file)
 
-    active = Active(uri, "data", "s3")
+    active = Active(uri, "data", storage_type="s3")
     active._version = 2
     active._method = "max"
 
