@@ -106,12 +106,12 @@ def save_cl_file_with_a(tmp_path):
 
 def test_cl(tmp_path):
     ncfile = save_cl_file_with_a(tmp_path)
-    active = Active(ncfile, "cl", utils.get_storage_type())
+    active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
     active._version = 0
     d = active[4:5, 1:2]
     mean_result = np.mean(d)
 
-    active = Active(ncfile, "cl", utils.get_storage_type())
+    active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
     active._version = 2
     active.method = "mean"
     active.components = True
@@ -127,12 +127,12 @@ def test_cl(tmp_path):
 
 def test_ps(tmp_path):
     ncfile = save_cl_file_with_a(tmp_path)
-    active = Active(ncfile, "ps", utils.get_storage_type())
+    active = Active(ncfile, "ps", storage_type=utils.get_storage_type())
     active._version = 0
     d = active[4:5, 1:2]
     mean_result = np.mean(d)
 
-    active = Active(ncfile, "ps", utils.get_storage_type())
+    active = Active(ncfile, "ps", storage_type=utils.get_storage_type())
     active._version = 2
     active.method = "mean"
     active.components = True
@@ -165,7 +165,7 @@ def test_native_emac_model_fails(test_data_path):
     uri = utils.write_to_storage(ncfile)
 
     if USE_S3:
-        active = Active(uri, "aps_ave", utils.get_storage_type())
+        active = Active(uri, "aps_ave", storage_type=utils.get_storage_type())
         with pytest.raises(InvalidHDF5Err):
             active[...]
     else:
@@ -184,12 +184,12 @@ def test_cesm2_native(test_data_path):
     """
     ncfile = str(test_data_path / "cesm2_native.nc")
     uri = utils.write_to_storage(ncfile)
-    active = Active(uri, "TREFHT", utils.get_storage_type())
+    active = Active(uri, "TREFHT", storage_type=utils.get_storage_type())
     active._version = 0
     d = active[4:5, 1:2]
     mean_result = np.mean(d)
 
-    active = Active(uri, "TREFHT", utils.get_storage_type())
+    active = Active(uri, "TREFHT", storage_type=utils.get_storage_type())
     active._version = 2
     active.method = "mean"
     active.components = True
@@ -209,12 +209,12 @@ def test_daily_data(test_data_path):
     """
     ncfile = str(test_data_path / "daily_data.nc")
     uri = utils.write_to_storage(ncfile)
-    active = Active(uri, "ta", utils.get_storage_type())
+    active = Active(uri, "ta", storage_type=utils.get_storage_type())
     active._version = 0
     d = active[4:5, 1:2]
     mean_result = np.mean(d)
 
-    active = Active(uri, "ta", utils.get_storage_type())
+    active = Active(uri, "ta", storage_type=utils.get_storage_type())
     active._version = 2
     active.method = "mean"
     active.components = True
@@ -234,13 +234,13 @@ def test_daily_data_masked(test_data_path):
     """
     ncfile = str(test_data_path / "daily_data_masked.nc")
     uri = utils.write_to_storage(ncfile)
-    active = Active(uri, "ta", utils.get_storage_type())
+    active = Active(uri, "ta", storage_type=utils.get_storage_type())
     active._version = 0
     d = active[:]
     d = np.ma.masked_where(d==999., d)
     mean_result = np.ma.mean(d)
 
-    active = Active(uri, "ta", utils.get_storage_type())
+    active = Active(uri, "ta", storage_type=utils.get_storage_type())
     active._version = 2
     active.method = "mean"
     active.components = True
