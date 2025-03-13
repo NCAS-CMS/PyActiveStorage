@@ -514,7 +514,8 @@ class Active:
             tmp, count = reduce_opens3_chunk(ds._fh, offset, size, compressor, filters,
                             self.missing, ds.dtype,
                             chunks, ds._order,
-                            chunk_selection, method=self.method
+                            chunk_selection, axis=self.axis,
+                            method=self.method
             )
 
         elif self.storage_type == "s3" and self._version==2:
