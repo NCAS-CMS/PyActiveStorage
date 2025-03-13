@@ -1,9 +1,13 @@
 """Active storage module."""
 import numpy as np
+import pyfive
 
 from numcodecs.compat import ensure_ndarray
 
-def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shape, order, chunk_selection, axis, method=None):
+
+def reduce_chunk(rfile, 
+                 offset, size, compression, filters, missing, dtype, shape, 
+                 order, chunk_selection, axis, method=None):
     """ We do our own read of chunks and decoding etc 
     
     rfile - the actual file with the data 
@@ -24,20 +28,39 @@ def reduce_chunk(rfile, offset, size, compression, filters, missing, dtype, shap
             storage implementations we'll change to controlled vocabulary)
                     
     """
-    
-    #FIXME: for the moment, open the file every time ... we might want to do that, or not
-    with open(rfile,'rb') as open_file:
-        # get the data
-        chunk = read_block(open_file, offset, size)
-        # reverse any compression and filters
-        chunk = filter_pipeline(chunk, compression, filters)
-        # make it a numpy array of bytes
-        chunk = ensure_ndarray(chunk)
-        # convert to the appropriate data type
-        chunk = chunk.view(dtype)
-        # sort out ordering and convert to the parent hyperslab dimensions
-        chunk = chunk.reshape(-1, order='A')
-        chunk = chunk.reshape(shape, order=order)
+    obj_type = type(rfile)
+    print(f"Reducing chunk of object {obj_type}")
+
+    if not obj_type is pyfive.high_level.Dataset:
+        #FIXME: for the moment, open the file every time ... we might want to do that, or not
+        # we could just use an instance of pyfive.high_level.Dataset.id
+        # passed directly from active.py, as below
+        with open(rfile,'rb') as open_file:
+            # get the data
+            chunk = read_block(open_file, offset, size)
+            # reverse any compression and filters
+            chunk = filter_pipeline(chunk, compression, filters)
+            # make it a numpy array of bytes
+            chunk = ensure_ndarray(chunk)
+            # convert to the appropriate data type
+            chunk = chunk.view(dtype)
+            # sort out ordering and convert to the parent hyperslab dimensions
+            chunk = chunk.reshape(-1, order='A')
+            chunk = chunk.reshape(shape, order=order)
+    else:
+            class storeinfo: pass
+            storeinfo.byte_offset = offset
+            storeinfo.size = size
+            chunk = rfile.id._get_raw_chunk(storeinfo)
+            # reverse any compression and filters
+            chunk = filter_pipeline(chunk, compression, filters)
+            # make it a numpy array of bytes
+            chunk = ensure_ndarray(chunk)
+            # convert to the appropriate data type
+            chunk = chunk.view(dtype)
+            # sort out ordering and convert to the parent hyperslab dimensions
+            chunk = chunk.reshape(-1, order='A')
+            chunk = chunk.reshape(shape, order=order)
 
     tmp = chunk[chunk_selection]
     tmp = mask_missing(tmp, missing)

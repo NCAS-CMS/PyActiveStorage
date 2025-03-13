@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pyfive
 import pytest
 import threading
 
@@ -8,13 +9,14 @@ from activestorage.active import load_from_s3
 from activestorage.config import *
 from botocore.exceptions import EndpointConnectionError as botoExc
 from botocore.exceptions import NoCredentialsError as NoCredsExc
+from netCDF4 import Dataset
 
 
 def test_uri_none():
     """Unit test for class:Active."""
     # test invalid uri
     some_file = None
-    expected = "Must use a valid file for uri. Got None"
+    expected = "Must use a valid file name or variable object for dataset. Got None"
     with pytest.raises(ValueError) as exc:
         active = Active(some_file, ncvar="")
     assert str(exc.value) == expected
@@ -78,7 +80,31 @@ def test_active():
     uri = "tests/test_data/cesm2_native.nc"
     ncvar = "TREFHT"
     active = Active(uri, ncvar=ncvar)
-    init = active.__init__(uri=uri, ncvar=ncvar)
+    init = active.__init__(dataset=uri, ncvar=ncvar)
+
+
+def test_activevariable_netCDF4():
+    uri = "tests/test_data/cesm2_native.nc"
+    ncvar = "TREFHT"
+    ds = Dataset(uri)[ncvar]
+    exc_str = "Variable object dataset can only be pyfive.high_level.Dataset"
+    with pytest.raises(TypeError) as exc:
+        av = Active(ds)
+    assert exc_str in str(exc)
+
+
+def test_activevariable_pyfive():
+    uri = "tests/test_data/cesm2_native.nc"
+    ncvar = "TREFHT"
+    ds = pyfive.File(uri)[ncvar]
+    av = Active(ds)
+    av._method = "min"
+    assert av.method([3,444]) == 3
+    av_slice_min = av[3:5]
+    assert av_slice_min == np.array(258.62814, dtype="float32")
+    # test with Numpy
+    np_slice_min = np.min(ds[3:5])
+    assert av_slice_min == np_slice_min
 
 
 @pytest.mark.xfail(reason="We don't employ locks with Pyfive anymore, yet.")
