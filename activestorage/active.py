@@ -514,7 +514,7 @@ class Active:
             tmp, count = reduce_opens3_chunk(ds._fh, offset, size, compressor, filters,
                             self.missing, ds.dtype,
                             chunks, ds._order,
-                            chunk_selection, axis=self.axis,
+                            chunk_selection, axis=axis,
                             method=self.method
             )
 
