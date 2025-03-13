@@ -124,7 +124,7 @@ def test_Active_s3_v0():
     """
     # run Active on s3 file
     s3_file = "s3://pyactivestorage/s3_test_bizarre_large.nc"
-    active = Active(s3_file, "data", "s3")
+    active = Active(s3_file, "data", storage_type="s3")
     active._version = 0
     active.components = True
     result1 = active[0:2, 4:6, 7:9]
@@ -136,7 +136,7 @@ def test_Active_s3_v1():
     """
     # run Active on s3 file
     s3_file = "s3://pyactivestorage/s3_test_bizarre_large.nc"
-    active = Active(s3_file, "data", "s3")
+    active = Active(s3_file, "data", storage_type="s3")
     active._version = 1
     active.method = "mean"
     active.components = True
@@ -149,7 +149,7 @@ def test_Active_s3_v2():
     """
     # run Active on s3 file
     s3_file = "s3://pyactivestorage/s3_test_bizarre_large.nc"
-    active = Active(s3_file, "data", "s3")
+    active = Active(s3_file, "data", storage_type="s3")
     active._version = 2
     active.method = "mean"
     active.components = True
