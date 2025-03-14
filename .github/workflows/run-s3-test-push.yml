@@ -1,0 +1,85 @@
+# adapted GA workflow from https://github.com/stackhpc/reductionist-rs
+---
+name: S3/Minio Test Latest Python
+
+on:
+  push:
+
+# Required shell entrypoint to have properly configured bash shell
+defaults:
+  run:
+    shell: bash -l {0}
+
+jobs:
+  linux-test:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.13"]
+      fail-fast: false
+    name: Linux Python ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+          miniforge-version: "latest"
+          use-mamba: true
+          mamba-version: "2.0.5"  # https://github.com/conda-incubator/setup-miniconda/issues/392
+      - name: Get conda and Python versions
+        run: |
+          conda --version
+          python -V
+      - name: Export proxy
+        run: |
+          echo 'USE_S3 = True' >> activestorage/config.py
+      - name: Start minio object storage
+        run: tests/s3_exploratory/minio_scripts/minio-start
+      - name: Wait for minio object storage to start
+        run: |
+          until curl -if http://localhost:9001; do
+            sleep 1;
+          done
+      - name: Run Reductionist container
+        run: docker run -it --detach --rm --net=host --name reductionist ghcr.io/stackhpc/reductionist-rs:latest
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: activestorage-minio
+          environment-file: environment.yml
+          python-version: ${{ matrix.python-version }}
+          miniforge-version: "latest"
+          use-mamba: true
+          mamba-version: "2.0.5"  # https://github.com/conda-incubator/setup-miniconda/issues/392
+      - name: Install development version of NCAS-CMS/Pyfive:wacasoft
+        run: |
+          cd ..
+          git clone https://github.com/NCAS-CMS/pyfive.git
+          cd pyfive
+          git checkout wacasoft
+          pip install -e .
+      - name: Install PyActiveStorage
+        run: |
+          conda --version
+          python -V
+          which python
+          pip install -e .
+      - name: Run tests
+        run: |
+          pytest -n 2
+      - name: Run S3 exploratory tests
+        run: |
+          pytest tests/s3_exploratory/test_s3_reduction.py --html=test-reports/s3-exploratory-report.html
+        if: always()
+      - name: Install pytest-monitor
+        run: pip install pytest-monitor
+      - name: Run S3 performance tests
+        run: |
+          pytest tests/s3_exploratory/test_s3_arrange_files.py
+          pytest tests/s3_exploratory/test_s3_performance.py --db ../.pymon
+      - name: Analyze S3 and local test performance
+        run: python tests/s3_exploratory/parse_pymon.py
+      - name: Stop minio object storage
+        run: tests/s3_exploratory/minio_scripts/minio-stop
+        if: always()
