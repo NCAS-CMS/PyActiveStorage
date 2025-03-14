@@ -5,8 +5,7 @@ name: S3/Minio Test
 on:
   push:
     branches:
-      - main  # keep this at all times
-      - pyfive
+      - main
   pull_request:
   schedule:
     - cron: '0 0 * * *'  # nightly

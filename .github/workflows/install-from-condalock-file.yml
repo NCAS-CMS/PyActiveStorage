@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - enable_http_reduction
   # run the test only if the PR is to main
   # turn it on if required
   # pull_request:
@@ -37,6 +38,13 @@ jobs:
       - run: which python
       - run: python -V
       - run: conda create --name activestorage-fromlock --file conda-linux-64.lock
+      - name: Install development version of NCAS-CMS/Pyfive:wacasoft
+        run: |
+          cd ..
+          git clone https://github.com/NCAS-CMS/pyfive.git
+          cd pyfive
+          git checkout wacasoft
+          pip install -e .
       - run: which python
       - run: pip --version
       - run: pip install -e .
