@@ -1,13 +1,9 @@
 # adapted GA workflow from https://github.com/stackhpc/reductionist-rs
 ---
-name: S3/Minio Test
+name: S3/Minio Test Latest Python
 
 on:
   push:
-    branches:
-      - main
-  schedule:
-    - cron: '0 0 * * *'  # nightly
 
 # Required shell entrypoint to have properly configured bash shell
 defaults:
@@ -19,7 +15,7 @@ jobs:
     runs-on: "ubuntu-latest"
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.13"]
       fail-fast: false
     name: Linux Python ${{ matrix.python-version }}
     steps:
@@ -87,10 +83,3 @@ jobs:
       - name: Stop minio object storage
         run: tests/s3_exploratory/minio_scripts/minio-stop
         if: always()
-      #- name: Upload HTML report artifact
-      #  uses: actions/upload-artifact@v4
-      #  with:
-      #    name: html-report
-      #    path: test-reports/
-      #    overwrite: true
-      #  if: always()

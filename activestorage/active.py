@@ -1,9 +1,11 @@
 import concurrent.futures
 import os
+import fsspec
 import numpy as np
 import pathlib
 import urllib
 import pyfive
+import requests
 import s3fs
 import time
 
@@ -15,6 +17,33 @@ from activestorage.config import *
 from activestorage import reductionist
 from activestorage.storage import reduce_chunk, reduce_opens3_chunk
 from activestorage.hdf2numcodec import decode_filters
+
+
+def return_storage_type(uri):
+    """
+    Extract the gateway-protocol to infer what type of storage
+    """
+    try:
+        resp = requests.head(uri)
+    except requests.exceptions.MissingSchema:  # eg local file
+        return
+    except requests.exceptions.InvalidSchema:  # eg Minio file s3://pyactivestorage/common_cl_a.nc
+        if not uri.startswith("s3:"):
+            return
+        else:
+            return "s3"
+    except requests.exceptions.ConnectionError as exc:  # eg invalid link or offline
+        print(exc)
+        return
+    response = resp.headers
+
+    # https files on NGINX don't have "gateway-protocol" key
+    if "gateway-protocol" in response:
+        if response["gateway-protocol"] == "s3":
+            print("Gateway protocol indicates S3 storage.")
+            return "s3"
+    else:
+        return "https"
 
 
 def load_from_s3(uri, storage_options=None):
@@ -47,6 +76,19 @@ def load_from_s3(uri, storage_options=None):
     ds = pyfive.File(s3file)
     t3=time.time()
     print(f"Dataset loaded from S3 with s3fs and Pyfive: {uri} ({t2-t1:.2},{t3-t2:.2})")
+    return ds
+
+
+def load_from_https(uri):
+    """
+    Load a pyfive.high_level.Dataset from a
+    netCDF4 file on an https server (NGINX).
+    """
+    #TODO need to test if NGINX server behind https://
+    fs = fsspec.filesystem('http')
+    http_file = fs.open(uri, 'rb')
+    ds = pyfive.File(http_file)
+    print(f"Dataset loaded from https with Pyfive: {uri}")
     return ds
 
 
@@ -140,6 +182,24 @@ class Active:
             self.ds = dataset
         self.uri = dataset
 
+        # determine the storage_type
+        # based on what we have available
+        if not storage_type:
+            if not input_variable:
+                check_uri = self.uri
+            else:
+                check_uri = self.ds.id._filename
+
+            # "special" case when we have to deal
+            # with storage_options['client_kwargs']["endpoint_url"]
+            if storage_options is not None and 'client_kwargs' in storage_options:
+                if "endpoint_url" in storage_options['client_kwargs']:
+                    base_url = storage_options['client_kwargs']["endpoint_url"]
+                    if not input_variable:
+                        check_uri = os.path.join(base_url, self.uri)
+                    else:
+                        check_uri = os.path.join(base_url, self.ds.id._filename)
+            storage_type = return_storage_type(check_uri)
 
         # still allow for a passable storage_type
         # for special cases eg "special-POSIX" ie DDN
@@ -152,6 +212,8 @@ class Active:
             self.filename = self.ds
         elif input_variable and self.storage_type == "s3":
             self.filename = self.ds.id._filename
+        elif input_variable and self.storage_type == "https":
+            self.filename = self.ds
 
         # get storage_options
         self.storage_options = storage_options
@@ -198,6 +260,8 @@ class Active:
             nc = pyfive.File(self.uri)
         elif self.storage_type == "s3":
             nc = load_from_s3(self.uri, self.storage_options)
+        elif self.storage_type == "https":
+            nc = load_from_https(self.uri)
         self.filename = self.uri
         self.ds = nc[ncvar]
 
@@ -518,7 +582,7 @@ class Active:
                             method=self.method
             )
 
-        elif self.storage_type == "s3" and self._version==2:
+        elif self.storage_type == "s3" and self._version == 2:
             # S3: pass in pre-configured storage options (credentials)
             # print("S3 rfile is:", self.filename)
             parsed_url = urllib.parse.urlparse(self.filename)
@@ -567,6 +631,31 @@ class Active:
                                                        chunk_selection,
                                                        axis,
                                                        operation=self._method)
+        # this is for testing ONLY until Reductionist is able to handle https
+        # located files; after that, we can pipe any regular https file through
+        # to Reductionist, provided the https server is "closer" to Reductionist
+        elif self.storage_type == "https" and self._version == 2:
+            # build a simple session
+            session = requests.Session()
+            session.auth = (None, None)
+            session.verify = False
+            bucket = "https"  # really doesn't matter
+
+            # note the extra "storage_type" kwarg
+            # this currently makes Reductionist throw a wobbly
+            # E           activestorage.reductionist.ReductionistError: Reductionist error: HTTP 400: {"error": {"message": "request data is not valid", "caused_by": ["Failed to deserialize the JSON body into the target type", "storage_type: unknown field `storage_type`, expected one of `source`, `bucket`, `object`, `dtype`, `byte_order`, `offset`, `size`, `shape`, `order`, `selection`, `compression`, `filters`, `missing` at line 1 column 550"]}}
+            tmp, count = reductionist.reduce_chunk(session,
+                                                   "https://192.171.169.113:8080",
+                                                   self.filename,
+                                                   bucket, self.filename, offset,
+                                                   size, compressor, filters,
+                                                   self.missing, np.dtype(ds.dtype),
+                                                   chunks,
+                                                   ds._order,
+                                                   chunk_selection,
+                                                   axis,
+                                                   operation=self._method,
+                                                   storage_type="https")
         elif self.storage_type=='ActivePosix' and self.version==2:
             # This is where the DDN Fuse and Infinia wrappers go
             raise NotImplementedError

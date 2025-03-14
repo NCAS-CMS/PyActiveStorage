@@ -161,6 +161,7 @@ def test_get_endpoint_url():
     }
     uri = "tests/test_data/cesm2_native.nc"
     ncvar = "TREFHT"
-    active = Active(uri, ncvar=ncvar, storage_options=storage_options)
+    active = Active(uri, ncvar=ncvar, storage_type="s3",
+                    storage_options=storage_options)
     ep_url = Active._get_endpoint_url(active)
     assert ep_url == "https://cow.moo"
