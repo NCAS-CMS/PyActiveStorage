@@ -7,11 +7,15 @@ import shutil
 import tempfile
 import unittest
 
+# TODO remove in stable
+import h5py
 import h5netcdf
+
+import pyfive
 
 from netCDF4 import Dataset
 
-from activestorage.active import Active
+from activestorage.active import Active, load_from_s3
 from activestorage.config import *
 from activestorage import dummy_data as dd
 
@@ -31,7 +35,7 @@ def load_dataset(testfile):
 
 def active_zero(testfile):
     """Run Active with no active storage (version=0)."""
-    active = Active(testfile, "data", utils.get_storage_type())
+    active = Active(testfile, "data", storage_type=utils.get_storage_type())
     active._version = 0
     d = active[0:2, 4:6, 7:9]
 
@@ -45,7 +49,7 @@ def active_zero(testfile):
 
 def active_two(testfile):
     """Run Active with active storage (version=2)."""
-    active = Active(testfile, "data", utils.get_storage_type())
+    active = Active(testfile, "data", storage_type=utils.get_storage_type())
     active._version = 2
     active.method = "mean"
     active.components = True
@@ -194,8 +198,27 @@ def test_validmax(tmp_path):
     assert unmasked_numpy_mean != masked_numpy_mean
     print("Numpy masked result (mean)", masked_numpy_mean)
 
+    # load files via external protocols
+    y = Dataset(testfile)
+    z = h5py.File(testfile)
+    a = h5netcdf.File(testfile)
+
     # write file to storage
     testfile = utils.write_to_storage(testfile)
+
+    # load file via our protocols
+    if USE_S3:
+        x = load_from_s3(testfile)
+    else:
+        x = pyfive.File(testfile)
+
+    # print stuff
+    print('y-valid-max', y['data'].getncattr('valid_max'))
+    print('x-valid-max', x['data'].attrs.get('valid_max'))
+    print('z-valid-max', z['data'].attrs.get('valid_max'))
+    print('a-valid-max', a['data'].attrs.get('valid_max'))
+
+
 
     # numpy masked to check for correct Active behaviour
     no_active_mean = active_zero(testfile)
@@ -247,58 +270,33 @@ def test_validrange(tmp_path):
 def test_active_mask_data(tmp_path):
     testfile = str(tmp_path / 'test_partially_missing_data.nc')
 
+    def check_masking(testfile, testname):
+
+        valid_masked_data = load_dataset(testfile)
+        ds = pyfive.File(testfile)
+        dsvar = ds["data"]
+        dsdata = dsvar[:]
+        ds.close()
+        a = Active(testfile, "data")
+        data = a._mask_data(dsdata)
+        np.testing.assert_array_equal(data, valid_masked_data,f'Failed masking for {testname}')
+
     # with valid min
     r = dd.make_validmin_ncdata(testfile, valid_min=500)
-
-    # retrieve the actual numpy-ed result
-    actual_data = load_dataset(testfile)
-
-    # dataset variable
-    ds = h5netcdf.File(testfile, 'r', invalid_netcdf=True)
-    dsvar = ds["data"]
-
-    # test the function
-    data = Active._mask_data(None, actual_data, dsvar)
-    ds.close()
+    check_masking(testfile, "valid min")
 
     # with valid range
     r = dd.make_validrange_ncdata(testfile, valid_range=[750., 850.])
+    check_masking(testfile, "valid range")
 
     # retrieve the actual numpy-ed result
     actual_data = load_dataset(testfile)
-
-    # dataset variable
-    ds = h5netcdf.File(testfile, 'r', invalid_netcdf=True)
-    dsvar = ds["data"]
-
-    # test the function
-    data = Active._mask_data(None, actual_data, dsvar)
-    ds.close()
 
     # with missing
     r = dd.make_missing_ncdata(testfile)
-
-    # retrieve the actual numpy-ed result
-    actual_data = load_dataset(testfile)
-
-    # dataset variable
-    ds = h5netcdf.File(testfile, 'r', invalid_netcdf=True)
-    dsvar = ds["data"]
-
-    # test the function
-    data = Active._mask_data(None, actual_data, dsvar)
-    ds.close()
+    check_masking(testfile,'missing')
 
     # with _FillValue
     r = dd.make_fillvalue_ncdata(testfile)
+    check_masking(testfile,"_FillValue")
 
-    # retrieve the actual numpy-ed result
-    actual_data = load_dataset(testfile)
-
-    # dataset variable
-    ds = h5netcdf.File(testfile, 'r', invalid_netcdf=True)
-    dsvar = ds["data"]
-
-    # test the function
-    data = Active._mask_data(None, actual_data, dsvar)
-    ds.close()

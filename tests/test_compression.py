@@ -16,9 +16,9 @@ def check_dataset_filters(temp_file: str, ncvar: str, compression: str, shuffle:
     # Sanity check that test data is compressed and filtered as expected.
     if USE_S3:
         with load_from_s3(temp_file) as test_data:
-            # NOTE: h5netcdf thinks zlib is gzip
-            assert test_data.variables[ncvar].compression == "gzip"
-            assert test_data.variables[ncvar].shuffle == shuffle
+            print("File attrs", test_data.attrs)
+            assert test_data[ncvar].compression == "gzip"
+            assert test_data[ncvar].shuffle == shuffle
     else:
         with Dataset(temp_file) as test_data:
             test_data_filters = test_data.variables[ncvar].filters()
@@ -46,18 +46,14 @@ STORAGE_OPTIONS_CLASSIC = {
     'client_kwargs': {'endpoint_url': S3_URL},
 }
 S3_ACTIVE_URL_MINIO = S3_ACTIVE_STORAGE_URL
-S3_ACTIVE_URL_Bryan = "https://192.171.169.248:8080"
 
 # TODO include all supported configuration types
 # so far test three possible configurations for storage_options:
 # - storage_options = None, active_storage_url = None (Minio and local Reductionist, preset credentials from config.py)
 # - storage_options = CLASSIC, active_storage_url = CLASSIC (Minio and local Reductionist, preset credentials from config.py but folded in storage_options and active_storage_url)
-# - storage_options = CLASSIC, active_storage_url = Bryan's machine (Minio BUT Reductionist moved on Bryan's machine)
-#   (this invariably fails due to data URL being //localhost:9000 closed to outside Reductionist
 storage_options_paramlist = [
     (None, None),
     (STORAGE_OPTIONS_CLASSIC, S3_ACTIVE_URL_MINIO),
-#    (STORAGE_OPTIONS_CLASSIC, S3_ACTIVE_URL_Bryan)
 ]
 
 
@@ -69,7 +65,7 @@ def test_compression_and_filters(tmp_path: str, compression: str, shuffle: bool)
     """
     test_file = create_compressed_dataset(tmp_path, compression, shuffle)
 
-    active = Active(test_file, 'data', utils.get_storage_type())
+    active = Active(test_file, 'data', storage_type=utils.get_storage_type())
     active._version = 1
     active._method = "min"
     result = active[0:2,4:6,7:9]
@@ -91,7 +87,11 @@ def test_compression_and_filters_cmip6_data(storage_options, active_storage_url)
 
     check_dataset_filters(test_file, "tas", "zlib", False)
 
-    active = Active(test_file, 'tas', utils.get_storage_type(),
+    print("Test file and storage options", test_file, storage_options)
+    if not utils.get_storage_type():
+        storage_options = None
+        active_storage_url = None
+    active = Active(test_file, 'tas', storage_type=utils.get_storage_type(),
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
     active._version = 1
@@ -117,7 +117,11 @@ def test_compression_and_filters_obs4mips_data(storage_options, active_storage_u
 
     check_dataset_filters(test_file, "rlut", "zlib", False)
 
-    active = Active(test_file, 'rlut', utils.get_storage_type(),
+    print("Test file and storage options", test_file, storage_options)
+    if not utils.get_storage_type():
+        storage_options = None
+        active_storage_url = None
+    active = Active(test_file, 'rlut', storage_type=utils.get_storage_type(),
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
     active._version = 1

@@ -3,10 +3,9 @@
 # interaction and replace with local file operations.
 
 import botocore
-import contextlib
 import os
-import h5netcdf
 import numpy as np
+import pyfive
 import pytest
 import requests.exceptions
 from unittest import mock
@@ -16,31 +15,23 @@ import activestorage.active
 from activestorage.active import Active
 from activestorage.config import *
 from activestorage.dummy_data import make_vanilla_ncdata
-from activestorage import netcdf_to_zarr
 import activestorage.reductionist
 import activestorage.storage
 
 
-# Capture the real function before it is mocked.
-old_netcdf_to_zarr = netcdf_to_zarr.load_netcdf_zarr_generic
 
 
 @mock.patch.object(activestorage.active, "load_from_s3")
-@mock.patch.object(activestorage.netcdf_to_zarr, "load_netcdf_zarr_generic")
 @mock.patch.object(activestorage.active.reductionist, "reduce_chunk")
-def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
+def test_s3(mock_reduce, mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3."""
 
     # Since this is a unit test, we can't assume that an S3 object store or
     # active storage server is available. Therefore, we mock out the remote
     # service interaction and replace with local file operations.
 
-    @contextlib.contextmanager
-    def load_from_s3(uri):
-        yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
-
-    def load_netcdf_zarr_generic(uri, ncvar, storage_type, storage_options=None):
-        return old_netcdf_to_zarr(test_file, ncvar, None, None)
+    def load_from_s3(uri, storage_options=None):
+        return pyfive.File(test_file)
 
     def reduce_chunk(
         session,
@@ -57,6 +48,7 @@ def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
         shape,
         order,
         chunk_selection,
+        axis,
         operation,
     ):
         return activestorage.storage.reduce_chunk(
@@ -70,29 +62,33 @@ def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
             shape,
             order,
             chunk_selection,
+            axis,
             np.max,
         )
 
     mock_load.side_effect = load_from_s3
-    mock_nz.side_effect = load_netcdf_zarr_generic
     mock_reduce.side_effect = reduce_chunk
 
     uri = "s3://fake-bucket/fake-object"
     test_file = str(tmp_path / "test.nc")
     make_vanilla_ncdata(test_file)
 
-    active = Active(uri, "data", "s3")
-    active._version = 1
+    active = Active(uri, "data", storage_type="s3")
+    active._version = 2
     active._method = "max"
 
+    print("This test has severe flakiness:")
+    print("Either fails with AssestionError - bTREE stuff,")
+    print("or it fails with a multitude of KeyErrors.")
+    print(active)
     result = active[::]
 
     assert result == 999.0
 
-    # S3 loading is not done from Active anymore
-    mock_load.assert_not_called()
+    # S3 loading is done from Active
+    # but we should delegate that outside at some point
+    # mock_load.assert_not_called()
 
-    mock_nz.assert_called_once_with(uri, "data", "s3", None)
     # NOTE: This gets called multiple times with various arguments. Match on
     # the common ones.
     mock_reduce.assert_called_with(
@@ -110,6 +106,7 @@ def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
         mock.ANY,
         "C",
         mock.ANY,
+        mock.ANY,
         operation="max",
     )
 
@@ -118,9 +115,8 @@ def test_s3(mock_reduce, mock_nz, mock_load, tmp_path):
 def test_reductionist_version_0(mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3 using version 0."""
 
-    @contextlib.contextmanager
     def load_from_s3(uri, storage_options=None):
-        yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
+        return pyfive.File(test_file)
 
     mock_load.side_effect = load_from_s3
 
@@ -128,7 +124,7 @@ def test_reductionist_version_0(mock_load, tmp_path):
     test_file = str(tmp_path / "test.nc")
     make_vanilla_ncdata(test_file)
 
-    active = Active(uri, "data", "s3")
+    active = Active(uri, "data", storage_type="s3")
     active._version = 0
 
     result = active[::]
@@ -145,32 +141,26 @@ def test_s3_load_failure(mock_load):
     mock_load.side_effect = FileNotFoundError
 
     with pytest.raises(FileNotFoundError):
-        Active(uri, "data", "s3")
+        Active(uri, "data", storage_type="s3")
 
 
 @mock.patch.object(activestorage.active, "load_from_s3")
-@mock.patch.object(activestorage.netcdf_to_zarr, "load_netcdf_zarr_generic")
 @mock.patch.object(activestorage.active.reductionist, "reduce_chunk")
-def test_reductionist_connection(mock_reduce, mock_nz, mock_load, tmp_path):
+def test_reductionist_connection(mock_reduce, mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3."""
 
-    @contextlib.contextmanager
-    def load_from_s3(uri):
-        yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
-
-    def load_netcdf_zarr_generic(uri, ncvar, storage_type, storage_options=None):
-        return old_netcdf_to_zarr(test_file, ncvar, None, None)
+    def load_from_s3(uri, storage_options=None):
+        return pyfive.File(test_file)
 
     mock_load.side_effect = load_from_s3
-    mock_nz.side_effect = load_netcdf_zarr_generic
     mock_reduce.side_effect = requests.exceptions.ConnectTimeout()
 
     uri = "s3://fake-bucket/fake-object"
     test_file = str(tmp_path / "test.nc")
     make_vanilla_ncdata(test_file)
 
-    active = Active(uri, "data", "s3")
-    active._version = 1
+    active = Active(uri, "data", storage_type="s3")
+    active._version = 2
     active._method = "max"
 
     with pytest.raises(requests.exceptions.ConnectTimeout):
@@ -178,28 +168,22 @@ def test_reductionist_connection(mock_reduce, mock_nz, mock_load, tmp_path):
 
 
 @mock.patch.object(activestorage.active, "load_from_s3")
-@mock.patch.object(activestorage.netcdf_to_zarr, "load_netcdf_zarr_generic")
 @mock.patch.object(activestorage.active.reductionist, "reduce_chunk")
-def test_reductionist_bad_request(mock_reduce, mock_nz, mock_load, tmp_path):
+def test_reductionist_bad_request(mock_reduce, mock_load, tmp_path):
     """Test stack when call to Active contains storage_type == s3."""
 
-    @contextlib.contextmanager
-    def load_from_s3(uri):
-        yield h5netcdf.File(test_file, 'r', invalid_netcdf=True)
-
-    def load_netcdf_zarr_generic(uri, ncvar, storage_type, storage_options=None):
-        return old_netcdf_to_zarr(test_file, ncvar, None, None)
+    def load_from_s3(uri, storage_options=None):
+        return pyfive.File(test_file)
 
     mock_load.side_effect = load_from_s3
-    mock_nz.side_effect = load_netcdf_zarr_generic
     mock_reduce.side_effect = activestorage.reductionist.ReductionistError(400, "Bad request")
 
     uri = "s3://fake-bucket/fake-object"
     test_file = str(tmp_path / "test.nc")
     make_vanilla_ncdata(test_file)
 
-    active = Active(uri, "data", "s3")
-    active._version = 1
+    active = Active(uri, "data", storage_type="s3")
+    active._version = 2
     active._method = "max"
 
     with pytest.raises(activestorage.reductionist.ReductionistError):

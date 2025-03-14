@@ -24,16 +24,18 @@ def create_test_dataset(tmp_path):
     return test_file
 
 
-@pytest.mark.xfail(USE_S3, reason="descriptor 'flatten' for 'numpy.ndarray' objects doesn't apply to a 'memoryview' object")
+# @pytest.mark.xfail(USE_S3, reason="descriptor 'flatten' for 'numpy.ndarray' objects doesn't apply to a 'memoryview' object")
 def test_read0(tmp_path):
     """
     Test a normal read slicing the data an interesting way, using version 0 (native interface)
     """
     test_file = create_test_dataset(tmp_path)
-    active = Active(test_file, 'data', utils.get_storage_type())
+    active = Active(test_file, 'data', storage_type=utils.get_storage_type())
     active._version = 0
-    d = active[0:2,4:6,7:9]
-    nda = np.ndarray.flatten(d.data)
+    d = active[0:2, 4:6, 7:9]
+    # d.data is a memoryview object in both local POSIX and remote S3 storages
+    # keep the current behaviour of the test to catch possible type changes
+    nda = np.ndarray.flatten(np.asarray(d.data))
     assert np.array_equal(nda,np.array([740.,840.,750.,850.,741.,841.,751.,851.]))
 
 def test_read1(tmp_path):
@@ -41,11 +43,11 @@ def test_read1(tmp_path):
     Test a normal read slicing the data an interesting way, using version 1 (replicating native interface in our code)
     """
     test_file = create_test_dataset(tmp_path)
-    active = Active(test_file, 'data', utils.get_storage_type())
+    active = Active(test_file, 'data', storage_type=utils.get_storage_type())
     active._version = 0
     d0 = active[0:2,4:6,7:9]
 
-    active = Active(test_file, 'data', utils.get_storage_type())
+    active = Active(test_file, 'data', storage_type=utils.get_storage_type())
     active._version = 1
     d1 = active[0:2,4:6,7:9]
     assert np.array_equal(d0,d1)
@@ -55,12 +57,12 @@ def test_active(tmp_path):
     Shows what we expect an active example test to achieve and provides "the right answer"
     """
     test_file = create_test_dataset(tmp_path)
-    active = Active(test_file, 'data', utils.get_storage_type())
+    active = Active(test_file, 'data', storage_type=utils.get_storage_type())
     active._version = 0
     d = active[0:2,4:6,7:9]
     mean_result = np.mean(d)
 
-    active = Active(test_file, 'data', utils.get_storage_type())
+    active = Active(test_file, 'data', storage_type=utils.get_storage_type())
     active.method = "mean"
     result2 = active[0:2,4:6,7:9]
     assert mean_result == result2
@@ -70,12 +72,12 @@ def testActiveComponents(tmp_path):
     Shows what we expect an active example test to achieve and provides "the right answer"
     """
     test_file = create_test_dataset(tmp_path)
-    active = Active(test_file, "data", utils.get_storage_type())
+    active = Active(test_file, "data", storage_type=utils.get_storage_type())
     active._version = 0
     d = active[0:2, 4:6, 7:9]
     mean_result = np.mean(d)
 
-    active = Active(test_file, "data", utils.get_storage_type())
+    active = Active(test_file, "data", storage_type=utils.get_storage_type())
     active._version = 2
     active.method = "mean"
     active.components = True
