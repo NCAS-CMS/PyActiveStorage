@@ -1,4 +1,5 @@
 """Active storage module."""
+import fsspec
 import numpy as np
 import pyfive
 
@@ -35,18 +36,33 @@ def reduce_chunk(rfile,
         #FIXME: for the moment, open the file every time ... we might want to do that, or not
         # we could just use an instance of pyfive.high_level.Dataset.id
         # passed directly from active.py, as below
-        with open(rfile,'rb') as open_file:
-            # get the data
-            chunk = read_block(open_file, offset, size)
-            # reverse any compression and filters
-            chunk = filter_pipeline(chunk, compression, filters)
-            # make it a numpy array of bytes
-            chunk = ensure_ndarray(chunk)
-            # convert to the appropriate data type
-            chunk = chunk.view(dtype)
-            # sort out ordering and convert to the parent hyperslab dimensions
-            chunk = chunk.reshape(-1, order='A')
-            chunk = chunk.reshape(shape, order=order)
+        try:
+            with open(rfile,'rb') as open_file:
+                # get the data
+                chunk = read_block(open_file, offset, size)
+                # reverse any compression and filters
+                chunk = filter_pipeline(chunk, compression, filters)
+                # make it a numpy array of bytes
+                chunk = ensure_ndarray(chunk)
+                # convert to the appropriate data type
+                chunk = chunk.view(dtype)
+                # sort out ordering and convert to the parent hyperslab dimensions
+                chunk = chunk.reshape(-1, order='A')
+                chunk = chunk.reshape(shape, order=order)
+        except FileNotFoundError:  # could a https file
+            fs = fsspec.filesystem('http')
+            with fs.open(rfile, 'rb') as open_file:
+                # get the data
+                chunk = read_block(open_file, offset, size)
+                # reverse any compression and filters
+                chunk = filter_pipeline(chunk, compression, filters)
+                # make it a numpy array of bytes
+                chunk = ensure_ndarray(chunk)
+                # convert to the appropriate data type
+                chunk = chunk.view(dtype)
+                # sort out ordering and convert to the parent hyperslab dimensions
+                chunk = chunk.reshape(-1, order='A')
+                chunk = chunk.reshape(shape, order=order)
     else:
             class storeinfo: pass
             storeinfo.byte_offset = offset
