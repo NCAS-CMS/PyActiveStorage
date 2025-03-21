@@ -4,9 +4,10 @@ on:
   # Trigger on push on main or other branch for testing
   # NOTE that push: main will create the file very often
   # and hence lots of automated PRs
-  # push:
-  #   branches:
-  #     - main
+  push:
+    branches:
+      - main
+      - install_pyfive_condalock
   schedule:
     - cron: '0 4 */10 * *'
 
@@ -57,6 +58,13 @@ jobs:
         run: |
           which python
           python --version
+      - name: Install development version of NCAS-CMS/Pyfive:wacasoft
+        run: |
+          cd ..
+          git clone https://github.com/NCAS-CMS/pyfive.git
+          cd pyfive
+          git checkout wacasoft
+          pip install -e .
       - name: Install with pip
         run: pip install -e .
       - name: Run tests
