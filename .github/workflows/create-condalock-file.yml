@@ -57,6 +57,13 @@ jobs:
         run: |
           which python
           python --version
+      - name: Install development version of NCAS-CMS/Pyfive:wacasoft
+        run: |
+          cd ..
+          git clone https://github.com/NCAS-CMS/pyfive.git
+          cd pyfive
+          git checkout wacasoft
+          pip install -e .
       - name: Install with pip
         run: pip install -e .
       - name: Run tests
