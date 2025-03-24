@@ -15,6 +15,7 @@ dependencies:
   - pip !=21.3
   - requests
   - s3fs >=2024.2.0  # loose s3fs deps leading to old aiobotocore for <2024.2.0
+  - ujson
   # Python packages for testing
   - moto  # mock S3 tests
   - pytest
