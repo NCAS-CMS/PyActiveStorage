@@ -41,6 +41,7 @@ dependencies = [
     "numpy!=1.24.3",  # severe masking bug
     "requests",
     "s3fs>=2024.2.0",  # see environment.yml for pin reason
+    "ujson",
 ]
 description = "A Python client for Active Storage"
 license = {text = "BSD License, Version 3-Clause"}
