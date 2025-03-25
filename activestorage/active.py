@@ -353,6 +353,12 @@ class Active:
         self._method = value
 
     @property
+    def mean(self):
+        self.components = True
+        self._method =  "mean"
+        return self
+
+    @property
     def ncvar(self):
         """Return or set the netCDF variable name."""
         return self._ncvar
