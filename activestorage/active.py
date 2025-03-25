@@ -359,6 +359,18 @@ class Active:
         return self
 
     @property
+    def min(self):
+        self.components = False
+        self._method =  "min"
+        return self
+
+    @property
+    def max(self):
+        self.components = False
+        self._method =  "max"
+        return self
+
+    @property
     def ncvar(self):
         """Return or set the netCDF variable name."""
         return self._ncvar
