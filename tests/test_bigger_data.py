@@ -125,7 +125,7 @@ def test_cl_old_method(tmp_path):
     np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
 
 
-def test_cl(tmp_path):
+def test_cl_mean(tmp_path):
     ncfile = save_cl_file_with_a(tmp_path)
     active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
     active._version = 0
@@ -142,6 +142,22 @@ def test_cl(tmp_path):
     np.testing.assert_array_equal(result2["n"], np.array([[[[12]]]]))
     # check for active
     np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+
+
+def test_cl_min(tmp_path):
+    ncfile = save_cl_file_with_a(tmp_path)
+    active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
+    active._version = 2
+    result2 = active.min[4:5, 1:2]
+    np.testing.assert_array_equal(result2, np.array([[[[22.]]]], dtype="float32"))
+
+
+def test_cl_max(tmp_path):
+    ncfile = save_cl_file_with_a(tmp_path)
+    active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
+    active._version = 2
+    result2 = active.max[4:5, 1:2]
+    np.testing.assert_array_equal(result2, np.array([[[[22.]]]], dtype="float32"))
 
 
 def test_ps(tmp_path):
