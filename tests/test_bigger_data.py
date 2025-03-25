@@ -104,6 +104,27 @@ def save_cl_file_with_a(tmp_path):
     return uri
 
 
+def test_cl_old_method(tmp_path):
+    ncfile = save_cl_file_with_a(tmp_path) 
+    active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
+    active._version = 0
+    d = active[4:5, 1:2]
+    mean_result = np.mean(d)
+
+    active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
+    active._version = 2
+    active.method = "mean"
+    active.components = True
+    result2 = active[4:5, 1:2]
+    print(result2, ncfile)
+    # expect {'sum': array([[[[264.]]]], dtype=float32), 'n': array([[[[12]]]])}
+    # check for typing and structure
+    np.testing.assert_array_equal(result2["sum"], np.array([[[[264.]]]], dtype="float32"))
+    np.testing.assert_array_equal(result2["n"], np.array([[[[12]]]]))
+    # check for active
+    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+
+
 def test_cl(tmp_path):
     ncfile = save_cl_file_with_a(tmp_path)
     active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
