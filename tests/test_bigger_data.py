@@ -160,6 +160,22 @@ def test_cl_max(tmp_path):
     np.testing.assert_array_equal(result2, np.array([[[[22.]]]], dtype="float32"))
 
 
+def test_cl_global_max(tmp_path):
+    ncfile = save_cl_file_with_a(tmp_path)
+    active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
+    active._version = 2
+    result2 = active.max[:]
+    np.testing.assert_array_equal(result2, np.array([[[[22.]]]], dtype="float32"))
+
+
+def test_cl_maxxx(tmp_path):
+    ncfile = save_cl_file_with_a(tmp_path)
+    active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
+    active._version = 2
+    with pytest.raises(AttributeError):
+        result2 = active.maxxx[:]
+
+
 def test_ps(tmp_path):
     ncfile = save_cl_file_with_a(tmp_path)
     active = Active(ncfile, "ps", storage_type=utils.get_storage_type())
