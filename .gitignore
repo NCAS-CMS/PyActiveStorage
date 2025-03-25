@@ -5,6 +5,7 @@ tests/*.pyc*
 tests/__pycache__/
 .eggs
 ActiveStorage.egg-info
+activestorage.egg-info
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

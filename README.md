@@ -1,9 +1,9 @@
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity)
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
-[![Test](https://github.com/valeriupredoi/PyActiveStorage/actions/workflows/run-tests.yml/badge.svg)](https://github.com/valeriupredoi/PyActiveStorage/actions/workflows/run-tests.yml)
-[![codecov](https://codecov.io/gh/valeriupredoi/PyActiveStorage/branch/main/graph/badge.svg?token=1VGKP4L3S3)](https://codecov.io/gh/valeriupredoi/PyActiveStorage)
+[![Test](https://github.com/NCAS-CMS/PyActiveStorage/actions/workflows/run-tests.yml/badge.svg)](https://github.com/NCAS-CMS/PyActiveStorage/actions/workflows/run-tests.yml)
+[![codecov](https://codecov.io/gh/NCAS-CMS/PyActiveStorage/branch/main/graph/badge.svg?token=1VGKP4L3S3)](https://codecov.io/gh/NCAS-CMS/PyActiveStorage)
 
-![pyactivestoragelogo](https://github.com/valeriupredoi/PyActiveStorage/blob/main/doc/figures/PyActiveStorage-logo-complete.jpg)
+![pyactivestoragelogo](https://github.com/NCAS-CMS/PyActiveStorage/blob/main/doc/figures/PyActiveStorage-logo-complete.jpg)
 
 ## Active Storage Prototype
 
@@ -68,7 +68,7 @@ The chunk reductions are implemented in `activestorage.storage` using NumPy.
 
 ### S3-compatible object store
 
-We now have support for Active runs with netCDF4 files on S3, from [PR 89](https://github.com/valeriupredoi/PyActiveStorage/pull/89).
+We now have support for Active runs with netCDF4 files on S3, from [PR 89](https://github.com/NCAS-CMS/PyActiveStorage/pull/89).
 To achieve this we integrate with [Reductionist](https://github.com/stackhpc/reductionist-rs), an S3 Active Storage Server.
 Reductionist is typically deployed "near" to an S3-compatible object store and provides an API to perform numerical reductions on object data.
 To use Reductionist, use a `storage_type` of `s3`.
@@ -79,9 +79,9 @@ From there on, `Active` works as per normal.
 
 ## Testing overview
 
-We have written unit and integration tests, and employ a coverage measurement tool - Codecov, see PyActiveStorage [test coverage](https://app.codecov.io/gh/valeriupredoi/PyActiveStorage) with current coverage of 87%; our Continuous Integration (CI) testing is deployed on [Github Actions](https://github.com/valeriupredoi/PyActiveStorage/actions), and we have nightly tests that run the entire testing suite, to be able to detect any issues introduced by updated versions of our dependencies. Github Actions (GA) tests also test the integration of various storage types we currently support; as such, we have dedicated tests that test Active Storage with S3 storage (by creating and running a MinIO client from within the test, and deploying and testing PyActiveStorage with data shipped to the S3 client).
+We have written unit and integration tests, and employ a coverage measurement tool - Codecov, see PyActiveStorage [test coverage](https://app.codecov.io/gh/NCAS-CMS/PyActiveStorage) with current coverage of 87%; our Continuous Integration (CI) testing is deployed on [Github Actions](https://github.com/NCAS-CMS/PyActiveStorage/actions), and we have nightly tests that run the entire testing suite, to be able to detect any issues introduced by updated versions of our dependencies. Github Actions (GA) tests also test the integration of various storage types we currently support; as such, we have dedicated tests that test Active Storage with S3 storage (by creating and running a MinIO client from within the test, and deploying and testing PyActiveStorage with data shipped to the S3 client).
 
-Of particular interest are performance tests, and we have started using tests that measure system run time and resident memory (RES); we use ``pytest-monitor`` for this purpose, inside the GA CI testing environemnt. So far, performance testing showed us that HDF5 chunking is paramount for performance `ie` a large number of small HDF5 chunks leads to very long system run times, and high memory consumption; however, larger HDF5 chunks significantly increase performance – as an example, running PyActiveStorage on an uncompressed netCDF4 file of size 1GB on disk (500x500x500 data elements, float64 each), with optimal HDF5 chunking (eg 75 data elements per chunk, on each dimesnional axis) takes order 0.1s for a local POSIX storage and 0.3s for the case when the file is on an S3 server; the same run needs only order approx. 100MB of RES memory for each of the two storage options see [test result](https://github.com/valeriupredoi/PyActiveStorage/actions/runs/6313871715/job/17142905423?pr=146); the same types of runs with much smaller HDF5 chunks (eg 20x smaller) will need order a factor of 300 more time to complete, and order a few GB of RES memory.
+Of particular interest are performance tests, and we have started using tests that measure system run time and resident memory (RES); we use ``pytest-monitor`` for this purpose, inside the GA CI testing environemnt. So far, performance testing showed us that HDF5 chunking is paramount for performance `ie` a large number of small HDF5 chunks leads to very long system run times, and high memory consumption; however, larger HDF5 chunks significantly increase performance – as an example, running PyActiveStorage on an uncompressed netCDF4 file of size 1GB on disk (500x500x500 data elements, float64 each), with optimal HDF5 chunking (eg 75 data elements per chunk, on each dimesnional axis) takes order 0.1s for a local POSIX storage and 0.3s for the case when the file is on an S3 server; the same run needs only order approx. 100MB of RES memory for each of the two storage options see [test result](https://github.com/NCAS-CMS/PyActiveStorage/actions/runs/6313871715/job/17142905423?pr=146); the same types of runs with much smaller HDF5 chunks (eg 20x smaller) will need order a factor of 300 more time to complete, and order a few GB of RES memory.
 
 ## Testing HDF5 chunking
 
@@ -152,11 +152,11 @@ Kerchunking needs ~200MB same as Active in total - kerchunking is memory-dominan
 
 ## Documentation
 
-See available Sphinx [documentation](https://htmlpreview.github.io/?https://github.com/valeriupredoi/PyActiveStorage/blob/main/doc/build/index.html). To build locally the documentation run:
+See available Sphinx [documentation](https://htmlpreview.github.io/?https://github.com/NCAS-CMS/PyActiveStorage/blob/main/doc/build/index.html). To build locally the documentation run:
 
 ```
 sphinx-build -Ea doc doc/build
 ```
 ## Code coverage (test coverage)
 
-We monitor test coverage via the [Codecov app](https://app.codecov.io/gh/valeriupredoi/PyActiveStorage) and employ a bot that displays coverage changes introduced in every PR; the bot posts a comment directly to the PR, in which coverage variations introduced by the proposed code changes are displayed.
+We monitor test coverage via the [Codecov app](https://app.codecov.io/gh/NCAS-CMS/PyActiveStorage) and employ a bot that displays coverage changes introduced in every PR; the bot posts a comment directly to the PR, in which coverage variations introduced by the proposed code changes are displayed.
