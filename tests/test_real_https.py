@@ -14,8 +14,7 @@ def test_https():
 
     active = Active(test_file_uri, "cl", storage_type="https")
     active._version = 1
-    active._method = "min"
-    result = active[0:3, 4:6, 7:9]
+    result = active.min[0:3, 4:6, 7:9]
     print("Result is", result)
     assert result == np.array([0.6909787], dtype="float32")
 
@@ -26,8 +25,7 @@ def test_https_100years():
     test_file_uri = "https://esgf.ceda.ac.uk/thredds/fileServer/esg_cmip6/CMIP6/CMIP/MOHC/UKESM1-1-LL/historical/r1i1p1f2/Amon/pr/gn/latest/pr_Amon_UKESM1-1-LL_historical_r1i1p1f2_gn_195001-201412.nc"
     active = Active(test_file_uri, "pr")
     active._version = 1
-    active._method = "min"
-    result = active[0:3, 4:6, 7:9]
+    result = active.min[0:3, 4:6, 7:9]
     print("Result is", result)
     assert result == np.array([5.4734613e-07], dtype="float32")
 
@@ -41,8 +39,7 @@ def test_https_reductionist():
     with pytest.raises(activestorage.reductionist.ReductionistError):
         active = Active(test_file_uri, "cl")
         active._version = 2
-        active._method = "min"
-        result = active[0:3, 4:6, 7:9]
+        result = active.min[0:3, 4:6, 7:9]
         print("Result is", result)
         assert result == np.array([0.6909787], dtype="float32")
 
@@ -53,8 +50,7 @@ def test_https_implicit_storage():
 
     active = Active(test_file_uri, "cl")
     active._version = 1
-    active._method = "min"
-    result = active[0:3, 4:6, 7:9]
+    result = active.min[0:3, 4:6, 7:9]
     print("Result is", result)
     assert result == np.array([0.6909787], dtype="float32")
 
@@ -70,8 +66,7 @@ def test_https_implicit_storage_file_not_found():
     with pytest.raises(FileNotFoundError):
         active = Active(test_file_uri, "cl")
         active._version = 1
-        active._method = "min"
-        result = active[0:3, 4:6, 7:9]
+        result = active.min[0:3, 4:6, 7:9]
 
 
 def test_https_implicit_storage_wrong_url():
@@ -83,8 +78,7 @@ def test_https_implicit_storage_wrong_url():
     with pytest.raises(ValueError):
         active = Active(test_file_uri, "cl")
         active._version = 1
-        active._method = "min"
-        result = active[0:3, 4:6, 7:9]
+        result = active.min[0:3, 4:6, 7:9]
 
 
 @pytest.mark.skip(reason="save time: test_https_dataset_implicit_storage is more general.")
@@ -96,8 +90,7 @@ def test_https_dataset():
 
     active = Active(av, storage_type="https")
     active._version = 1
-    active._method = "min"
-    result = active[0:3, 4:6, 7:9]
+    result = active.min[0:3, 4:6, 7:9]
     print("Result is", result)
     assert result == np.array([0.6909787], dtype="float32")
 
@@ -110,7 +103,6 @@ def test_https_dataset_implicit_storage():
 
     active = Active(av)
     active._version = 1
-    active._method = "min"
-    result = active[0:3, 4:6, 7:9]
+    result = active.min[0:3, 4:6, 7:9]
     print("Result is", result)
     assert result == np.array([0.6909787], dtype="float32")

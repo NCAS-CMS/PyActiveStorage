@@ -32,8 +32,7 @@ def test_s3_dataset():
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
     active._version = 2
-    active._method = "min"
-    result = active[0:3, 4:6, 7:9]  # standardized slice
+    result = active.min[0:3, 4:6, 7:9]  # standardized slice
     print("Result is", result)
     assert result == 5098.625
 
@@ -42,8 +41,7 @@ def test_s3_dataset():
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
     active._version = 2
-    active._method = "min"
-    result = active[0:3, 4:6, 7:9]  # standardized slice
+    result = active.min[0:3, 4:6, 7:9]  # standardized slice
     print("Result is", result)
     assert result == 5098.625
 
@@ -56,8 +54,7 @@ def test_s3_dataset():
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
     active._version = 2
-    active._method = "min"
-    result = active[0:3, 4:6, 7:9]  # standardized slice
+    result = active.min[0:3, 4:6, 7:9]  # standardized slice
     print("Result is", result)
     assert result == 5098.625
 
@@ -66,7 +63,6 @@ def test_s3_dataset():
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
     active._version = 2
-    active._method = "min"
-    result = active[0:3, 4:6, 7:9]  # standardized slice
+    result = active.min[0:3, 4:6, 7:9]  # standardized slice
     print("Result is", result)
     assert result == 5098.625
