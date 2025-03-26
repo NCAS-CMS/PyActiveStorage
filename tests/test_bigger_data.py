@@ -355,3 +355,21 @@ def test_daily_data_masked_no_stats_no_components(test_data_path):
     active._version = 2
     result2 = active[3:4, 0, 2][0][0]
     assert result2 == 250.35127
+
+
+def test_daily_data_masked_two_stats(test_data_path):
+    """
+    Test again with a daily data file, with masking on
+    """
+    ncfile = str(test_data_path / "daily_data_masked.nc")
+    uri = utils.write_to_storage(ncfile)
+
+    # first a mean
+    active = Active(uri, "ta", storage_type=utils.get_storage_type())
+    active._version = 2
+    result2 = active.min[:]
+    assert result2 == 245.0020751953125
+
+    # then recycle Active object for something else
+    # check method is reset
+    assert active._method is None
