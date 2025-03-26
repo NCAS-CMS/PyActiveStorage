@@ -107,6 +107,32 @@ def test_activevariable_pyfive():
     assert av_slice_min == np_slice_min
 
 
+def test_activevariable_pyfive_with_attributed_min():
+    uri = "tests/test_data/cesm2_native.nc"
+    ncvar = "TREFHT"
+    ds = pyfive.File(uri)[ncvar]
+    av = Active(ds)
+    av_slice_min = av.min[3:5]
+    assert av_slice_min == np.array(258.62814, dtype="float32")
+    # test with Numpy
+    np_slice_min = np.min(ds[3:5])
+    assert av_slice_min == np_slice_min
+
+
+def test_activevariable_pyfive_with_attributed_mean():
+    uri = "tests/test_data/cesm2_native.nc"
+    ncvar = "TREFHT"
+    ds = pyfive.File(uri)[ncvar]
+    av = Active(ds)
+    av.components = True
+    av_slice_min = av.mean[3:5]
+    actual_mean = av_slice_min["sum"] / av_slice_min["n"]
+    assert actual_mean == np.array(283.39508056640625, dtype="float32")
+    # test with Numpy
+    np_slice_min = np.mean(ds[3:5])
+    assert np.isclose(actual_mean, np_slice_min)
+
+
 @pytest.mark.xfail(reason="We don't employ locks with Pyfive anymore, yet.")
 def test_lock():
     """Unit test for class:Active."""
