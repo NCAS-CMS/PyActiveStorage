@@ -354,19 +354,16 @@ class Active:
 
     @property
     def mean(self):
-        self.components = True
         self._method =  "mean"
         return self
 
     @property
     def min(self):
-        self.components = False
         self._method =  "min"
         return self
 
     @property
     def max(self):
-        self.components = False
         self._method =  "max"
         return self
 
@@ -378,7 +375,6 @@ class Active:
     @ncvar.setter
     def ncvar(self, value):
         self._ncvar = value
-
 
     def _get_active(self, method, *args):
         """ 
@@ -430,6 +426,9 @@ class Active:
 
         # Whether or not we need to store reduction counts
         need_counts = self.components or self._method == "mean"
+        # but never when we don't have a statistical method
+        if self._method is None:
+            need_counts = False
 
         if method is not None:
             # Get the number of chunks per axis
