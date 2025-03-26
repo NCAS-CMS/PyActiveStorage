@@ -124,6 +124,7 @@ def test_activevariable_pyfive_with_attributed_mean():
     ncvar = "TREFHT"
     ds = pyfive.File(uri)[ncvar]
     av = Active(ds)
+    av.components = True
     av_slice_min = av.mean[3:5]
     actual_mean = av_slice_min["sum"] / av_slice_min["n"]
     assert actual_mean == np.array(283.39508056640625, dtype="float32")
