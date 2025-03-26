@@ -556,6 +556,9 @@ class Active:
                     #       to a masked value in 'out'.
                     out = out / n
 
+        # reset the method to start from a clean property
+        self._method = None
+
         return out
 
     def _get_endpoint_url(self):
