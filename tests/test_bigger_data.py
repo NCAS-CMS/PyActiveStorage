@@ -339,8 +339,10 @@ def test_daily_data_masked_no_stats_yes_components(test_data_path):
     active = Active(uri, "ta", storage_type=utils.get_storage_type())
     active._version = 2
     active.components = True
-    result2 = active[3:4, 0, 2][0][0]
-    assert result2 == 250.35127
+    raised = "Setting components to True for None statistical method."
+    with pytest.raises(ValueError) as exc:
+        result2 = active[3:4, 0, 2]
+        assert raised == str(exc)
 
 
 def test_daily_data_masked_no_stats_no_components(test_data_path):
