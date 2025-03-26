@@ -427,8 +427,8 @@ class Active:
         # Whether or not we need to store reduction counts
         need_counts = self.components or self._method == "mean"
         # but never when we don't have a statistical method
-        if self._method is None:
-            need_counts = False
+        if self.components and self._method is None:
+            raise ValueError("Setting components to True for None statistical method.")
 
         if method is not None:
             # Get the number of chunks per axis
