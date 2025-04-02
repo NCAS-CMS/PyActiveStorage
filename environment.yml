@@ -5,6 +5,7 @@ channels:
   - nodefaults
 
 dependencies:
+  - aiohttp <3.11.15  # test
   - python >=3.10
   - dask !=2024.8.0  # github.com/dask/dask/issues/11296
   - fsspec
