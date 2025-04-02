@@ -150,4 +150,5 @@ def test_reductionist_reduce_chunk():
                                            [], np.dtype("int32"), (32, ), "C",
                                            [slice(0, 2, 1), ], None, "min")
     assert tmp == 134351386
-    assert count == 2
+    # count is returned as a list even for one element
+    assert count == [2]
