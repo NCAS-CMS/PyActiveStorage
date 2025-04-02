@@ -620,6 +620,7 @@ class Active:
             if self.storage_options is None:
               
                 # for the moment we need to force ds.dtype to be a numpy type
+                # Reductionist returns "count" as a list even for single elements
                 tmp, count = reductionist.reduce_chunk(session,
                                                        S3_ACTIVE_STORAGE_URL,
                                                        S3_URL,
@@ -640,6 +641,8 @@ class Active:
                     bucket = os.path.dirname(parsed_url.path)  # bucketX
                     object = os.path.basename(parsed_url.path)  # fileY
                     print("S3 anon=True Bucket and File:", bucket, object)
+
+                # Reductionist returns "count" as a list even for single elements
                 tmp, count = reductionist.reduce_chunk(session,
                                                        self.active_storage_url,
                                                        self._get_endpoint_url(),
@@ -664,6 +667,8 @@ class Active:
             # note the extra "storage_type" kwarg
             # this currently makes Reductionist throw a wobbly
             # E           activestorage.reductionist.ReductionistError: Reductionist error: HTTP 400: {"error": {"message": "request data is not valid", "caused_by": ["Failed to deserialize the JSON body into the target type", "storage_type: unknown field `storage_type`, expected one of `source`, `bucket`, `object`, `dtype`, `byte_order`, `offset`, `size`, `shape`, `order`, `selection`, `compression`, `filters`, `missing` at line 1 column 550"]}}
+
+            # Reductionist returns "count" as a list even for single elements
             tmp, count = reductionist.reduce_chunk(session,
                                                    "https://192.171.169.113:8080",
                                                    self.filename,
