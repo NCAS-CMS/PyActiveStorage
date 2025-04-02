@@ -6,6 +6,7 @@ channels:
 
 dependencies:
   - aiohttp <3.11.15  # test
+  - tblib <3.1.0  # test
   - python >=3.10
   - dask !=2024.8.0  # github.com/dask/dask/issues/11296
   - fsspec
