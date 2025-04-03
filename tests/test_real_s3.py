@@ -13,11 +13,12 @@ S3_BUCKET = "bnl"
 @pytest.mark.slow
 def test_s3_dataset():
     """Run somewhat as the 'gold' test."""
+    # NOTE: "https://uor-aces-o.s3-ext.jc.rl.ac.uk" is the stable S3 JASMIN
+    # proxy that is now migrated to the new proxy (1 April 2025)
     storage_options = {
         'key': "f2d55c6dcfc7618b2c34e00b58df3cef",
         'secret': "$/'#M{0{/4rVhp%n^(XeX$q@y#&(NM3W1->~N.Q6VP.5[@bLpi='nt]AfH)>78pT",
-        # 'client_kwargs': {'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"},  # old proxy
-        'client_kwargs': {'endpoint_url': "https://uor-aces-o.ext.proxy.jc.rl.ac.uk"},  # new proxy
+        'client_kwargs': {'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"},
     }
     active_storage_url = "https://192.171.169.113:8080"
     # bigger_file = "ch330a.pc19790301-bnl.nc"  # 18GB 3400 HDF5 chunks
