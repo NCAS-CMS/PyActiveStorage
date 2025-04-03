@@ -39,5 +39,5 @@ jobs:
           pip install -e .
       - run: pip install -e .
       - run: conda list
-      - run: pytest -n 2 --junitxml=report-1.xml
+      - run: pytest -n 2 -m "not slow" --junitxml=report-1.xml
       - uses: codecov/codecov-action@v5
