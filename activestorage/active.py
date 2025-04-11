@@ -353,6 +353,21 @@ class Active:
         self._method = value
 
     @property
+    def mean(self):
+        self._method =  "mean"
+        return self
+
+    @property
+    def min(self):
+        self._method =  "min"
+        return self
+
+    @property
+    def max(self):
+        self._method =  "max"
+        return self
+
+    @property
     def ncvar(self):
         """Return or set the netCDF variable name."""
         return self._ncvar
@@ -360,7 +375,6 @@ class Active:
     @ncvar.setter
     def ncvar(self, value):
         self._ncvar = value
-
 
     def _get_active(self, method, *args):
         """ 
@@ -412,6 +426,9 @@ class Active:
 
         # Whether or not we need to store reduction counts
         need_counts = self.components or self._method == "mean"
+        # but never when we don't have a statistical method
+        if self.components and self._method is None:
+            raise ValueError("Setting components to True for None statistical method.")
 
         if method is not None:
             # Get the number of chunks per axis
@@ -538,6 +555,9 @@ class Active:
                     #       because it will, by definition, correspond
                     #       to a masked value in 'out'.
                     out = out / n
+
+        # reset the method to start from a clean property
+        self._method = None
 
         return out
 

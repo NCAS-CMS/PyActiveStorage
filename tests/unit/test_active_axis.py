@@ -50,7 +50,9 @@ def test_active_axis_reduction(index):
             assert np.ma.allclose(x, r)
 
             # Test dictionary components output
+            # re-add method
             active.components = True
+            active.method = method
 
             rn = np.ma.count(ref[index], axis=axis, keepdims=True)
 
@@ -73,13 +75,10 @@ def test_active_axis_reduction(index):
 def test_active_axis_format_1():
     """Unit test for class:Active axis format."""
     active1 = Active(rfile, ncvar, axis=[0, 2])
-    active1.method = "mean"
-
     active2 = Active(rfile, ncvar, axis=(-1, -3))
-    active2.method = "mean"
 
-    x1 = active2[...]
-    x2 = active2[...]
+    x1 = active2.mean[...]
+    x2 = active2.mean[...]
 
     assert x1.shape == x2.shape
     assert (x1.mask == x2.mask).all()
