@@ -16,7 +16,8 @@ def test_s3_dataset():
         'secret': "$/'#M{0{/4rVhp%n^(XeX$q@y#&(NM3W1->~N.Q6VP.5[@bLpi='nt]AfH)>78pT",
         'client_kwargs': {'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"},
     }
-    active_storage_url = "https://192.171.169.113:8080"
+    # active_storage_url = "https://192.171.169.113:8080"  # Bryan VM
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft
     # bigger_file = "ch330a.pc19790301-bnl.nc"  # 18GB 3400 HDF5 chunks
     bigger_file = "ch330a.pc19790301-def.nc"  # 17GB 64 HDF5 chunks
     # bigger_file = "da193a_25_day__198808-198808.nc"  # 3GB 30 HDF5 chunks
