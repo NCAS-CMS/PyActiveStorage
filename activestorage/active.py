@@ -636,7 +636,7 @@ class Active:
                 # special case for "anon=True" buckets that work only with e.g.
                 # fs = s3fs.S3FileSystem(anon=True, client_kwargs={'endpoint_url': S3_URL})
                 # where file uri = bucketX/fileY.mc
-                print("S3 Storage options to Reductionist:", self.storage_options)
+                # print("S3 Storage options to Reductionist:", self.storage_options)
                 if self.storage_options.get("anon", None) == True:
                     bucket = os.path.dirname(parsed_url.path)  # bucketX
                     object = os.path.basename(parsed_url.path)  # fileY
@@ -670,7 +670,7 @@ class Active:
 
             # Reductionist returns "count" as a list even for single elements
             tmp, count = reductionist.reduce_chunk(session,
-                                                   "https://192.171.169.113:8080",
+                                                   "https://reductionist.jasmin.ac.uk/",  # Wacasoft
                                                    self.filename,
                                                    bucket, self.filename, offset,
                                                    size, compressor, filters,
