@@ -1,7 +1,7 @@
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity)
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 [![Test](https://github.com/NCAS-CMS/PyActiveStorage/actions/workflows/run-tests.yml/badge.svg)](https://github.com/NCAS-CMS/PyActiveStorage/actions/workflows/run-tests.yml)
-[![codecov](https://codecov.io/gh/NCAS-CMS/PyActiveStorage/branch/main/graph/badge.svg?token=1VGKP4L3S3)](https://app.codecov.io/gh/NCAS-CMS/PyActiveStorage)
+[![codecov](https://codecov.io/gh/NCAS-CMS/PyActiveStorage/graph/badge.svg?token=1olGjnvAOp)](https://codecov.io/gh/NCAS-CMS/PyActiveStorage)
 
 ![pyactivestoragelogo](https://github.com/NCAS-CMS/PyActiveStorage/blob/main/doc/figures/PyActiveStorage-logo-complete.jpg)
 
