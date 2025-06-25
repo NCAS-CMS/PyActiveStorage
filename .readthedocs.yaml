@@ -14,6 +14,8 @@ build:
   jobs:
     post_create_environment:
       - conda run -n ${CONDA_DEFAULT_ENV} pip install . --no-deps
+      # remove this when we have conda-forge Pyfive in our environment
+      - conda run -n ${CONDA_DEFAULT_ENV} pip install pyfive
 
 # Declare the requirements required to build your docs
 conda:
