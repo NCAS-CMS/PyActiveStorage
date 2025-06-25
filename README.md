@@ -35,25 +35,31 @@ Python versions supported: 3.10, 3.11, 3.12, 3.13. Fully compatible with `numpy 
 
 This package provides 
 
-1. the class `Active`, which is a shimmy to NetCDF4 (and HDF5) storage via kerchunk metadata and the zarr indexer. It does not however, use zarr for the actual read.
+1. the class `Active`, which is a shimmy to NetCDF4 (and HDF5) via a [`Pyfive.File`](https://github.com/NCAS-CMS/pyfive) file object
 2. The actual reads are done in the methods of `storage.py` or `reductionist.py`, which are called from within an `Active.__getitem__`.
 
-Example usage is in the file `tests/test_harness.py`, but it's basically this simple:
+Example usage is in the test files, depending on the case:
+
+- [`tests/test_harness.py`](https://github.com/NCAS-CMS/PyActiveStorage/blob/main/tests/test_harness.py)
+- [`test_real_s3.py`](https://github.com/NCAS-CMS/PyActiveStorage/blob/main/tests/test_real_s3.py)
+- [`test_real_https.py`](https://github.com/NCAS-CMS/PyActiveStorage/blob/main/tests/test_real_https.py)
+
+but it's basically this simple:
 
 ```python
-active = Active(self.testfile, "data")
-active.method = "mean"
-result = active[0:2, 4:6, 7:9]
+active = Active(file.Path | Pyfive.Dataset, ncvar="some_var")
+active._version = 2
+result = active.mean[0:2, 4:6, 7:9]
 ```
 
-where `result` will be the mean of the appropriate slice of the hyperslab in `var`.
+where `result` will be the mean of the appropriate slice of the hyperslab in `some_var` variable data.
 
 There are some (relatively obsolete) documents from our exploration of zarr internals in the docs4understanding, but they are not germane to the usage of the Active class.
 
 ## Storage types
 
 PyActiveStorage is designed to interact with various storage backends.
-The storage backend is specified using the `storage_type` argument to `Active` constructor.
+The storage backend is automatically detected, but can still be specified using the `storage_type` argument to the `Active` constructor.
 There are two main integration points for a storage backend:
 
 #. Load netCDF metadata
@@ -76,6 +82,10 @@ To use Reductionist, use a `storage_type` of `s3`.
 To load metadata, netCDF files are opened using `s3fs`, with `h5netcdf` used to put the open file (which is nothing more than a memory view of the netCDF file) into an hdf5/netCDF-like object format.
 Chunk reductions are implemented in `activestorage.reductionist`, with each operation resulting in an API request to the Reductionist server.
 From there on, `Active` works as per normal.
+
+### HTTPS-compatible on an NGINX server
+
+The same infrastructure as for S3, but the file is passed in as an `https` URI.
 
 ## Testing overview
 
