@@ -167,11 +167,14 @@ Kerchunking needs ~200MB same as Active in total - kerchunking is memory-dominan
 
 ## Documentation
 
-See available Sphinx [documentation](https://htmlpreview.github.io/?https://github.com/NCAS-CMS/PyActiveStorage/blob/main/doc/build/index.html). To build locally the documentation run:
+See available Sphinx [documentation](https://pyactivestorage.readthedocs.io/en/latest/). To build locally the documentation run:
 
 ```
 sphinx-build -Ea doc doc/build
 ```
+
+Docs are webhooked to build on Pull Requests, and pushes.
+
 ## Code coverage (test coverage)
 
 We monitor test coverage via the [Codecov app](https://app.codecov.io/gh/NCAS-CMS/PyActiveStorage) and employ a bot that displays coverage changes introduced in every PR; the bot posts a comment directly to the PR, in which coverage variations introduced by the proposed code changes are displayed.
