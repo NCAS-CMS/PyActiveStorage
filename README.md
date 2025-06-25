@@ -1,11 +1,16 @@
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity)
+[![Documentation Status](https://app.readthedocs.org/projects/pyactivestorage/badge/?version=latest)](https://pyactivestorage.readthedocs.io/en/latest/?badge=latest)
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 [![Test](https://github.com/NCAS-CMS/PyActiveStorage/actions/workflows/run-tests.yml/badge.svg)](https://github.com/NCAS-CMS/PyActiveStorage/actions/workflows/run-tests.yml)
 [![codecov](https://codecov.io/gh/NCAS-CMS/PyActiveStorage/graph/badge.svg?token=1olGjnvAOp)](https://codecov.io/gh/NCAS-CMS/PyActiveStorage)
 
 ![pyactivestoragelogo](https://github.com/NCAS-CMS/PyActiveStorage/blob/main/doc/figures/PyActiveStorage-logo-complete.jpg)
 
-## Active Storage Prototype
+## PyActiveStorage
+
+- [Latest documentation on ReadTheDocs (RTD)](https://pyactivestorage.readthedocs.io/en/latest/)
+- [RTD latest builds](https://app.readthedocs.org/projects/pyactivestorage/)
+- [GHA Tests](https://github.com/NCAS-CMS/PyActiveStorage/actions)
 
 ### Create virtual environment
 
