@@ -11,7 +11,7 @@ computations. We have two implementations of active storage with which PyActiveS
 
 * a prototype in DDN InfiniaTM
 * a production ready `“Reductionist” <https://github.com/stackhpc/reductionist-rs>`_  middleware software which can be
-deployed to turn any S3 object store into active storage
+  deployed to turn any S3 object store into active storage
 
 Using PyActiveStorage can speed up workflows, especially if the data is remote, or the local area network is congested.
 Early results accessing global fields of 10km resolution data on the CEDA-JASMIN S3 object store show that time-series
