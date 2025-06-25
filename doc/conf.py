@@ -416,4 +416,4 @@ intersphinx_mapping = {
 sys.path.append(os.path.dirname(__file__))
 from gensidebar import generate_sidebar
 
-generate_sidebar(globals(), "esmvalcore")
+generate_sidebar(globals(), "pyactivestorage")
