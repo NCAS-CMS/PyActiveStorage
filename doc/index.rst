@@ -8,7 +8,6 @@ Welcome to PyActiveStorage documentation!
 
     Introduction <introduction>
     Quickstart <quickstart/index>
-    Examples <examples>
     API Reference <api/pyactivestorage>
 
 Indices and tables
