@@ -23,8 +23,7 @@ dependencies:
   - pytest-html !=2.1.0
   - pytest-metadata >=1.5.1
   - pytest-xdist
-  # Python packages needed for building docs
-  # re-add when we deploy the docs
-  # - autodocsumm >=0.2.2
-  # - sphinx >=5
-  # - sphinx_rtd_theme
+  # docs
+  - autodocsumm
+  - sphinx
+  - sphinx_rtd_theme
