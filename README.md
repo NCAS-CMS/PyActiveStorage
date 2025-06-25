@@ -29,7 +29,7 @@ pip install -e .
 pytest -n 2
 ```
 
-Python versions supported: (3.9 EOL but no more testing with it), 3.10, 3.11, 3.12, 3.13. Fully compatible with `numpy >=2.0.0`.
+Python versions supported: 3.10, 3.11, 3.12, 3.13. Fully compatible with `numpy >=2.0.0`.
 
 ## Active Storage Data Interface
 
