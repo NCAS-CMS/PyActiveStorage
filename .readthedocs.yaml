@@ -15,9 +15,8 @@ build:
     post_create_environment:
       - conda run -n ${CONDA_DEFAULT_ENV} pip install . --no-deps
       # remove when Pyfive on conda-forge and in our deps
-      - conda run -n ${CONDA_DEFAULT_ENV} git clone https://github.com/NCAS-CMS/pyfive.git
+      - conda run -n ${CONDA_DEFAULT_ENV} git clone https://github.com/jjhelmus/pyfive
       - cd pyfive
-      - conda run -n ${CONDA_DEFAULT_ENV} git checkout wacasoft
       - conda run -n ${CONDA_DEFAULT_ENV} pip install -e .
 
 # Declare the requirements required to build your docs
