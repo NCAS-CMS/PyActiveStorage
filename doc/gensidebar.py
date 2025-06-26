@@ -57,12 +57,12 @@ def generate_sidebar(conf, conf_api):
     #
 
     _header("pyactivestorage", "PyActiveStorage")
-    _write("pyactivestorage", "Introduction", "introduction")
-    _write("pyactivestorage", "Getting started", "quickstart/index")
+    # _write("pyactivestorage", "Introduction", "introduction")
+    # _write("pyactivestorage", "Getting started", "quickstart/index")
     # _write("pyactivestorage", "Examples", "examples")
     # _write("pyactivestorage", "Contributing to the community", "community/index")
     # _write("pyactivestorage", "Utilities", "utils")
-    _write("pyactivestorage", "API Reference", "api/pyactivestorage")
+    # _write("pyactivestorage", "API Reference", "api/pyactivestorage")
     # _write("pyactivestorage", "Frequently Asked Questions", "faq")
     # _write("pyactivestorage", "Changelog", "changelog")
     _endl()
