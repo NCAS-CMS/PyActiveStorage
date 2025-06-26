@@ -1,14 +1,12 @@
-Welcome to PyActiveStorage documentation!
+Welcome to PyActiveStorage Documentation!
 =========================================
 
 .. include:: _sidebar.rst.inc
 
-.. toctree::
-   :maxdepth: 2
-
-    Introduction <introduction>
-    Quickstart <quickstart/index>
-    API Reference <api/pyactivestorage>
+.. _fig_how_it_works:
+.. figure:: /figures/PyActiveStorage-logo-complete.jpg
+   :align: center
+   :width: 80%
 
 Indices and tables
 ==================
