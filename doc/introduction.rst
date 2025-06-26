@@ -21,3 +21,11 @@ different hemispheres) in times which are competitive with local users accessing
 We anticipate this technology will be game-changing for remote access to data, particularly where there is
 insufficient local storage to make copies of data, or those with low-bandwidth networks – although anyone can benefit from
 minimising network contention and reducing the carbon cost of moving data.
+
+How it works
+============
+
+.. _fig_how_it_works:
+.. figure:: /figures/how-it-works.png
+   :align: center
+   :width: 80%
