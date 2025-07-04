@@ -56,12 +56,11 @@ jobs:
           miniforge-version: "latest"
           use-mamba: true
           mamba-version: "2.0.5"  # https://github.com/conda-incubator/setup-miniconda/issues/392
-      - name: Install development version of NCAS-CMS/Pyfive:wacasoft
+      - name: Install development version of NCAS-CMS/Pyfive:main
         run: |
           cd ..
           git clone https://github.com/NCAS-CMS/pyfive.git
-          cd pyfive
-          git checkout wacasoft
+          cd pyfive  # main
           pip install -e .
       - name: Install PyActiveStorage
         run: |
