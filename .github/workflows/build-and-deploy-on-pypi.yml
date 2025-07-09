@@ -38,11 +38,12 @@ jobs:
           --out-dir dist/
           .
       #### Test PyPI
-      - name: Publish distribution 📦 to Test PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          verbose: true
-          repository-url: https://test.pypi.org/legacy/
+      # https://test.pypi.org/project/PyActiveStorage/
+      # - name: Publish distribution 📦 to Test PyPI
+      #   uses: pypa/gh-action-pypi-publish@release/v1
+      #   with:
+      #     verbose: true
+      #     repository-url: https://test.pypi.org/legacy/
       ####
       - name: Publish distribution 📦 to PyPI
         if: startsWith(github.ref, 'refs/tags')
