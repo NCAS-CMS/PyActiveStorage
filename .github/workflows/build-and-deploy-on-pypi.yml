@@ -7,11 +7,15 @@ on:
   push:
     branches:
       - main
+      - prerelease_v0.1
 
 jobs:
   build-n-publish:
     name: Build and publish PyActiveStorage on PyPi
     runs-on: ubuntu-latest
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing on PyPI or Test PyPI
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,11 +38,13 @@ jobs:
           --binary
           --out-dir dist/
           .
-      #- name: Publish distribution 📦 to Test PyPI
-      #  uses: pypa/gh-action-pypi-publish@master
-      #  with:
-      #    password: ${{ secrets.test_pypi_password }}
-      #    repository_url: https://test.pypi.org/legacy/
+      #### Test PyPI
+      - name: Publish distribution 📦 to Test PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          verbose: true
+          repository-url: https://test.pypi.org/legacy/
+      ####
       - name: Publish distribution 📦 to PyPI
         if: startsWith(github.ref, 'refs/tags')
         uses: pypa/gh-action-pypi-publish@release/v1
