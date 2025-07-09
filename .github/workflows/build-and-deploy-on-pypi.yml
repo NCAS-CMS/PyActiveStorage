@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - main
+      - prerelease_v0.1
 
 jobs:
   build-n-publish:
