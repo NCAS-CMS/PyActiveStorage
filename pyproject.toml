@@ -39,6 +39,7 @@ dependencies = [
     "netcdf4",
     "numcodecs>=0.12",  # github/issues/162
     "numpy!=1.24.3",  # severe masking bug
+    "pyfive>=0.5.0",  # earliest support for advanced Pyfive 
     "requests",
     "s3fs>=2024.2.0",  # see environment.yml for pin reason
     "ujson",
