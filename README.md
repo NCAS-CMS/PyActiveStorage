@@ -34,7 +34,10 @@ pip install -e .
 pytest -n 2
 ```
 
-Python versions supported: 3.10, 3.11, 3.12, 3.13. Fully compatible with `numpy >=2.0.0`.
+### Main dependencies
+
+- Python versions supported: 3.10, 3.11, 3.12, 3.13. Fully compatible with `numpy >=2.0.0`.
+- [Pyfive](https://anaconda.org/conda-forge/pyfive) needs to be pinned `>=0.5.0` (first fully upgraded Pyfive version).
 
 ## Active Storage Data Interface
 
