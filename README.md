@@ -4,7 +4,7 @@
 [![Test](https://github.com/NCAS-CMS/PyActiveStorage/actions/workflows/run-tests.yml/badge.svg)](https://github.com/NCAS-CMS/PyActiveStorage/actions/workflows/run-tests.yml)
 [![codecov](https://codecov.io/gh/NCAS-CMS/PyActiveStorage/graph/badge.svg?token=1olGjnvAOp)](https://codecov.io/gh/NCAS-CMS/PyActiveStorage)
 
-![pyactivestoragelogo](https://github.com/NCAS-CMS/PyActiveStorage/main/doc/figures/PyActiveStorage-logo-complete.jpg)
+![pyactivestoragelogo](https://raw.githubusercontent.com/NCAS-CMS/PyActiveStorage/main/doc/figures/PyActiveStorage-logo-complete.jpg)
 
 ## PyActiveStorage
 
