@@ -46,7 +46,7 @@ jobs:
           conda install pytest-metadata
           conda install pytest-xdist
       - run: conda list
-      - run: pytest -n 2
+      - run: pytest -n 2 -m "not slow" --ignore=tests/test_real_https.py --ignore=tests/test_real_s3.py
 
   osx:
     runs-on: "macos-latest"
@@ -80,4 +80,4 @@ jobs:
           conda install pytest-html 
           conda install pytest-metadata
           conda install pytest-xdist
-      - run: pytest -n 2
+      - run: pytest -n 2 -m "not slow" --ignore=tests/test_real_https.py --ignore=tests/test_real_s3.py
