@@ -41,6 +41,9 @@ jobs:
       - run: |
           conda install moto
           conda install pytest
+          conda install pytest-cov
+          conda install pytest-html
+          conda install pytest-metadata
           conda install pytest-xdist
       - run: conda list
       - run: pytest -n 2
@@ -73,5 +76,8 @@ jobs:
       - run: |
           conda install moto
           conda install pytest
+          conda install pytest-cov 
+          conda install pytest-html 
+          conda install pytest-metadata
           conda install pytest-xdist
       - run: pytest -n 2
