@@ -32,11 +32,16 @@ jobs:
           miniforge-version: "latest"
           use-mamba: true
           mamba-version: "2.0.5"  # https://github.com/conda-incubator/setup-miniconda/issues/392
-      - run: conda --version
-      - run: python -V
+      - run: |
+          conda --version
+          mamba --version
+          python -V
       - run: conda list
       - run: conda install pyactivestorage
-      - run: conda install moto, pytest, pytest-xdist
+      - run: |
+          conda install moto
+          conda install pytest
+          conda install pytest-xdist
       - run: conda list
       - run: pytest -n 2
 
@@ -58,10 +63,15 @@ jobs:
           miniforge-version: "latest"
           use-mamba: true
           mamba-version: "2.0.5"  # https://github.com/conda-incubator/setup-miniconda/issues/392
-      - run: conda --version
-      - run: python -V
+      - run: |
+          conda --version
+          mamba --version
+          python -V
       - run: conda list
       - run: conda install -c conda-forge git
       - run: conda install pyactivestorage
-      - run: conda install moto, pytest, pytest-xdist
+      - run: |
+          conda install moto
+          conda install pytest
+          conda install pytest-xdist
       - run: pytest -n 2
