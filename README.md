@@ -3,6 +3,7 @@
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 [![Test](https://github.com/NCAS-CMS/PyActiveStorage/actions/workflows/run-tests.yml/badge.svg)](https://github.com/NCAS-CMS/PyActiveStorage/actions/workflows/run-tests.yml)
 [![codecov](https://codecov.io/gh/NCAS-CMS/PyActiveStorage/graph/badge.svg?token=1olGjnvAOp)](https://codecov.io/gh/NCAS-CMS/PyActiveStorage)
+[![Anaconda-Server Badge](https://anaconda.org/conda-forge/pyactivestorage/badges/version.svg)](https://anaconda.org/conda-forge/pyactivestorage)
 
 ![pyactivestoragelogo](https://raw.githubusercontent.com/NCAS-CMS/PyActiveStorage/main/doc/figures/PyActiveStorage-logo-complete.jpg)
 
@@ -11,6 +12,7 @@
 - [Latest documentation on ReadTheDocs (RTD)](https://pyactivestorage.readthedocs.io/en/latest/)
 - [RTD latest builds](https://app.readthedocs.org/projects/pyactivestorage/)
 - [GHA Tests](https://github.com/NCAS-CMS/PyActiveStorage/actions)
+- [conda-forge feedstock](https://github.com/conda-forge/pyactivestorage-feedstock)
 
 ### Create virtual environment
 

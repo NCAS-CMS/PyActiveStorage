@@ -1,4 +1,4 @@
-name: Test
+name: Test Conda Package
 
 on:
   push:
@@ -27,16 +27,24 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: activestorage
-          environment-file: environment.yml
           python-version: ${{ matrix.python-version }}
           miniforge-version: "latest"
           use-mamba: true
-      - run: conda --version
-      - run: python -V
+      - run: |
+          conda --version
+          mamba --version
+          python -V
       - run: conda list
-      - run: pip install -e .
+      - run: conda install pyactivestorage
+      - run: |
+          conda install moto
+          conda install pytest
+          conda install pytest-cov
+          conda install pytest-html
+          conda install pytest-metadata
+          conda install pytest-xdist
       - run: conda list
-      - run: pytest -n 2
+      - run: pytest -n 2 -m "not slow" --ignore=tests/test_real_https.py --ignore=tests/test_real_s3.py
 
   osx:
     runs-on: "macos-latest"
@@ -52,13 +60,21 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: activestorage
-          environment-file: environment.yml
           python-version: ${{ matrix.python-version }}
           miniforge-version: "latest"
           use-mamba: true
-      - run: conda --version
-      - run: python -V
+      - run: |
+          conda --version
+          mamba --version
+          python -V
       - run: conda list
-      - run: mamba install -c conda-forge git
-      - run: pip install -e .
-      - run: pytest -n 2
+      - run: conda install -c conda-forge git
+      - run: conda install pyactivestorage
+      - run: |
+          conda install moto
+          conda install pytest
+          conda install pytest-cov 
+          conda install pytest-html 
+          conda install pytest-metadata
+          conda install pytest-xdist
+      - run: pytest -n 2 -m "not slow" --ignore=tests/test_real_https.py --ignore=tests/test_real_s3.py
