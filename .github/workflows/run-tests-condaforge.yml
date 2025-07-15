@@ -1,0 +1,63 @@
+name: Test Conda Package
+
+on:
+  push:
+    branches:
+      - main
+      - conda_package_testing
+  schedule:
+    - cron: '0 0 * * *'  # nightly
+
+# Required shell entrypoint to have properly configured bash shell
+defaults:
+  run:
+    shell: bash -l {0}
+
+jobs:
+  linux:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+      fail-fast: false
+    name: Linux Python ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+          miniforge-version: "latest"
+          use-mamba: true
+          mamba-version: "2.0.5"  # https://github.com/conda-incubator/setup-miniconda/issues/392
+      - run: conda --version
+      - run: python -V
+      - run: conda list
+      - run: conda install pyactivestorage
+      - run: conda list
+      - run: pytest -n 2
+
+  osx:
+    runs-on: "macos-latest"
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+      fail-fast: false
+    name: OSX Python ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+          miniforge-version: "latest"
+          use-mamba: true
+          mamba-version: "2.0.5"  # https://github.com/conda-incubator/setup-miniconda/issues/392
+      - run: conda --version
+      - run: python -V
+      - run: conda list
+      - run: conda install -c conda-forge git
+      - run: conda install pyactivestorage
+      - run: pytest -n 2
