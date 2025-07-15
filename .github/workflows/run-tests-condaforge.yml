@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - conda_package_testing
   schedule:
     - cron: '0 0 * * *'  # nightly
 
