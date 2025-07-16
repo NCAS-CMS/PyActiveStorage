@@ -13,7 +13,6 @@
 - [RTD latest builds](https://app.readthedocs.org/projects/pyactivestorage/)
 - [GHA Tests](https://github.com/NCAS-CMS/PyActiveStorage/actions)
 - [conda-forge feedstock](https://github.com/conda-forge/pyactivestorage-feedstock)
-- and a cow
 
 ### Create virtual environment
 
