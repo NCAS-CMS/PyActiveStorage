@@ -1,20 +1,23 @@
 """Reductionist S3 Active Storage server storage interface module."""
 
 import collections.abc
-import http.client
 import json
-import requests
-import numcodecs
-import numpy as np
 import sys
 import typing
+
+import numpy as np
+import requests
 
 REDUCTIONIST_AXIS_READY = False
 
 DEBUG = 0
 
 
-def get_session(username: str, password: str, cacert: typing.Optional[str]) -> requests.Session:
+def get_session(
+    username: str,
+    password: str,
+    cacert: typing.Optional[str],
+) -> requests.Session:
     """Create and return a client session object.
 
     :param username: S3 username / access key
@@ -27,9 +30,25 @@ def get_session(username: str, password: str, cacert: typing.Optional[str]) -> r
     return session
 
 
-def reduce_chunk(session, server, source, bucket, object,
-                 offset, size, compression, filters, missing, dtype, shape,
-                 order, chunk_selection, axis, operation, storage_type=None):
+def reduce_chunk(
+    session,
+    server,
+    source,
+    bucket,
+    object,
+    offset,
+    size,
+    compression,
+    filters,
+    missing,
+    dtype,
+    shape,
+    order,
+    chunk_selection,
+    axis,
+    operation,
+    storage_type=None,
+):
     """Perform a reduction on a chunk using Reductionist.
 
     :param server: Reductionist server URL
@@ -57,41 +76,52 @@ def reduce_chunk(session, server, source, bucket, object,
     :returns: the reduced data as a numpy array or scalar
     :raises ReductionistError: if the request to Reductionist fails
     """
-
-    request_data = build_request_data(source, bucket, object, offset, size, compression,
-                                      filters, missing, dtype, shape, order, chunk_selection,
-                                      axis, storage_type=storage_type)
+    request_data = build_request_data(
+        source,
+        bucket,
+        object,
+        offset,
+        size,
+        compression,
+        filters,
+        missing,
+        dtype,
+        shape,
+        order,
+        chunk_selection,
+        axis,
+        storage_type=storage_type,
+    )
     if DEBUG:
         print(f"Reductionist request data dictionary: {request_data}")
     api_operation = "sum" if operation == "mean" else operation or "select"
-    url = f'{server}/v1/{api_operation}/'
+    url = f"{server}/v1/{api_operation}/"
     response = request(session, url, request_data)
 
     if response.ok:
         return decode_result(response)
-    else:
-        decode_and_raise_error(response)
+    decode_and_raise_error(response)
 
 
 def encode_byte_order(dtype):
     """Encode the byte order (endianness) of a dtype in a JSON-compatible format."""
-    if dtype.byteorder == '=':
+    if dtype.byteorder == "=":
         return sys.byteorder
-    elif dtype.byteorder == '<':
-        return 'little'
-    elif dtype.byteorder == '>':
-        return 'big'
+    if dtype.byteorder == "<":
+        return "little"
+    if dtype.byteorder == ">":
+        return "big"
     assert False, "Unexpected byte order {dtype.byteorder}"
 
 
 def encode_selection(selection):
     """Encode a chunk selection in a JSON-compatible format."""
+
     def encode_slice(s):
         if isinstance(s, slice):
             return [s.start, s.stop, s.step]
-        else:
-            # Integer - select single value
-            return [s, s + 1, 1]
+        # Integer - select single value
+        return [s, s + 1, 1]
 
     return [encode_slice(s) for s in selection]
 
@@ -100,8 +130,7 @@ def encode_filter(filter):
     """Encode a filter algorithm in a JSON-compatible format."""
     if filter.codec_id == "shuffle":
         return {"id": filter.codec_id, "element_size": filter.elementsize}
-    else:
-        raise ValueError(f"Unsupported filter {filter})")
+    raise ValueError(f"Unsupported filter {filter})")
 
 
 def encode_filters(filters):
@@ -123,14 +152,21 @@ def encode_missing(missing):
     # fill_value and missing_value are effectively the same when reading data.
     missing_value = fill_value or missing_value
     if missing_value:
-        if isinstance(missing_value, collections.abc.Sequence):
-            return {"missing_values": [encode_dvalue(v) for v in missing_value]}
-        elif isinstance(missing_value, np.ndarray):
-            return {"missing_values": [encode_dvalue(v) for v in missing_value]}
-        else:
-            return {"missing_value": encode_dvalue(missing_value)}
+        if isinstance(missing_value, collections.abc.Sequence) or isinstance(
+            missing_value,
+            np.ndarray,
+        ):
+            return {
+                "missing_values": [encode_dvalue(v) for v in missing_value],
+            }
+        return {"missing_value": encode_dvalue(missing_value)}
     if valid_min and valid_max:
-        return {"valid_range": [encode_dvalue(valid_min), encode_dvalue(valid_max)]}
+        return {
+            "valid_range": [
+                encode_dvalue(valid_min),
+                encode_dvalue(valid_max),
+            ],
+        }
     if valid_min:
         return {"valid_min": encode_dvalue(valid_min)}
     if valid_max:
@@ -138,20 +174,33 @@ def encode_missing(missing):
     assert False, "Expected missing values not found"
 
 
-def build_request_data(source: str, bucket: str, object: str, offset: int,
-                       size: int, compression, filters, missing, dtype, shape,
-                       order, selection, axis, storage_type=None) -> dict:
+def build_request_data(
+    source: str,
+    bucket: str,
+    object: str,
+    offset: int,
+    size: int,
+    compression,
+    filters,
+    missing,
+    dtype,
+    shape,
+    order,
+    selection,
+    axis,
+    storage_type=None,
+) -> dict:
     """Build request data for Reductionist API."""
     request_data = {
-        'source': source,
-        'bucket': bucket,
-        'object': object,
-        'dtype': dtype.name,
-        'byte_order': encode_byte_order(dtype),
-        'offset': int(offset),
-        'size': int(size),
-        'order': order,
-        'storage_type': storage_type,
+        "source": source,
+        "bucket": bucket,
+        "object": object,
+        "dtype": dtype.name,
+        "byte_order": encode_byte_order(dtype),
+        "offset": int(offset),
+        "size": int(size),
+        "order": order,
+        "storage_type": storage_type,
     }
     if shape:
         request_data["shape"] = shape
@@ -168,10 +217,10 @@ def build_request_data(source: str, bucket: str, object: str, offset: int,
         request_data["missing"] = encode_missing(missing)
 
     if REDUCTIONIST_AXIS_READY:
-        request_data['axis'] = axis
-    elif axis is not None and len(axis) != len(shape):        
+        request_data["axis"] = axis
+    elif axis is not None and len(axis) != len(shape):
         raise ValueError(
-            "Can't reduce over axis subset unitl reductionist is ready"
+            "Can't reduce over axis subset unitl reductionist is ready",
         )
 
     return {k: v for k, v in request_data.items() if v is not None}
@@ -188,20 +237,20 @@ def request(session: requests.Session, url: str, request_data: dict):
 
 def decode_result(response):
     """Decode a successful response, return as a 2-tuple of (numpy array or scalar, count)."""
-    dtype = response.headers['x-activestorage-dtype']
-    shape = json.loads(response.headers['x-activestorage-shape'])
+    dtype = response.headers["x-activestorage-dtype"]
+    shape = json.loads(response.headers["x-activestorage-shape"])
 
     # Result
     result = np.frombuffer(response.content, dtype=dtype)
     result = result.reshape(shape)
 
     # Counts
-    count = json.loads(response.headers['x-activestorage-count'])
+    count = json.loads(response.headers["x-activestorage-count"])
     # TODO: When reductionist is ready, we need to fix 'count'
-    
+
     # Mask the result
     result = np.ma.masked_where(count == 0, result)
-    
+
     return result, count
 
 
@@ -209,7 +258,9 @@ class ReductionistError(Exception):
     """Exception for Reductionist failures."""
 
     def __init__(self, status_code, error):
-        super(ReductionistError, self).__init__(f"Reductionist error: HTTP {status_code}: {error}")
+        super(ReductionistError, self).__init__(
+            f"Reductionist error: HTTP {status_code}: {error}",
+        )
 
 
 def decode_and_raise_error(response):
