@@ -1,22 +1,22 @@
 import concurrent.futures
 import os
+import pathlib
+import time
+import urllib
+from pathlib import Path
+from typing import Optional
+
 import fsspec
 import numpy as np
-import pathlib
-import urllib
 import pyfive
 import requests
 import s3fs
-import time
-
-from pathlib import Path
 from pyfive.h5d import StoreInfo
-from typing import Optional
 
-from activestorage.config import *
 from activestorage import reductionist
-from activestorage.storage import reduce_chunk, reduce_opens3_chunk
+from activestorage.config import *  # noqa
 from activestorage.hdf2numcodec import decode_filters
+from activestorage.storage import reduce_chunk, reduce_opens3_chunk
 
 
 def return_storage_type(uri):
@@ -64,18 +64,22 @@ def load_from_s3(uri, storage_options=None):
     storage_options: kwarg dict containing S3 credentials passed straight to Active
     """
     if storage_options is None:  # use pre-configured S3 credentials
-        fs = s3fs.S3FileSystem(key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
-                               secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
-                               client_kwargs={'endpoint_url': S3_URL})  # eg "http://localhost:9000" for Minio
+        fs = s3fs.S3FileSystem(
+            key=S3_ACCESS_KEY,  # eg "minioadmin" for Minio
+            secret=S3_SECRET_KEY,  # eg "minioadmin" for Minio
+            client_kwargs={'endpoint_url':
+                           S3_URL})  # eg "http://localhost:9000" for Minio
     else:
         fs = s3fs.S3FileSystem(**storage_options)  # use passed-in dictionary
-   
-    t1=time.time()   
+
+    t1 = time.time()
     s3file = fs.open(uri, 'rb')
-    t2=time.time()
+    t2 = time.time()
     ds = pyfive.File(s3file)
-    t3=time.time()
-    print(f"Dataset loaded from S3 with s3fs and Pyfive: {uri} ({t2-t1:.2},{t3-t2:.2})")
+    t3 = time.time()
+    print(
+        f"Dataset loaded from S3 with s3fs and Pyfive: {uri} ({t2 - t1:.2},{t3 - t2:.2})"
+    )
     return ds
 
 
@@ -84,7 +88,7 @@ def load_from_https(uri):
     Load a pyfive.high_level.Dataset from a
     netCDF4 file on an https server (NGINX).
     """
-    #TODO need to test if NGINX server behind https://
+    # TODO need to test if NGINX server behind https://
     fs = fsspec.filesystem('http')
     http_file = fs.open(uri, 'rb')
     ds = pyfive.File(http_file)
@@ -93,7 +97,7 @@ def load_from_https(uri):
 
 
 def get_missing_attributes(ds):
-    """" 
+    """"
     Load all the missing attributes we need from a netcdf file
     """
 
@@ -115,27 +119,27 @@ def get_missing_attributes(ds):
     valid_range = hfix(ds.attrs.get('valid_range'))
     if valid_max is not None or valid_min is not None:
         if valid_range is not None:
-            raise ValueError(
-                "Invalid combination in the file of valid_min, "
-                "valid_max, valid_range: "
-                f"{valid_min}, {valid_max}, {valid_range}"
-            )
-    elif valid_range is not None:            
+            raise ValueError("Invalid combination in the file of valid_min, "
+                             "valid_max, valid_range: "
+                             f"{valid_min}, {valid_max}, {valid_range}")
+    elif valid_range is not None:
         valid_min, valid_max = valid_range
-    
+
     return _FillValue, missing_value, valid_min, valid_max
 
+
 class Active:
-    """ 
+    """
     Instantiates an interface to active storage which contains either zarr files
     or HDF5 (NetCDF4) files.
 
     This is Verson 1 which simply provides support for standard read operations, but done via
     explicit reads within this class rather than within the underlying format libraries.
-    
+
     Version 2 will add methods for actual active storage.
 
     """
+
     def __new__(cls, *args, **kwargs):
         """Store reduction methods."""
         instance = super().__new__(cls)
@@ -149,16 +153,14 @@ class Active:
         }
         return instance
 
-    def __init__(
-        self,
-        dataset: Optional[str | Path | object] ,
-        ncvar: str = None,
-        axis: tuple = None,
-        storage_type: str = None,
-        max_threads: int = 100,
-        storage_options: dict = None,
-        active_storage_url: str = None
-    ) -> None:
+    def __init__(self,
+                 dataset: Optional[str | Path | object],
+                 ncvar: str = None,
+                 axis: tuple = None,
+                 storage_type: str = None,
+                 max_threads: int = 100,
+                 storage_options: dict = None,
+                 active_storage_url: str = None) -> None:
         """
         Instantiate with a NetCDF4 dataset URI and the variable of interest within that file.
         (We need the variable, because we need variable specific metadata from within that
@@ -171,13 +173,17 @@ class Active:
         self.ds = None
         input_variable = False
         if dataset is None:
-            raise ValueError(f"Must use a valid file name or variable object for dataset. Got {dataset!r}")
+            raise ValueError(
+                f"Must use a valid file name or variable object for dataset. Got {dataset!r}"
+            )
         if isinstance(dataset, Path) and not dataset.exists():
             raise ValueError(f"Path to input file {dataset!r} does not exist.")
         if not isinstance(dataset, Path) and not isinstance(dataset, str):
             print(f"Treating input {dataset} as variable object.")
             if not type(dataset) is pyfive.high_level.Dataset:
-                raise TypeError(f"Variable object dataset can only be pyfive.high_level.Dataset. Got {dataset!r}")
+                raise TypeError(
+                    f"Variable object dataset can only be pyfive.high_level.Dataset. Got {dataset!r}"
+                )
             input_variable = True
             self.ds = dataset
         self.uri = dataset
@@ -198,7 +204,8 @@ class Active:
                     if not input_variable:
                         check_uri = os.path.join(base_url, self.uri)
                     else:
-                        check_uri = os.path.join(base_url, self.ds.id._filename)
+                        check_uri = os.path.join(base_url,
+                                                 self.ds.id._filename)
             storage_type = return_storage_type(check_uri)
 
         # still allow for a passable storage_type
@@ -222,7 +229,8 @@ class Active:
         # basic check on file
         if not input_variable:
             if not os.path.isfile(self.uri) and not self.storage_type:
-                raise ValueError(f"Must use existing file for uri. {self.uri} not found")
+                raise ValueError(
+                    f"Must use existing file for uri. {self.uri} not found")
 
         self.ncvar = ncvar
         if self.ncvar is None and not input_variable:
@@ -233,7 +241,7 @@ class Active:
         # __getitem__ call).
         if axis is not None:
             if isinstance(axis, int):
-                axis = (axis,)
+                axis = (axis, )
             else:
                 axis = tuple(axis)
 
@@ -271,45 +279,46 @@ class Active:
         return get_missing_attributes(self.ds)
 
     def __getitem__(self, index):
-        """ 
+        """
         Provides support for a standard get item.
         #FIXME-BNL: Why is the argument index?
         """
         if self.ds is None:
             self.__load_nc_file()
-        
+
         self.missing = self.__get_missing_attributes()
 
         self.data_read = 0
-        
+
         if self.method is None and self._version == 0:
-        
+
             # No active operation
             return self._get_vanilla(index)
 
         elif self._version == 1:
 
-            #FIXME: is the difference between version 1 and 2 still honoured?
+            # FIXME: is the difference between version 1 and 2 still honoured?
             return self._get_selection(index)
-        
-        elif self._version  == 2:
+
+        elif self._version == 2:
 
             return self._get_selection(index)
-          
+
         else:
             raise ValueError(f'Version {self._version} not supported')
 
     def _get_vanilla(self, index):
-        """ 
+        """
         Get the data without any active operation
         """
-        data = self.ds[index]    
+        data = self.ds[index]
         data = self._mask_data(data)
         return data
 
     @property
     def components(self):
-        """Return or set the components flag.
+        """
+        Return or set the components flag.
 
         If True and `method` is not `None` then return the processed
         result in a dictionary that includes a processed value and the
@@ -348,23 +357,24 @@ class Active:
     @method.setter
     def method(self, value):
         if value is not None and value not in self._methods:
-            raise ValueError(f"Bad 'method': {value}. Choose from min/max/mean/sum.")
+            raise ValueError(
+                f"Bad 'method': {value}. Choose from min/max/mean/sum.")
 
         self._method = value
 
     @property
     def mean(self):
-        self._method =  "mean"
+        self._method = "mean"
         return self
 
     @property
     def min(self):
-        self._method =  "min"
+        self._method = "min"
         return self
 
     @property
     def max(self):
-        self._method =  "max"
+        self._method = "max"
         return self
 
     @property
@@ -377,19 +387,19 @@ class Active:
         self._ncvar = value
 
     def _get_active(self, method, *args):
-        """ 
+        """
         *args defines a slice of data. This method loops over each of the chunks
-        necessary to extract the parts of the slice, and asks the active storage 
-        to apply the method to each part. It then applies the method to 
+        necessary to extract the parts of the slice, and asks the active storage
+        to apply the method to each part. It then applies the method to
         the partial results and returns a value is if  method had been applied to
         an array returned via getitem.
         """
         raise NotImplementedError
 
     def _get_selection(self, *args):
-        """ 
+        """
         At this point we have a Dataset object, but all the important information about
-        how to use it is in the attribute DataoobjectDataset class. Here we gather 
+        how to use it is in the attribute DataoobjectDataset class. Here we gather
         metadata from the dataset instance and then continue with the dataobjects instance.
         """
 
@@ -400,7 +410,7 @@ class Active:
         dtype = np.dtype(self.ds.dtype)
         array = pyfive.indexing.ZarrArrayStub(self.ds.shape, self.ds.chunks)
         ds = self.ds.id
-        
+
         if self._axis is None:
             # 'axis' is None, so work out how many dimensions there
             # are from the variable.
@@ -409,26 +419,30 @@ class Active:
         if ds.filter_pipeline is None:
             compressor, filters = None, None
         else:
-            compressor, filters = decode_filters(ds.filter_pipeline , dtype.itemsize, name)
-        
+            compressor, filters = decode_filters(ds.filter_pipeline,
+                                                 dtype.itemsize, name)
+
         indexer = pyfive.indexing.OrthogonalIndexer(*args, array)
         out_shape = indexer.shape
-        #stripped_indexer = [(a, b, c) for a,b,c in indexer]
+        # stripped_indexer = [(a, b, c) for a,b,c in indexer]
         drop_axes = indexer.drop_axes and keepdims
 
         # we use array._chunks rather than ds.chunks, as the latter is
         # none in the case of unchunked data, and we need to tell the
         # storage the array dimensions in this case.
-        return self._from_storage(ds, indexer, array._chunks, out_shape, dtype, compressor, filters, drop_axes, self._axis)
+        return self._from_storage(ds, indexer, array._chunks, out_shape, dtype,
+                                  compressor, filters, drop_axes, self._axis)
 
-    def _from_storage(self, ds, indexer, chunks, out_shape, out_dtype, compressor, filters, drop_axes, axis):
+    def _from_storage(self, ds, indexer, chunks, out_shape, out_dtype,
+                      compressor, filters, drop_axes, axis):
         method = self.method
 
         # Whether or not we need to store reduction counts
         need_counts = self.components or self._method == "mean"
         # but never when we don't have a statistical method
         if self.components and self._method is None:
-            raise ValueError("Setting components to True for None statistical method.")
+            raise ValueError(
+                "Setting components to True for None statistical method.")
 
         if method is not None:
             # Get the number of chunks per axis
@@ -443,8 +457,7 @@ class Active:
                     # a droped axis.
                     raise IndexError(
                         "Can't do an active reduction when the index for "
-                        f"axis {i!r} drops the axis."
-                    )
+                        f"axis {i!r} drops the axis.")
 
             # Replace the size of each reduced axis with the total
             # number of chunks along that axis
@@ -453,10 +466,8 @@ class Active:
                 try:
                     out_shape[i] = nchunks[i]
                 except IndexError:
-                    raise ValueError(
-                        "Can't do an active reduction for an "
-                        f"out-of-range axis: {i!r}"
-                    )
+                    raise ValueError("Can't do an active reduction for an "
+                                     f"out-of-range axis: {i!r}")
 
             out = np.ma.empty(out_shape, dtype=out_dtype, order=ds._order)
             out.mask = True
@@ -467,7 +478,7 @@ class Active:
             out = np.ma.empty(out_shape, dtype=out_dtype, order=ds._order)
 
         # Create a shared session object.
-        if self.storage_type == "s3" and self._version==2:
+        if self.storage_type == "s3" and self._version == 2:
             if self.storage_options is not None:
                 key, secret = None, None
                 if "key" in self.storage_options:
@@ -475,28 +486,35 @@ class Active:
                 if "secret" in self.storage_options:
                     secret = self.storage_options["secret"]
                 if key and secret:
-                    session = reductionist.get_session(key, secret,
-                                                       S3_ACTIVE_STORAGE_CACERT)
+                    session = reductionist.get_session(
+                        key, secret, S3_ACTIVE_STORAGE_CACERT)
                 else:
-                    session = reductionist.get_session(S3_ACCESS_KEY, S3_SECRET_KEY,
-                                                       S3_ACTIVE_STORAGE_CACERT)
+                    session = reductionist.get_session(
+                        S3_ACCESS_KEY, S3_SECRET_KEY, S3_ACTIVE_STORAGE_CACERT)
             else:
-                session = reductionist.get_session(S3_ACCESS_KEY, S3_SECRET_KEY,
+                session = reductionist.get_session(S3_ACCESS_KEY,
+                                                   S3_SECRET_KEY,
                                                    S3_ACTIVE_STORAGE_CACERT)
         else:
             session = None
 
         # Process storage chunks using a thread pool.
         chunk_count = 0
-        t1 = time.time()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_threads) as executor:
+        with concurrent.futures.ThreadPoolExecutor(
+                max_workers=self._max_threads) as executor:
             futures = []
             # Submit chunks for processing.
             for chunk_coords, chunk_selection, out_selection in indexer:
-                future = executor.submit(
-                    self._process_chunk,
-                    session,  ds, chunks, chunk_coords, chunk_selection,
-                    out_selection, compressor, filters, drop_axes=drop_axes)
+                future = executor.submit(self._process_chunk,
+                                         session,
+                                         ds,
+                                         chunks,
+                                         chunk_coords,
+                                         chunk_selection,
+                                         out_selection,
+                                         compressor,
+                                         filters,
+                                         drop_axes=drop_axes)
                 futures.append(future)
 
             # Wait for completion.
@@ -504,6 +522,7 @@ class Active:
                 try:
                     result, count, out_selection = future.result()
                 except Exception as exc:
+                    print(exc)
                     raise
 
                 chunk_count += 1
@@ -575,8 +594,16 @@ class Active:
 
         return f"http://{urllib.parse.urlparse(self.filename).netloc}"
 
-    def _process_chunk(self, session, ds, chunks, chunk_coords, chunk_selection,
-                       out_selection, compressor, filters, drop_axes=None):
+    def _process_chunk(self,
+                       session,
+                       ds,
+                       chunks,
+                       chunk_coords,
+                       chunk_selection,
+                       out_selection,
+                       compressor,
+                       filters,
+                       drop_axes=None):
         """
         Obtain part or whole of a chunk.
 
@@ -595,12 +622,18 @@ class Active:
 
         if self.storage_type == 's3' and self._version == 1:
 
-            tmp, count = reduce_opens3_chunk(ds._fh, offset, size, compressor, filters,
-                            self.missing, ds.dtype,
-                            chunks, ds._order,
-                            chunk_selection, axis=axis,
-                            method=self.method
-            )
+            tmp, count = reduce_opens3_chunk(ds._fh,
+                                             offset,
+                                             size,
+                                             compressor,
+                                             filters,
+                                             self.missing,
+                                             ds.dtype,
+                                             chunks,
+                                             ds._order,
+                                             chunk_selection,
+                                             axis=axis,
+                                             method=self.method)
 
         elif self.storage_type == "s3" and self._version == 2:
             # S3: pass in pre-configured storage options (credentials)
@@ -609,7 +642,7 @@ class Active:
 
             bucket = parsed_url.netloc
             object = parsed_url.path
-        
+
             # for certain S3 servers rfile needs to contain the bucket eg "bucket/filename"
             # as a result the parser above finds empty string bucket
             if bucket == "":
@@ -618,15 +651,20 @@ class Active:
             # print("S3 bucket:", bucket)
             # print("S3 file:", object)
             if self.storage_options is None:
-              
+
                 # for the moment we need to force ds.dtype to be a numpy type
                 # Reductionist returns "count" as a list even for single elements
                 tmp, count = reductionist.reduce_chunk(session,
                                                        S3_ACTIVE_STORAGE_URL,
                                                        S3_URL,
-                                                       bucket, object, offset,
-                                                       size, compressor, filters,
-                                                       self.missing, np.dtype(ds.dtype),
+                                                       bucket,
+                                                       object,
+                                                       offset,
+                                                       size,
+                                                       compressor,
+                                                       filters,
+                                                       self.missing,
+                                                       np.dtype(ds.dtype),
                                                        chunks,
                                                        ds._order,
                                                        chunk_selection,
@@ -637,23 +675,29 @@ class Active:
                 # fs = s3fs.S3FileSystem(anon=True, client_kwargs={'endpoint_url': S3_URL})
                 # where file uri = bucketX/fileY.mc
                 # print("S3 Storage options to Reductionist:", self.storage_options)
-                if self.storage_options.get("anon", None) == True:
+                if self.storage_options.get("anon", None) is True:
                     bucket = os.path.dirname(parsed_url.path)  # bucketX
                     object = os.path.basename(parsed_url.path)  # fileY
                     print("S3 anon=True Bucket and File:", bucket, object)
 
                 # Reductionist returns "count" as a list even for single elements
-                tmp, count = reductionist.reduce_chunk(session,
-                                                       self.active_storage_url,
-                                                       self._get_endpoint_url(),
-                                                       bucket, object, offset,
-                                                       size, compressor, filters,
-                                                       self.missing, np.dtype(ds.dtype),
-                                                       chunks,
-                                                       ds._order,
-                                                       chunk_selection,
-                                                       axis,
-                                                       operation=self._method)
+                tmp, count = reductionist.reduce_chunk(
+                    session,
+                    self.active_storage_url,
+                    self._get_endpoint_url(),
+                    bucket,
+                    object,
+                    offset,
+                    size,
+                    compressor,
+                    filters,
+                    self.missing,
+                    np.dtype(ds.dtype),
+                    chunks,
+                    ds._order,
+                    chunk_selection,
+                    axis,
+                    operation=self._method)
         # this is for testing ONLY until Reductionist is able to handle https
         # located files; after that, we can pipe any regular https file through
         # to Reductionist, provided the https server is "closer" to Reductionist
@@ -666,22 +710,28 @@ class Active:
 
             # note the extra "storage_type" kwarg
             # this currently makes Reductionist throw a wobbly
-            # E           activestorage.reductionist.ReductionistError: Reductionist error: HTTP 400: {"error": {"message": "request data is not valid", "caused_by": ["Failed to deserialize the JSON body into the target type", "storage_type: unknown field `storage_type`, expected one of `source`, `bucket`, `object`, `dtype`, `byte_order`, `offset`, `size`, `shape`, `order`, `selection`, `compression`, `filters`, `missing` at line 1 column 550"]}}
+            # E           activestorage.reductionist.ReductionistError: Reductionist error: HTTP 400: {"error": {"message": "request data is not valid", "caused_by": ["Failed to deserialize the JSON body into the target type", "storage_type: unknown field `storage_type`, expected one of `source`, `bucket`, `object`, `dtype`, `byte_order`, `offset`, `size`, `shape`, `order`, `selection`, `compression`, `filters`, `missing` at line 1 column 550"]}}  # noqa
 
             # Reductionist returns "count" as a list even for single elements
-            tmp, count = reductionist.reduce_chunk(session,
-                                                   "https://reductionist.jasmin.ac.uk/",  # Wacasoft
-                                                   self.filename,
-                                                   bucket, self.filename, offset,
-                                                   size, compressor, filters,
-                                                   self.missing, np.dtype(ds.dtype),
-                                                   chunks,
-                                                   ds._order,
-                                                   chunk_selection,
-                                                   axis,
-                                                   operation=self._method,
-                                                   storage_type="https")
-        elif self.storage_type=='ActivePosix' and self.version==2:
+            tmp, count = reductionist.reduce_chunk(
+                session,
+                "https://reductionist.jasmin.ac.uk/",  # Wacasoft
+                self.filename,
+                bucket,
+                self.filename,
+                offset,
+                size,
+                compressor,
+                filters,
+                self.missing,
+                np.dtype(ds.dtype),
+                chunks,
+                ds._order,
+                chunk_selection,
+                axis,
+                operation=self._method,
+                storage_type="https")
+        elif self.storage_type == 'ActivePosix' and self.version == 2:
             # This is where the DDN Fuse and Infinia wrappers go
             raise NotImplementedError
         else:
@@ -690,10 +740,18 @@ class Active:
             # so neither the returned data or the interface should be considered stable
             # although we will version changes.
 
-            tmp, count = reduce_chunk(self.filename, offset, size, compressor, filters,
-                                      self.missing, ds.dtype,
-                                      chunks, ds._order,
-                                      chunk_selection, axis, method=self.method)
+            tmp, count = reduce_chunk(self.filename,
+                                      offset,
+                                      size,
+                                      compressor,
+                                      filters,
+                                      self.missing,
+                                      ds.dtype,
+                                      chunks,
+                                      ds._order,
+                                      chunk_selection,
+                                      axis,
+                                      method=self.method)
 
         if self.method is not None:
             # For a reduced axis, replace the index in 'out_selection'
@@ -724,14 +782,14 @@ class Active:
             return tmp, None, out_selection
 
     def _mask_data(self, data):
-        """ 
-        Missing values obtained at initial getitem, and are used here to 
+        """
+        Missing values obtained at initial getitem, and are used here to
         mask data, if necessary
         """
         if self.missing is None:
             self.missing = self.__get_missing_attributes()
         _FillValue, missing_value, valid_min, valid_max = self.missing
-        
+
         if _FillValue is not None:
             data = np.ma.masked_equal(data, _FillValue)
 

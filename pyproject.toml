@@ -51,6 +51,7 @@ requires-python = ">=3.10"
 
 [project.optional-dependencies]
 test = [
+    "flake8",
     "pytest",
     "pytest-cov>=2.10.1",
     "pytest-html!=2.1.0",

@@ -31,5 +31,6 @@ jobs:
       - run: python -V
       - run: pip install -e .
       - run: conda list
+      - run: flake8 --exclude tests,doc,old_code,bnl --max-line-length 120 --ignore F405,F401
       - run: pytest -n 2 -m "not slow" --junitxml=report-1.xml
       - uses: codecov/codecov-action@v5

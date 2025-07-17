@@ -23,7 +23,7 @@ class NetCDFArray:
         """Initialisation.
 
         :Parameters:
-        
+
             filename: `str`
                 The URI of the dataset.
 
@@ -36,7 +36,7 @@ class NetCDFArray:
 
         nc = netCDF4.Dataset(self.filename, "r")
         v = nc.variables[self.ncvar]
-        
+
         self.shape = v.shape
         self.dtype = v.dtype
         self.ndim = v.ndim

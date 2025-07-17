@@ -18,6 +18,7 @@ dependencies:
   - s3fs >=2024.2.0  # loose s3fs deps leading to old aiobotocore for <2024.2.0
   - ujson
   # Python packages for testing
+  - flake8
   - moto  # mock S3 tests
   - pytest
   - pytest-cov >=2.10.1

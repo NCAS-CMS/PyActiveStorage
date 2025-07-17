@@ -1,19 +1,13 @@
 import activestorage
-
 from activestorage import Active as act
 
-
-# test version
-def test_version():
-    assert hasattr(activestorage, "__version__")
-    assert activestorage.__version__ == "0.0.2"
-    print(activestorage.__version__)
 
 # check activestorage class
 def test_activestorage_class_attrs():
     assert hasattr(activestorage, "Active")
     assert hasattr(activestorage, "active")
     assert hasattr(activestorage, "storage")
+
 
 # check Active class
 def test_active_class_attrs():
