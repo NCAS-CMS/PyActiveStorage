@@ -92,9 +92,7 @@ version_scheme = "release-branch-semver"
 
 [tool.pytest.ini_options]
 addopts = [
-    "--ignore=old_code/",
     "--ignore=tests/s3_exploratory",
-    "--ignore=bnl",
     "--cov=activestorage",
     "--cov-report=xml:test-reports/coverage.xml",
     "--cov-report=html:test-reports/coverage_html",
