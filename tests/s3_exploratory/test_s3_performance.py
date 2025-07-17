@@ -1,12 +1,12 @@
+from pathlib import Path
+
 import fsspec
 import pytest
 import s3fs
 import ujson
-
-from pathlib import Path
+from config_minio import *
 
 from activestorage.active import Active
-from config_minio import *
 
 
 @pytest.fixture
@@ -25,11 +25,9 @@ def test_s3_SingleHdf5ToZarr():
                            secret=S3_SECRET_KEY,
                            client_kwargs={'endpoint_url': S3_URL},
                            default_fill_cache=False,
-                           default_cache_type="none"
-    )
+                           default_cache_type="none")
     with fs.open(s3_file, 'rb') as s3file:
-        h5chunks = SingleHdf5ToZarr(s3file, s3_file,
-                                    inline_threshold=0)
+        h5chunks = SingleHdf5ToZarr(s3file, s3_file, inline_threshold=0)
 
 
 @pytest.mark.xfail(reason="Pyfive don't use Kerchunk")
@@ -40,8 +38,7 @@ def test_local_SingleHdf5ToZarr(test_data_path):
     local_file = str(test_data_path / "test_bizarre.nc")
     fs = fsspec.filesystem('')
     with fs.open(local_file, 'rb') as localfile:
-        h5chunks = SingleHdf5ToZarr(localfile, local_file,
-                                    inline_threshold=0)
+        h5chunks = SingleHdf5ToZarr(localfile, local_file, inline_threshold=0)
 
 
 @pytest.mark.xfail(reason="Pyfive don't use Kerchunk")
@@ -53,12 +50,10 @@ def test_s3_kerchunk_to_json():
                            secret=S3_SECRET_KEY,
                            client_kwargs={'endpoint_url': S3_URL},
                            default_fill_cache=False,
-                           default_cache_type="none"
-    )
+                           default_cache_type="none")
     fs2 = fsspec.filesystem('')
     with fs.open(s3_file, 'rb') as s3file:
-        h5chunks = SingleHdf5ToZarr(s3file, s3_file,
-                                    inline_threshold=0)
+        h5chunks = SingleHdf5ToZarr(s3file, s3_file, inline_threshold=0)
         # to here, SingleHdf5ToZarr is VERY quick and MEM-light
         # eg 0.21s and 65M RES for a 50M file
         with fs2.open(outf, 'wb') as f:
@@ -72,8 +67,7 @@ def test_local_kerchunk_to_json(test_data_path):
     outf = "loocal_dump.json"
     fs = fsspec.filesystem('')
     with fs.open(local_file, 'rb') as localfile:
-        h5chunks = SingleHdf5ToZarr(localfile, local_file,
-                                    inline_threshold=0)
+        h5chunks = SingleHdf5ToZarr(localfile, local_file, inline_threshold=0)
         # to here, SingleHdf5ToZarr is VERY quick and MEM-light
         # eg 0.07s and 65M RES for a 50M file
         with fs.open(outf, 'wb') as f:
@@ -89,12 +83,10 @@ def test_s3_kerchunk_openZarrGroup():
                            secret=S3_SECRET_KEY,
                            client_kwargs={'endpoint_url': S3_URL},
                            default_fill_cache=False,
-                           default_cache_type="none"
-    )
+                           default_cache_type="none")
     fs2 = fsspec.filesystem('')
     with fs.open(s3_file, 'rb') as s3file:
-        h5chunks = SingleHdf5ToZarr(s3file, s3_file,
-                                    inline_threshold=0)
+        h5chunks = SingleHdf5ToZarr(s3file, s3_file, inline_threshold=0)
         # to here, SingleHdf5ToZarr is VERY quick and MEM-light
         # eg 0.21s and 65M RES for a 50M file
         with fs2.open(outf, 'wb') as f:
@@ -109,8 +101,7 @@ def test_local_kerchunk_openZarrGroup(test_data_path):
     outf = "loocal_dump.json"
     fs = fsspec.filesystem('')
     with fs.open(local_file, 'rb') as localfile:
-        h5chunks = SingleHdf5ToZarr(localfile, local_file,
-                                    inline_threshold=0)
+        h5chunks = SingleHdf5ToZarr(localfile, local_file, inline_threshold=0)
         # to here, SingleHdf5ToZarr is VERY quick and MEM-light
         # eg 0.07s and 65M RES for a 50M file
         with fs.open(outf, 'wb') as f:

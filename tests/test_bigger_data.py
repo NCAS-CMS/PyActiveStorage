@@ -1,17 +1,16 @@
 """Create test data for heftier data tests."""
 import os
-import pytest
+from pathlib import Path
 
 import numpy as np
-from netCDF4 import Dataset
-from pathlib import Path
+import pytest
 import s3fs
+import utils
+from netCDF4 import Dataset
+from pyfive.core import InvalidHDF5File as InvalidHDF5Err
 
 from activestorage.active import Active
 from activestorage.config import *
-from pyfive.core import InvalidHDF5File as InvalidHDF5Err
-
-import utils
 
 
 @pytest.fixture
@@ -29,11 +28,11 @@ def create_hyb_pres_file_without_ap(dataset, short_name):
     dataset.createDimension('bnds', size=2)
 
     # Dimensional variables
-    dataset.createVariable('time', np.float64, dimensions=('time',))
-    dataset.createVariable('lev', np.float64, dimensions=('lev',))
+    dataset.createVariable('time', np.float64, dimensions=('time', ))
+    dataset.createVariable('lev', np.float64, dimensions=('lev', ))
     dataset.createVariable('lev_bnds', np.float64, dimensions=('lev', 'bnds'))
-    dataset.createVariable('lat', np.float64, dimensions=('lat',))
-    dataset.createVariable('lon', np.float64, dimensions=('lon',))
+    dataset.createVariable('lat', np.float64, dimensions=('lat', ))
+    dataset.createVariable('lon', np.float64, dimensions=('lon', ))
     dataset.variables['time'][:] = range(11)
     dataset.variables['time'].standard_name = 'time'
     dataset.variables['time'].units = 'days since 1850-1-1'
@@ -54,10 +53,9 @@ def create_hyb_pres_file_without_ap(dataset, short_name):
     dataset.variables['lon'].units = 'degrees_east'
 
     # Coordinates for derivation of pressure coordinate
-    dataset.createVariable('b', np.float64, dimensions=('lev',))
+    dataset.createVariable('b', np.float64, dimensions=('lev', ))
     dataset.createVariable('b_bnds', np.float64, dimensions=('lev', 'bnds'))
-    dataset.createVariable('ps', np.float64,
-                           dimensions=('time', 'lat', 'lon'))
+    dataset.createVariable('ps', np.float64, dimensions=('time', 'lat', 'lon'))
     dataset.variables['b'][:] = [0.0, 1.0]
     dataset.variables['b_bnds'][:] = [[-1.0, 0.5], [0.5, 2.0]]
     dataset.variables['ps'][:] = np.arange(1 * 3 * 4).reshape(1, 3, 4)
@@ -66,9 +64,11 @@ def create_hyb_pres_file_without_ap(dataset, short_name):
     dataset.variables['ps'].additional_attribute = 'xyz'
 
     # Variable
-    dataset.createVariable(short_name, np.float32,
+    dataset.createVariable(short_name,
+                           np.float32,
                            dimensions=('time', 'lev', 'lat', 'lon'))
-    dataset.variables[short_name][:] = np.full((1, 2, 3, 4), 22.0,
+    dataset.variables[short_name][:] = np.full((1, 2, 3, 4),
+                                               22.0,
                                                dtype=np.float32)
     dataset.variables[short_name].standard_name = (
         'cloud_area_fraction_in_atmosphere_layer')
@@ -78,7 +78,7 @@ def create_hyb_pres_file_without_ap(dataset, short_name):
 def create_hyb_pres_file_with_a(dataset, short_name):
     """Create netcdf file with issues in hybrid pressure coordinate."""
     create_hyb_pres_file_without_ap(dataset, short_name)
-    dataset.createVariable('a', np.float64, dimensions=('lev',))
+    dataset.createVariable('a', np.float64, dimensions=('lev', ))
     dataset.createVariable('a_bnds', np.float64, dimensions=('lev', 'bnds'))
     dataset.createVariable('p0', np.float64, dimensions=())
     dataset.variables['a'][:] = [1.0, 2.0]
@@ -105,7 +105,7 @@ def save_cl_file_with_a(tmp_path):
 
 
 def test_cl_old_method(tmp_path):
-    ncfile = save_cl_file_with_a(tmp_path) 
+    ncfile = save_cl_file_with_a(tmp_path)
     active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
     active._version = 0
     d = active[4:5, 1:2]
@@ -119,10 +119,11 @@ def test_cl_old_method(tmp_path):
     print(result2, ncfile)
     # expect {'sum': array([[[[264.]]]], dtype=float32), 'n': array([[[[12]]]])}
     # check for typing and structure
-    np.testing.assert_array_equal(result2["sum"], np.array([[[[264.]]]], dtype="float32"))
+    np.testing.assert_array_equal(result2["sum"],
+                                  np.array([[[[264.]]]], dtype="float32"))
     np.testing.assert_array_equal(result2["n"], np.array([[[[12]]]]))
     # check for active
-    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+    np.testing.assert_array_equal(mean_result, result2["sum"] / result2["n"])
 
 
 def test_cl_mean(tmp_path):
@@ -139,10 +140,11 @@ def test_cl_mean(tmp_path):
     print(result2, ncfile)
     # expect {'sum': array([[[[264.]]]], dtype=float32), 'n': array([[[[12]]]])}
     # check for typing and structure
-    np.testing.assert_array_equal(result2["sum"], np.array([[[[264.]]]], dtype="float32"))
+    np.testing.assert_array_equal(result2["sum"],
+                                  np.array([[[[264.]]]], dtype="float32"))
     np.testing.assert_array_equal(result2["n"], np.array([[[[12]]]]))
     # check for active
-    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+    np.testing.assert_array_equal(mean_result, result2["sum"] / result2["n"])
 
 
 def test_cl_min(tmp_path):
@@ -150,7 +152,8 @@ def test_cl_min(tmp_path):
     active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
     active._version = 2
     result2 = active.min[4:5, 1:2]
-    np.testing.assert_array_equal(result2, np.array([[[[22.]]]], dtype="float32"))
+    np.testing.assert_array_equal(result2,
+                                  np.array([[[[22.]]]], dtype="float32"))
 
 
 def test_cl_max(tmp_path):
@@ -158,7 +161,8 @@ def test_cl_max(tmp_path):
     active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
     active._version = 2
     result2 = active.max[4:5, 1:2]
-    np.testing.assert_array_equal(result2, np.array([[[[22.]]]], dtype="float32"))
+    np.testing.assert_array_equal(result2,
+                                  np.array([[[[22.]]]], dtype="float32"))
 
 
 def test_cl_global_max(tmp_path):
@@ -166,7 +170,8 @@ def test_cl_global_max(tmp_path):
     active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
     active._version = 2
     result2 = active.max[:]
-    np.testing.assert_array_equal(result2, np.array([[[[22.]]]], dtype="float32"))
+    np.testing.assert_array_equal(result2,
+                                  np.array([[[[22.]]]], dtype="float32"))
 
 
 def test_cl_maxxx(tmp_path):
@@ -194,7 +199,7 @@ def test_ps(tmp_path):
     np.testing.assert_array_equal(result2["sum"], np.array([[[22.]]]))
     np.testing.assert_array_equal(result2["n"], np.array([[[4]]]))
     # check for active
-    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+    np.testing.assert_array_equal(mean_result, result2["sum"] / result2["n"])
 
 
 def test_ps_implicit_storage_type(tmp_path):
@@ -219,7 +224,7 @@ def test_ps_implicit_storage_type(tmp_path):
     np.testing.assert_array_equal(result2["sum"], np.array([[[22.]]]))
     np.testing.assert_array_equal(result2["n"], np.array([[[4]]]))
     # check for active
-    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+    np.testing.assert_array_equal(mean_result, result2["sum"] / result2["n"])
 
 
 def test_native_emac_model_fails(test_data_path):
@@ -273,10 +278,14 @@ def test_cesm2_native(test_data_path):
     print(result2, ncfile)
     # expect {'sum': array([[[2368.3232]]], dtype=float32), 'n': array([[[8]]])}
     # check for typing and structure
-    np.testing.assert_allclose(result2["sum"], np.array([[[2368.3232]]], dtype="float32"), rtol=1e-6)
+    np.testing.assert_allclose(result2["sum"],
+                               np.array([[[2368.3232]]], dtype="float32"),
+                               rtol=1e-6)
     np.testing.assert_array_equal(result2["n"], np.array([[[8]]]))
     # check for active
-    np.testing.assert_allclose(mean_result, result2["sum"]/result2["n"], rtol=1e-6)
+    np.testing.assert_allclose(mean_result,
+                               result2["sum"] / result2["n"],
+                               rtol=1e-6)
 
 
 def test_daily_data(test_data_path):
@@ -298,10 +307,11 @@ def test_daily_data(test_data_path):
     print(result2, ncfile)
     # expect {'sum': array([[[[1515.9822]]]], dtype=float32), 'n': array([[[8]]])}
     # check for typing and structure
-    np.testing.assert_array_equal(result2["sum"], np.array([[[[1515.9822]]]], dtype="float32"))
+    np.testing.assert_array_equal(result2["sum"],
+                                  np.array([[[[1515.9822]]]], dtype="float32"))
     np.testing.assert_array_equal(result2["n"], np.array([[[[6]]]]))
     # check for active
-    np.testing.assert_array_equal(mean_result, result2["sum"]/result2["n"])
+    np.testing.assert_array_equal(mean_result, result2["sum"] / result2["n"])
 
 
 def test_daily_data_masked(test_data_path):
@@ -313,7 +323,7 @@ def test_daily_data_masked(test_data_path):
     active = Active(uri, "ta", storage_type=utils.get_storage_type())
     active._version = 0
     d = active[:]
-    d = np.ma.masked_where(d==999., d)
+    d = np.ma.masked_where(d == 999., d)
     mean_result = np.ma.mean(d)
 
     active = Active(uri, "ta", storage_type=utils.get_storage_type())
@@ -324,10 +334,14 @@ def test_daily_data_masked(test_data_path):
     print(result2, ncfile)
     # expect {'sum': array([[[[169632.5]]]], dtype=float32), 'n': 680}
     # check for typing and structure
-    np.testing.assert_allclose(result2["sum"], np.array([[[[169632.5]]]], dtype="float32"), rtol=1e-6)
+    np.testing.assert_allclose(result2["sum"],
+                               np.array([[[[169632.5]]]], dtype="float32"),
+                               rtol=1e-6)
     np.testing.assert_array_equal(result2["n"], 680)
     # check for active
-    np.testing.assert_allclose(mean_result, result2["sum"]/result2["n"], rtol=1e-6)
+    np.testing.assert_allclose(mean_result,
+                               result2["sum"] / result2["n"],
+                               rtol=1e-6)
 
 
 def test_daily_data_masked_no_stats_yes_components(test_data_path):

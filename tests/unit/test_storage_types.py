@@ -2,23 +2,21 @@
 # active storage server is available. Therefore, we mock out the remote service
 # interaction and replace with local file operations.
 
-import botocore
 import os
+from unittest import mock
+
+import botocore
 import numpy as np
 import pyfive
 import pytest
 import requests.exceptions
-from unittest import mock
-
 
 import activestorage.active
+import activestorage.reductionist
+import activestorage.storage
 from activestorage.active import Active
 from activestorage.config import *
 from activestorage.dummy_data import make_vanilla_ncdata
-import activestorage.reductionist
-import activestorage.storage
-
-
 
 
 @mock.patch.object(activestorage.active, "load_from_s3")
@@ -176,7 +174,8 @@ def test_reductionist_bad_request(mock_reduce, mock_load, tmp_path):
         return pyfive.File(test_file)
 
     mock_load.side_effect = load_from_s3
-    mock_reduce.side_effect = activestorage.reductionist.ReductionistError(400, "Bad request")
+    mock_reduce.side_effect = activestorage.reductionist.ReductionistError(
+        400, "Bad request")
 
     uri = "s3://fake-bucket/fake-object"
     test_file = str(tmp_path / "test.nc")

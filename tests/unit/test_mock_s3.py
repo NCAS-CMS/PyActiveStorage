@@ -1,14 +1,14 @@
 import os
-import s3fs
 import pathlib
-import pyfive
-import pytest
+from tempfile import NamedTemporaryFile
+
 import h5netcdf
 import numpy as np
+import pyfive
+import pytest
+import s3fs
 
-from tempfile import NamedTemporaryFile
-from activestorage.active import load_from_s3, Active
-
+from activestorage.active import Active, load_from_s3
 
 # needed by the spoofed s3 filesystem
 port = 5555
@@ -25,7 +25,9 @@ def test_s3fs_s3(s3fs_s3):
 
     assert not mock_s3_filesystem.anon
     assert not mock_s3_filesystem.version_aware
-    assert mock_s3_filesystem.client_kwargs == {'endpoint_url': 'http://127.0.0.1:5555/'}
+    assert mock_s3_filesystem.client_kwargs == {
+        'endpoint_url': 'http://127.0.0.1:5555/'
+    }
 
 
 def spoof_boto3_s3(bucket, file_name, file_path):
@@ -103,7 +105,10 @@ def empty_bucket(aws_credentials):
         moto_fake.stop()
 
 
-@pytest.mark.skip(reason="This test uses the pure boto3 implement which we don't need at the moment.")
+@pytest.mark.skip(
+    reason=
+    "This test uses the pure boto3 implement which we don't need at the moment."
+)
 def test_s3file_with_pure_boto3(empty_bucket):
     ncfile = "./tests/test_data/daily_data.nc"
     file_path = pathlib.Path(ncfile)
@@ -131,9 +136,9 @@ def test_s3file_with_s3fs(s3fs_s3):
     bucket = "MY_BUCKET"
     s3fs_s3.mkdir(bucket)
     s3fs_s3.put(file_path, bucket)
-    s3 = s3fs.S3FileSystem(
-        anon=False, version_aware=True, client_kwargs={"endpoint_url": endpoint_uri}
-    )
+    s3 = s3fs.S3FileSystem(anon=False,
+                           version_aware=True,
+                           client_kwargs={"endpoint_url": endpoint_uri})
 
     # test load by standard h5netcdf
     with s3.open(os.path.join("MY_BUCKET", file_name), "rb") as f:
@@ -144,9 +149,11 @@ def test_s3file_with_s3fs(s3fs_s3):
     assert "ta" in ncfile
 
     # test active.load_from_s3
-    storage_options = dict(anon=False, version_aware=True,
+    storage_options = dict(anon=False,
+                           version_aware=True,
                            client_kwargs={"endpoint_url": endpoint_uri})
-    with load_from_s3(os.path.join("MY_BUCKET", file_name), storage_options) as ac_file:
+    with load_from_s3(os.path.join("MY_BUCKET", file_name),
+                      storage_options) as ac_file:
         print(ac_file)
         assert "ta" in ac_file
 
@@ -158,6 +165,6 @@ def test_s3file_with_s3fs(s3fs_s3):
         print("Pyfive dataset:", pie_ds["ta"])
         av = Active(pie_ds["ta"])
         av._method = "min"
-        assert av.method([3,444]) == 3
+        assert av.method([3, 444]) == 3
         av_slice_min = av[3:5]
         assert av_slice_min == np.array(249.6583, dtype="float32")

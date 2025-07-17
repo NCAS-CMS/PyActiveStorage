@@ -1,5 +1,4 @@
 import activestorage
-
 from activestorage import Active as act
 
 
@@ -8,6 +7,7 @@ def test_activestorage_class_attrs():
     assert hasattr(activestorage, "Active")
     assert hasattr(activestorage, "active")
     assert hasattr(activestorage, "storage")
+
 
 # check Active class
 def test_active_class_attrs():
