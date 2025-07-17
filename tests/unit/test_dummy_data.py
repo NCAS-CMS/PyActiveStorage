@@ -1,9 +1,10 @@
 import os
+
 import numpy as np
 import pytest
+from netCDF4 import Dataset
 
 from activestorage import dummy_data as dd
-from netCDF4 import Dataset
 
 
 def test_make_ncdata_minmax(tmp_path):
@@ -17,7 +18,7 @@ def test_make_ncdata_minmax(tmp_path):
                              fillvalue=-999.,
                              valid_range=None,
                              valid_min=-1.,
-                             valid_max=1.2 * 10 ** 3)
+                             valid_max=1.2 * 10**3)
     content = Dataset(filename)
     assert content.dimensions["xdim"].size == 10
     assert content.dimensions["ydim"].size == 10
@@ -36,7 +37,7 @@ def test_make_ncdata_range(tmp_path):
                              compression=None,
                              missing=1e20,
                              fillvalue=-999.,
-                             valid_range=[-1.0, 1.2 * 10 ** 3],
+                             valid_range=[-1.0, 1.2 * 10**3],
                              valid_min=None,
                              valid_max=None)
     content = Dataset(filename)
@@ -50,35 +51,29 @@ def test_make_ncdata_range(tmp_path):
 
 def test_make_fillvalue_ncdata(tmp_path):
     filename = tmp_path / 'test_fillvalue.nc'
-    c = dd.make_fillvalue_ncdata(filename=filename,
-                                 chunksize=(3, 3, 1), n=10)
+    c = dd.make_fillvalue_ncdata(filename=filename, chunksize=(3, 3, 1), n=10)
 
 
 def test_make_missing_ncdata(tmp_path):
     filename = tmp_path / 'test_missing.nc'
-    c = dd.make_missing_ncdata(filename=filename,
-                                 chunksize=(3, 3, 1), n=10)
+    c = dd.make_missing_ncdata(filename=filename, chunksize=(3, 3, 1), n=10)
 
 
 def test_make_validmin_ncdata(tmp_path):
     filename = tmp_path / 'test_validmin.nc'
-    c = dd.make_validmin_ncdata(filename=filename,
-                                chunksize=(3, 3, 1), n=10)
+    c = dd.make_validmin_ncdata(filename=filename, chunksize=(3, 3, 1), n=10)
 
 
 def test_make_validmax_ncdata(tmp_path):
     filename = tmp_path / 'test_validmax.nc'
-    c = dd.make_validmax_ncdata(filename=filename,
-                                chunksize=(3, 3, 1), n=10)
+    c = dd.make_validmax_ncdata(filename=filename, chunksize=(3, 3, 1), n=10)
 
 
 def test_make_validrange_ncdata(tmp_path):
     filename = tmp_path / 'test_validrange.nc'
-    c = dd.make_validrange_ncdata(filename=filename,
-                                  chunksize=(3, 3, 1), n=10)
+    c = dd.make_validrange_ncdata(filename=filename, chunksize=(3, 3, 1), n=10)
 
 
 def test_make_vanilla_ncdata(tmp_path):
     filename = tmp_path / 'test_vanilla.nc'
-    c = dd.make_vanilla_ncdata(filename=filename,
-                               chunksize=(3, 3, 1), n=10)
+    c = dd.make_vanilla_ncdata(filename=filename, chunksize=(3, 3, 1), n=10)

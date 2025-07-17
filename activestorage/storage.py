@@ -2,21 +2,32 @@
 import fsspec
 import numpy as np
 import pyfive
-
 from numcodecs.compat import ensure_ndarray
 
 
-def reduce_chunk(rfile, 
-                 offset, size, compression, filters, missing, dtype, shape, 
-                 order, chunk_selection, axis, method=None):
-    """ We do our own read of chunks and decoding etc 
-    
-    rfile - the actual file with the data 
+def reduce_chunk(rfile,
+                 offset,
+                 size,
+                 compression,
+                 filters,
+                 missing,
+                 dtype,
+                 shape,
+                 order,
+                 chunk_selection,
+                 axis,
+                 method=None):
+    """
+    We do our own read of chunks and decoding etc
+
+    Parameters
+    ==========
+    rfile - the actual file with the data
     offset, size - where and what we want ...
     compression - optional `numcodecs.abc.Codec` compression codec
     filters - optional list of `numcodecs.abc.Codec` filter codecs
-    dtype - likely float32 in most cases. 
-    shape - will be a tuple, something like (3,3,1), this is the dimensionality of the 
+    dtype - likely float32 in most cases.
+    shape - will be a tuple, something like (3,3,1), this is the dimensionality of the
             chunk itself
     order - typically 'C' for c-type ordering
     chunk_selection - python slice tuples for each dimension, e.g.
@@ -24,20 +35,19 @@ def reduce_chunk(rfile,
                         this defines the part of the chunk which is to be obtained
                         or operated upon.
     axis - tuple of the axes to be reduced (non-negative integers)
-    method - computation desired 
-            (in this Python version it's an actual method, in 
+    method - computation desired
+            (in this Python version it's an actual method, in
             storage implementations we'll change to controlled vocabulary)
-                    
     """
     obj_type = type(rfile)
     print(f"Reducing chunk of object {obj_type}")
 
-    if not obj_type is pyfive.high_level.Dataset:
-        #FIXME: for the moment, open the file every time ... we might want to do that, or not
+    if obj_type is not pyfive.high_level.Dataset:
+        # FIXME: for the moment, open the file every time ... we might want to do that, or not
         # we could just use an instance of pyfive.high_level.Dataset.id
         # passed directly from active.py, as below
         try:
-            with open(rfile,'rb') as open_file:
+            with open(rfile, 'rb') as open_file:
                 # get the data
                 chunk = read_block(open_file, offset, size)
                 # reverse any compression and filters
@@ -64,19 +74,22 @@ def reduce_chunk(rfile,
                 chunk = chunk.reshape(-1, order='A')
                 chunk = chunk.reshape(shape, order=order)
     else:
-            class storeinfo: pass
-            storeinfo.byte_offset = offset
-            storeinfo.size = size
-            chunk = rfile.id._get_raw_chunk(storeinfo)
-            # reverse any compression and filters
-            chunk = filter_pipeline(chunk, compression, filters)
-            # make it a numpy array of bytes
-            chunk = ensure_ndarray(chunk)
-            # convert to the appropriate data type
-            chunk = chunk.view(dtype)
-            # sort out ordering and convert to the parent hyperslab dimensions
-            chunk = chunk.reshape(-1, order='A')
-            chunk = chunk.reshape(shape, order=order)
+
+        class storeinfo:
+            pass
+
+        storeinfo.byte_offset = offset
+        storeinfo.size = size
+        chunk = rfile.id._get_raw_chunk(storeinfo)
+        # reverse any compression and filters
+        chunk = filter_pipeline(chunk, compression, filters)
+        # make it a numpy array of bytes
+        chunk = ensure_ndarray(chunk)
+        # convert to the appropriate data type
+        chunk = chunk.view(dtype)
+        # sort out ordering and convert to the parent hyperslab dimensions
+        chunk = chunk.reshape(-1, order='A')
+        chunk = chunk.reshape(shape, order=order)
 
     tmp = chunk[chunk_selection]
     tmp = mask_missing(tmp, missing)
@@ -88,6 +101,7 @@ def reduce_chunk(rfile,
         N = None
 
     return tmp, N
+
 
 def filter_pipeline(chunk, compression, filters):
     """
@@ -138,10 +152,19 @@ def read_block(open_file, offset, size):
     return data
 
 
-def reduce_opens3_chunk(fh, 
-        offset, size, compression, filters, missing, dtype, shape, 
-        order, chunk_selection, axis, method=None):
-    """ 
+def reduce_opens3_chunk(fh,
+                        offset,
+                        size,
+                        compression,
+                        filters,
+                        missing,
+                        dtype,
+                        shape,
+                        order,
+                        chunk_selection,
+                        axis,
+                        method=None):
+    """
     Same function as reduce_chunk, but this mimics what is done
     deep in the bowels of H5py/pyfive. The reason for doing this is
     so we can get per chunk metrics

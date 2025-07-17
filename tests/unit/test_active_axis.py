@@ -1,49 +1,48 @@
 import itertools
+
 import netCDF4
 import numpy as np
 import pytest
 
 from activestorage.active import Active
 
+
 def axis_combinations(ndim):
     """Create axes permutations"""
     return [None] + [
-        axes
-        for n in range(1, ndim + 1)
+        axes for n in range(1, ndim + 1)
         for axes in itertools.permutations(range(ndim), n)
     ]
 
+
 rfile = "tests/test_data/test1.nc"
-ncvar ='tas'
+ncvar = 'tas'
 ref = netCDF4.Dataset(rfile)[ncvar][...]
 
-@pytest.mark.parametrize(
-    "index",
-    (
-        Ellipsis,
-        (slice(6, 7), slice(None), slice(None)),
-        (slice(None), slice(0, 64, 3), slice(None)),
-        (slice(None), slice(None), slice(0, 128, 4)),
-        (slice(6, 7), slice(0, 64, 3), slice(0, 128, 4)),
-        (slice(1,11, 2), slice(0, 64, 3), slice(0, 128, 4)),
-        (slice(None), [0, 1, 5, 7, 30, 31], slice(None)),
-        (slice(None), [0, 1, 5, 7, 30, 31, 50, 51, 53], slice(None)),
-    )
-)
+
+@pytest.mark.parametrize("index", (
+    Ellipsis,
+    (slice(6, 7), slice(None), slice(None)),
+    (slice(None), slice(0, 64, 3), slice(None)),
+    (slice(None), slice(None), slice(0, 128, 4)),
+    (slice(6, 7), slice(0, 64, 3), slice(0, 128, 4)),
+    (slice(1, 11, 2), slice(0, 64, 3), slice(0, 128, 4)),
+    (slice(None), [0, 1, 5, 7, 30, 31], slice(None)),
+    (slice(None), [0, 1, 5, 7, 30, 31, 50, 51, 53], slice(None)),
+))
 def test_active_axis_reduction(index):
     """Unit test for class:Active axis combinations."""
     for axis in axis_combinations(ref.ndim):
         for method, numpy_func in zip(
-                ("mean", "sum", "min", "max"),
-                (np.ma.mean, np.ma.sum, np.ma.min, np.ma.max)
-        ):
-            print (axis, index, method)
+            ("mean", "sum", "min", "max"),
+            (np.ma.mean, np.ma.sum, np.ma.min, np.ma.max)):
+            print(axis, index, method)
 
             r = numpy_func(ref[index], axis=axis, keepdims=True)
 
             active = Active(rfile, ncvar, axis=axis)
             active.method = method
-            x  = active[index]
+            x = active[index]
 
             assert x.shape == r.shape
             assert (x.mask == r.mask).all()

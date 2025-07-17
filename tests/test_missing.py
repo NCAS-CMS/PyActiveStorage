@@ -1,25 +1,22 @@
 import os
-from this import d
-import numpy as np
-import numpy.ma as ma
-import pytest
 import shutil
 import tempfile
 import unittest
+from this import d
 
+import h5netcdf
 # TODO remove in stable
 import h5py
-import h5netcdf
-
+import numpy as np
+import numpy.ma as ma
 import pyfive
-
+import pytest
+import utils
 from netCDF4 import Dataset
 
+from activestorage import dummy_data as dd
 from activestorage.active import Active, load_from_s3
 from activestorage.config import *
-from activestorage import dummy_data as dd
-
-import utils
 
 
 def load_dataset(testfile):
@@ -108,7 +105,6 @@ def test_missing(tmp_path):
 
     np.testing.assert_array_equal(masked_numpy_mean, active_mean)
     np.testing.assert_array_equal(no_active_mean, active_mean)
-
 
 
 def test_fillvalue(tmp_path):
@@ -218,8 +214,6 @@ def test_validmax(tmp_path):
     print('z-valid-max', z['data'].attrs.get('valid_max'))
     print('a-valid-max', a['data'].attrs.get('valid_max'))
 
-
-
     # numpy masked to check for correct Active behaviour
     no_active_mean = active_zero(testfile)
 
@@ -279,7 +273,8 @@ def test_active_mask_data(tmp_path):
         ds.close()
         a = Active(testfile, "data")
         data = a._mask_data(dsdata)
-        np.testing.assert_array_equal(data, valid_masked_data,f'Failed masking for {testname}')
+        np.testing.assert_array_equal(data, valid_masked_data,
+                                      f'Failed masking for {testname}')
 
     # with valid min
     r = dd.make_validmin_ncdata(testfile, valid_min=500)
@@ -294,9 +289,8 @@ def test_active_mask_data(tmp_path):
 
     # with missing
     r = dd.make_missing_ncdata(testfile)
-    check_masking(testfile,'missing')
+    check_masking(testfile, 'missing')
 
     # with _FillValue
     r = dd.make_fillvalue_ncdata(testfile)
-    check_masking(testfile,"_FillValue")
-
+    check_masking(testfile, "_FillValue")

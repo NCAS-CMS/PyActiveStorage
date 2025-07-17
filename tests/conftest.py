@@ -1,12 +1,11 @@
-import os
-import s3fs
-import pathlib
 import json
+import os
+import pathlib
+
 import moto
 import pytest
-
+import s3fs
 from moto.moto_server.threaded_moto_server import ThreadedMotoServer
-
 
 # some spoofy server parameters
 # test parameters; don't modify these
@@ -15,6 +14,7 @@ endpoint_uri = "http://127.0.0.1:%s/" % port
 test_bucket_name = "test"
 versioned_bucket_name = "test-versioned"
 secure_bucket_name = "test-secure"
+
 
 def get_boto3_client():
     from botocore.session import Session
@@ -71,38 +71,40 @@ def s3fs_s3(s3_base):
     client.create_bucket(Bucket=test_bucket_name, ACL="public-read")
 
     client.create_bucket(Bucket=versioned_bucket_name, ACL="public-read")
-    client.put_bucket_versioning(
-        Bucket=versioned_bucket_name, VersioningConfiguration={"Status": "Enabled"}
-    )
+    client.put_bucket_versioning(Bucket=versioned_bucket_name,
+                                 VersioningConfiguration={"Status": "Enabled"})
 
     # initialize secure bucket
     client.create_bucket(Bucket=secure_bucket_name, ACL="public-read")
-    policy = json.dumps(
-        {
-            "Version": "2012-10-17",
-            "Id": "PutObjPolicy",
-            "Statement": [
-                {
-                    "Sid": "DenyUnEncryptedObjectUploads",
-                    "Effect": "Deny",
-                    "Principal": "*",
-                    "Action": "s3:PutObject",
-                    "Resource": "arn:aws:s3:::{bucket_name}/*".format(
-                        bucket_name=secure_bucket_name
-                    ),
-                    "Condition": {
-                        "StringNotEquals": {
-                            "s3:x-amz-server-side-encryption": "aws:kms"
-                        }
-                    },
+    policy = json.dumps({
+        "Version":
+        "2012-10-17",
+        "Id":
+        "PutObjPolicy",
+        "Statement": [{
+            "Sid":
+            "DenyUnEncryptedObjectUploads",
+            "Effect":
+            "Deny",
+            "Principal":
+            "*",
+            "Action":
+            "s3:PutObject",
+            "Resource":
+            "arn:aws:s3:::{bucket_name}/*".format(
+                bucket_name=secure_bucket_name),
+            "Condition": {
+                "StringNotEquals": {
+                    "s3:x-amz-server-side-encryption": "aws:kms"
                 }
-            ],
-        }
-    )
+            },
+        }],
+    })
 
     client.put_bucket_policy(Bucket=secure_bucket_name, Policy=policy)
     s3fs.S3FileSystem.clear_instance_cache()
-    s3 = s3fs.S3FileSystem(anon=False, client_kwargs={"endpoint_url": endpoint_uri})
+    s3 = s3fs.S3FileSystem(anon=False,
+                           client_kwargs={"endpoint_url": endpoint_uri})
     s3.invalidate_cache()
 
     yield s3

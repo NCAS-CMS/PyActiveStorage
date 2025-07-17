@@ -1,15 +1,15 @@
 import os
+import threading
+
 import numpy as np
 import pyfive
 import pytest
-import threading
-
-from activestorage.active import Active
-from activestorage.active import load_from_s3
-from activestorage.config import *
 from botocore.exceptions import EndpointConnectionError as botoExc
 from botocore.exceptions import NoCredentialsError as NoCredsExc
 from netCDF4 import Dataset
+
+from activestorage.active import Active, load_from_s3
+from activestorage.config import *
 
 
 def test_uri_none():
@@ -69,7 +69,7 @@ def test_method():
     ncvar = "TREFHT"
     active = Active(uri, ncvar=ncvar)
     active._method = "min"
-    assert active.method([3,444]) == 3
+    assert active.method([3, 444]) == 3
 
     active._method = "cow"
     assert active.method is None
@@ -99,7 +99,7 @@ def test_activevariable_pyfive():
     ds = pyfive.File(uri)[ncvar]
     av = Active(ds)
     av._method = "min"
-    assert av.method([3,444]) == 3
+    assert av.method([3, 444]) == 3
     av_slice_min = av[3:5]
     assert av_slice_min == np.array(258.62814, dtype="float32")
     # test with Numpy
@@ -183,11 +183,15 @@ def test_get_endpoint_url():
     storage_options = {
         'key': "cow",
         'secret': "secretcow",
-        'client_kwargs': {'endpoint_url': "https://cow.moo"},
+        'client_kwargs': {
+            'endpoint_url': "https://cow.moo"
+        },
     }
     uri = "tests/test_data/cesm2_native.nc"
     ncvar = "TREFHT"
-    active = Active(uri, ncvar=ncvar, storage_type="s3",
+    active = Active(uri,
+                    ncvar=ncvar,
+                    storage_type="s3",
                     storage_options=storage_options)
     ep_url = Active._get_endpoint_url(active)
     assert ep_url == "https://cow.moo"
