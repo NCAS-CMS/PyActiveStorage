@@ -3,7 +3,6 @@ import numcodecs
 
 def decode_filters(filter_pipeline, itemsize, name):
     """
-
     Convert HDF5 filter and compression instructions into instructions understood
     by numcodecs. Input is a pyfive filter_pipeline object, the itemsize, and the
     dataset name for error messages.
@@ -27,8 +26,9 @@ def decode_filters(filter_pipeline, itemsize, name):
     compressors, filters = [], []
 
     for filter in filter_pipeline:
-        filter_id = filter["filter_id"]
-        properties = filter["client_data"]
+
+        filter_id = filter['filter_id']
+        properties = filter['client_data']
 
         # We suppor the following
         if filter_id == GZIP_DEFLATE_FILTER:
@@ -36,16 +36,15 @@ def decode_filters(filter_pipeline, itemsize, name):
         elif filter_id == SHUFFLE_FILTER:
             filters.append(numcodecs.Shuffle(elementsize=itemsize))
         else:
-            raise NotImplementedError(
-                "We cannot yet support filter id ",
-                filter_id,
-            )
+            raise NotImplementedError('We cannot yet support filter id ',
+                                      filter_id)
 
         # We might be able, in the future, to support the following
         # At the moment the following code cannot be implemented, but we can move
         # the loops up as we develop backend support.
 
         if 0:
+
             if filter_id == 32001:
                 blosc_compressors = (
                     "blosclz",
@@ -75,20 +74,18 @@ def decode_filters(filter_pipeline, itemsize, name):
                 filters.append(numcodecs.Zstd(level=properties[0]))
             elif filter_id == 32004:
                 raise RuntimeError(
-                    f"{name} uses lz4 compression - not supported as yet",
-                )
+                    f"{name} uses lz4 compression - not supported as yet")
             elif filter_id == 32008:
                 raise RuntimeError(
-                    f"{name} uses bitshuffle compression - not supported as yet",
+                    f"{name} uses bitshuffle compression - not supported as yet"
                 )
             else:
                 raise RuntimeError(
                     f"{name} uses filter id {filter_id} with properties {properties},"
-                    f" not supported as yet",
-                )
+                    f" not supported as yet")
 
     if len(compressors) > 1:
-        raise ValueError("We only expected one compression algorithm")
+        raise ValueError('We only expected one compression algorithm')
     return compressors[0], filters
 
 
