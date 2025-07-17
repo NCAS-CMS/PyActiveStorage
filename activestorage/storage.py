@@ -1,28 +1,27 @@
 """Active storage module."""
-
 import fsspec
 import numpy as np
+import pyfive
 from numcodecs.compat import ensure_ndarray
 
-import pyfive
 
+def reduce_chunk(rfile,
+                 offset,
+                 size,
+                 compression,
+                 filters,
+                 missing,
+                 dtype,
+                 shape,
+                 order,
+                 chunk_selection,
+                 axis,
+                 method=None):
+    """
+    We do our own read of chunks and decoding etc
 
-def reduce_chunk(
-    rfile,
-    offset,
-    size,
-    compression,
-    filters,
-    missing,
-    dtype,
-    shape,
-    order,
-    chunk_selection,
-    axis,
-    method=None,
-):
-    """We do our own read of chunks and decoding etc
-
+    Parameters
+    ==========
     rfile - the actual file with the data
     offset, size - where and what we want ...
     compression - optional `numcodecs.abc.Codec` compression codec
@@ -39,7 +38,6 @@ def reduce_chunk(
     method - computation desired
             (in this Python version it's an actual method, in
             storage implementations we'll change to controlled vocabulary)
-
     """
     obj_type = type(rfile)
     print(f"Reducing chunk of object {obj_type}")
@@ -49,7 +47,7 @@ def reduce_chunk(
         # we could just use an instance of pyfive.high_level.Dataset.id
         # passed directly from active.py, as below
         try:
-            with open(rfile, "rb") as open_file:
+            with open(rfile, 'rb') as open_file:
                 # get the data
                 chunk = read_block(open_file, offset, size)
                 # reverse any compression and filters
@@ -59,11 +57,11 @@ def reduce_chunk(
                 # convert to the appropriate data type
                 chunk = chunk.view(dtype)
                 # sort out ordering and convert to the parent hyperslab dimensions
-                chunk = chunk.reshape(-1, order="A")
+                chunk = chunk.reshape(-1, order='A')
                 chunk = chunk.reshape(shape, order=order)
         except FileNotFoundError:  # could a https file
-            fs = fsspec.filesystem("http")
-            with fs.open(rfile, "rb") as open_file:
+            fs = fsspec.filesystem('http')
+            with fs.open(rfile, 'rb') as open_file:
                 # get the data
                 chunk = read_block(open_file, offset, size)
                 # reverse any compression and filters
@@ -73,7 +71,7 @@ def reduce_chunk(
                 # convert to the appropriate data type
                 chunk = chunk.view(dtype)
                 # sort out ordering and convert to the parent hyperslab dimensions
-                chunk = chunk.reshape(-1, order="A")
+                chunk = chunk.reshape(-1, order='A')
                 chunk = chunk.reshape(shape, order=order)
     else:
 
@@ -90,7 +88,7 @@ def reduce_chunk(
         # convert to the appropriate data type
         chunk = chunk.view(dtype)
         # sort out ordering and convert to the parent hyperslab dimensions
-        chunk = chunk.reshape(-1, order="A")
+        chunk = chunk.reshape(-1, order='A')
         chunk = chunk.reshape(shape, order=order)
 
     tmp = chunk[chunk_selection]
@@ -125,7 +123,9 @@ def filter_pipeline(chunk, compression, filters):
 
 
 def mask_missing(data, missing):
-    """Mask an array."""
+    """Mask an array.
+
+    """
     fill_value, missing_value, valid_min, valid_max = missing
 
     if fill_value is not None:
@@ -144,7 +144,7 @@ def mask_missing(data, missing):
 
 
 def read_block(open_file, offset, size):
-    """Read <size> bytes from <open_file> at <offset>"""
+    """ Read <size> bytes from <open_file> at <offset>"""
     place = open_file.tell()
     open_file.seek(offset)
     data = open_file.read(size)
@@ -152,20 +152,18 @@ def read_block(open_file, offset, size):
     return data
 
 
-def reduce_opens3_chunk(
-    fh,
-    offset,
-    size,
-    compression,
-    filters,
-    missing,
-    dtype,
-    shape,
-    order,
-    chunk_selection,
-    axis,
-    method=None,
-):
+def reduce_opens3_chunk(fh,
+                        offset,
+                        size,
+                        compression,
+                        filters,
+                        missing,
+                        dtype,
+                        shape,
+                        order,
+                        chunk_selection,
+                        axis,
+                        method=None):
     """
     Same function as reduce_chunk, but this mimics what is done
     deep in the bowels of H5py/pyfive. The reason for doing this is
@@ -179,7 +177,7 @@ def reduce_opens3_chunk(
     # convert to the appropriate data type
     chunk = chunk.view(dtype)
     # sort out ordering and convert to the parent hyperslab dimensions
-    chunk = chunk.reshape(-1, order="A")
+    chunk = chunk.reshape(-1, order='A')
     chunk = chunk.reshape(shape, order=order)
 
     tmp = chunk[chunk_selection]
