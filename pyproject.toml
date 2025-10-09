@@ -34,7 +34,6 @@ dynamic = [
     "version",
 ]
 dependencies = [
-    "dask!=2024.8.0",  # github.com/dask/dask/issues/11296
     "fsspec",
     "h5netcdf",
     "netcdf4",
@@ -66,6 +65,10 @@ doc = [
     "autodocsumm",
     "sphinx",
     "sphinx_rtd_theme",
+]
+# run dask-demo
+demo = [
+    "dask!=2024.8.0",  # github.com/dask/dask/issues/11296
 ]
 # to be added when functionality provided
 # develop = [
