@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - fix_s3_test_gha
   schedule:
     - cron: '0 0 * * *'  # nightly
 
@@ -23,7 +24,7 @@ jobs:
       fail-fast: false
     name: Linux Python ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - uses: conda-incubator/setup-miniconda@v3
