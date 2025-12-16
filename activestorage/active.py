@@ -272,6 +272,7 @@ class Active:
             nc = load_from_https(self.uri)
         self.filename = self.uri
         self.ds = nc[ncvar]
+        print("Loaded dataset", self.ds)
 
     def __get_missing_attributes(self):
         if self.ds is None:
@@ -366,21 +367,21 @@ class Active:
     def mean(self, axis=None):
         self._method = "mean"
         if axis is not None:
-            self.axis = axis
+            self._axis = axis
         return self
 
 
     def min(self, axis=None):
         self._method = "min"
         if axis is not None:
-            self.axis = axis
+            self._axis = axis
         return self
 
 
     def max(self, axis=None):
         self._method = "max"
         if axis is not None:
-            self.axis = axis
+            self._axis = axis
         return self
 
     @property
