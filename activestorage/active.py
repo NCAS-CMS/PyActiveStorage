@@ -362,19 +362,25 @@ class Active:
 
         self._method = value
 
-    @property
-    def mean(self):
+
+    def mean(self, axis=None):
         self._method = "mean"
+        if axis is not None:
+            self.axis = axis
         return self
 
-    @property
-    def min(self):
+
+    def min(self, axis=None):
         self._method = "min"
+        if axis is not None:
+            self.axis = axis
         return self
 
-    @property
-    def max(self):
+
+    def max(self, axis=None):
         self._method = "max"
+        if axis is not None:
+            self.axis = axis
         return self
 
     @property
