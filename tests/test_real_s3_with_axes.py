@@ -30,25 +30,57 @@ def build_active():
     return active
 
 
+## Active loads a 4dim dataset
+## Loaded dataset <HDF5 dataset "m01s30i111": shape (120, 85, 324, 432), type "float32">
+## default axis arg (when axis=None): 'axis': (0, 1, 2, 3)
+
 def test_no_axis():
+    """
+    Fails: it should pass: 'axis': (0, 1, 2, 3) default
+    are fine!
+
+    activestorage.reductionist.ReductionistError: Reductionist error: HTTP 400: {"error": {"message": "request data is not valid", "caused_by": ["__all__: Validation error: Number of reduction axes must be less than length of shape - to reduce over all axes omit the axis field completely [{}]"]}}
+    """
     active = build_active()
     result = active.min()[:]
     assert result == [[[[164.8125]]]]
 
 
 def test_no_axis_2():
+    """
+    Fails: it should pass: 'axis': (0, 1, 2, 3) default
+    are fine!
+
+    activestorage.reductionist.ReductionistError: Reductionist error: HTTP 400: {"error": {"message": "request data is not valid", "caused_by": ["__all__: Validation error: Number of reduction axes must be less than length of shape - to reduce over all axes omit the axis field completely [{}]"]}}
+    """
     active = build_active()
     result = active.min(axis=())[:]
     assert result == [[[[164.8125]]]]
 
 
+def test_axis_0():
+    """Fails: activestorage.reductionist.ReductionistError: Reductionist error: HTTP 502: -"""
+    active = build_active()
+    result = active.min(axis=(0, ))[:]
+    assert result == [[[[164.8125]]]]
+
+
 def test_axis_0_1():
+    """Fails: activestorage.reductionist.ReductionistError: Reductionist error: HTTP 502: -"""
     active = build_active()
     result = active.min(axis=(0, 1))[:]
     assert result == [[[[164.8125]]]]
 
 
-def test_no_axis_1():
+def test_axis_1():
+    """Fails: activestorage.reductionist.ReductionistError: Reductionist error: HTTP 502: -"""
     active = build_active()
-    result = active.min(axis=(1))[:]
+    result = active.min(axis=(1, ))[:]
     assert result == [[[[164.8125]]]]
+
+
+def test_axis_0_1_2():
+    """Passes fine."""
+    active = build_active()
+    result = active.min(axis=(0, 1, 2))[:]
+    assert result[0][0][0][0] == 171.05126953125
