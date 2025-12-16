@@ -112,7 +112,7 @@ def test_activevariable_pyfive_with_attributed_min():
     ncvar = "TREFHT"
     ds = pyfive.File(uri)[ncvar]
     av = Active(ds)
-    av_slice_min = av.min[3:5]
+    av_slice_min = av.min()[3:5]
     assert av_slice_min == np.array(258.62814, dtype="float32")
     # test with Numpy
     np_slice_min = np.min(ds[3:5])
@@ -125,7 +125,7 @@ def test_activevariable_pyfive_with_attributed_mean():
     ds = pyfive.File(uri)[ncvar]
     av = Active(ds)
     av.components = True
-    av_slice_min = av.mean[3:5]
+    av_slice_min = av.mean()[3:5]
     actual_mean = av_slice_min["sum"] / av_slice_min["n"]
     assert actual_mean == np.array(283.39508056640625, dtype="float32")
     # test with Numpy
