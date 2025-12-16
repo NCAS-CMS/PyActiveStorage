@@ -363,20 +363,17 @@ class Active:
 
         self._method = value
 
-
     def mean(self, axis=None):
         self._method = "mean"
         if axis is not None:
             self._axis = axis
         return self
 
-
     def min(self, axis=None):
         self._method = "min"
         if axis is not None:
             self._axis = axis
         return self
-
 
     def max(self, axis=None):
         self._method = "max"
