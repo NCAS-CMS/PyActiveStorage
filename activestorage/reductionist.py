@@ -10,7 +10,7 @@ import numcodecs
 import numpy as np
 import requests
 
-REDUCTIONIST_AXIS_READY = False
+REDUCTIONIST_AXIS_READY = True
 
 DEBUG = 0
 
