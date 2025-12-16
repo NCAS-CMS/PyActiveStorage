@@ -149,6 +149,8 @@ def test_reduce_chunk_compression(mock_request, compression, filters):
             "id": filter.codec_id,
             "element_size": filter.elementsize
         } for filter in filters],
+        "axis":
+        axis,
     }
     mock_request.assert_called_once_with(session, expected_url, expected_data)
 
@@ -258,6 +260,8 @@ def test_reduce_chunk_missing(mock_request, missing):
         ]],
         "missing":
         api_arg,
+        "axis":
+        axis,
     }
     mock_request.assert_called_once_with(session, expected_url, expected_data)
 
