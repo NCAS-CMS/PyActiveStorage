@@ -88,6 +88,7 @@ def reduce_chunk(session,
                                       chunk_selection,
                                       axis,
                                       storage_type=storage_type)
+    print(f"Reductionist request data dictionary: {request_data}")
     if DEBUG:
         print(f"Reductionist request data dictionary: {request_data}")
     api_operation = "sum" if operation == "mean" else operation or "select"
