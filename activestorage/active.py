@@ -114,6 +114,8 @@ def get_missing_attributes(ds):
 
     _FillValue = hfix(ds.attrs.get('_FillValue'))
     missing_value = ds.attrs.get('missing_value')
+    if isinstance(missing_value, np.ndarray):
+        missing_value = missing_value[0]
     valid_min = hfix(ds.attrs.get('valid_min'))
     valid_max = hfix(ds.attrs.get('valid_max'))
     valid_range = hfix(ds.attrs.get('valid_range'))
