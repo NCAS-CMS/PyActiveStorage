@@ -6,6 +6,28 @@ import pytest
 import activestorage.storage as st
 
 
+def test_mask_missing():
+    """Test mask missing."""
+    missing_1 = ([-900.], np.array([-900.]), None, None)
+    missing_2 = ([-900., 33.], np.array([-900., 33.]), None, None)
+    data_1 = np.ma.array(
+        [[[-900., 33.], [33., -900], [33., 44.]]],
+        mask=False,
+        fill_value=-900.0,
+        dtype=float
+    )
+    data_2 = np.ma.array(
+        [[[-900., 33.], [33., -900], [33., 44.]]],
+        mask=False,
+        fill_value=[-900.0, 33.],
+        dtype=float
+    )
+    res_1 = st.mask_missing(data_1, missing_1)
+    print(res_1)
+    res_2 = st.mask_missing(data_2, missing_2)
+    print(res_2)
+
+
 def test_reduce_chunk():
     """Test reduce chunk entirely."""
     rfile = "tests/test_data/cesm2_native.nc"
