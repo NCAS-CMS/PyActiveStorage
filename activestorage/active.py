@@ -116,7 +116,8 @@ def get_missing_attributes(ds):
     missing_value = ds.attrs.get('missing_value')
     # see https://github.com/NCAS-CMS/PyActiveStorage/pull/303
     if isinstance(missing_value, np.ndarray):
-        missing_value = missing_value[0]
+        if missing_value.size == 1:
+            missing_value = missing_value[0]
     valid_min = hfix(ds.attrs.get('valid_min'))
     valid_max = hfix(ds.attrs.get('valid_max'))
     valid_range = hfix(ds.attrs.get('valid_range'))

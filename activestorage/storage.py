@@ -129,10 +129,16 @@ def mask_missing(data, missing):
     fill_value, missing_value, valid_min, valid_max = missing
 
     if fill_value is not None:
-        data = np.ma.masked_equal(data, fill_value)
+        if isinstance(fill_value, np.ndarray) or isinstance(fill_value, list):
+            data = np.ma.masked_where(data == fill_value, data)
+        else:
+            data = np.ma.masked_equal(data, fill_value)
 
     if missing_value is not None:
-        data = np.ma.masked_equal(data, missing_value)
+        if isinstance(missing_value, np.ndarray) or isinstance(missing_value, list):
+            data = np.ma.masked_where(data == missing_value, data)
+        else:
+            data = np.ma.masked_equal(data, missing_value)
 
     if valid_max is not None:
         data = np.ma.masked_greater(data, valid_max)
