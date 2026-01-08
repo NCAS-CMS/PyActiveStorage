@@ -136,7 +136,7 @@ def test_cl_mean(tmp_path):
     active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
     active._version = 2
     active.components = True
-    result2 = active.mean[4:5, 1:2]
+    result2 = active.mean()[4:5, 1:2]
     print(result2, ncfile)
     # expect {'sum': array([[[[264.]]]], dtype=float32), 'n': array([[[[12]]]])}
     # check for typing and structure
@@ -151,7 +151,7 @@ def test_cl_min(tmp_path):
     ncfile = save_cl_file_with_a(tmp_path)
     active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
     active._version = 2
-    result2 = active.min[4:5, 1:2]
+    result2 = active.min()[4:5, 1:2]
     np.testing.assert_array_equal(result2,
                                   np.array([[[[22.]]]], dtype="float32"))
 
@@ -160,7 +160,7 @@ def test_cl_max(tmp_path):
     ncfile = save_cl_file_with_a(tmp_path)
     active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
     active._version = 2
-    result2 = active.max[4:5, 1:2]
+    result2 = active.max()[4:5, 1:2]
     np.testing.assert_array_equal(result2,
                                   np.array([[[[22.]]]], dtype="float32"))
 
@@ -169,7 +169,7 @@ def test_cl_global_max(tmp_path):
     ncfile = save_cl_file_with_a(tmp_path)
     active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
     active._version = 2
-    result2 = active.max[:]
+    result2 = active.max()[:]
     np.testing.assert_array_equal(result2,
                                   np.array([[[[22.]]]], dtype="float32"))
 
@@ -192,7 +192,7 @@ def test_ps(tmp_path):
     active = Active(ncfile, "ps", storage_type=utils.get_storage_type())
     active._version = 2
     active.components = True
-    result2 = active.mean[4:5, 1:2]
+    result2 = active.mean()[4:5, 1:2]
     print(result2, ncfile)
     # expect {'sum': array([[[22.]]]), 'n': array([[[4]]])}
     # check for typing and structure
@@ -381,7 +381,7 @@ def test_daily_data_masked_two_stats(test_data_path):
     # first a mean
     active = Active(uri, "ta", storage_type=utils.get_storage_type())
     active._version = 2
-    result2 = active.min[:]
+    result2 = active.min()[:]
     assert result2 == 245.0020751953125
 
     # then recycle Active object for something else
