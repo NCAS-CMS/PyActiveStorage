@@ -130,7 +130,11 @@ def mask_missing(data, missing):
 
     if fill_value is not None:
         if isinstance(fill_value, np.ndarray) or isinstance(fill_value, list):
-            data = np.ma.masked_where(data == fill_value, data)
+            try:
+                data = np.ma.masked_where(data == fill_value, data)
+            except ValueError:  # not broadcastable
+                fill_value = fill_value.reshape(data.shape)
+                data = np.ma.masked_where(data == fill_value, data)
         else:
             data = np.ma.masked_equal(data, fill_value)
 
