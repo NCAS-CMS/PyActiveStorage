@@ -8,7 +8,7 @@ from botocore.exceptions import EndpointConnectionError as botoExc
 from botocore.exceptions import NoCredentialsError as NoCredsExc
 from netCDF4 import Dataset
 
-from activestorage.active import Active, load_from_s3
+from activestorage.active import Active, load_from_s3, get_missing_attributes
 from activestorage.config import *
 
 
@@ -30,6 +30,13 @@ def test_uri_nonexistent():
     with pytest.raises(ValueError) as exc:
         active = Active(some_file, ncvar="")
     assert str(exc.value) == expected
+
+
+def test_get_missing_attributes():
+    """Test get missing attributes."""
+    ds = pyfive.File("tests/test_data/cesm2_native.nc")["TREFHT"]
+    missing_attrs = get_missing_attributes(ds)
+    assert missing_attrs == (np.float32(-900.0), np.float32(-900.0), None, None)
 
 
 def test_getitem():
