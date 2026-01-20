@@ -36,21 +36,35 @@ def test_mask_missing():
     np.testing.assert_array_equal(res_2, expected_2)
 
 
-def test_mask_missing_not_broadcastable():
+def test_mask_missing_missing_broadcastable():
     """Test mask missing when fill_value cant be broadcast to data."""
     data = np.ma.array(
         [[[-900., 33.], [33., -900], [33., 44.]]],
         mask=False,
-        fill_value=np.array([[-900.0, 33.], [-900.0, 33.]]),
+        fill_value=np.array([-900.0]),
         dtype=float
     )
-    missing = ([-900., 33.], np.array([-900., 33.]), None, None)
+    missing = (-900, np.array([-900., 33.]), None, None)
     res = st.mask_missing(data, missing)
     expected = np.ma.array(
         data,
         mask=[[[True, True], [False, False], [False, False]]]
     )
     np.testing.assert_array_equal(res, expected)
+
+
+def test_mask_missing_missing_not_broadcastable():
+    """Test mask missing when fill_value cant be broadcast to data."""
+    data = np.ma.array(
+        [[[-900., 33.], [33., -900], [33., 44.]]],
+        mask=False,
+        fill_value=np.array([-900.0]),
+        dtype=float
+    )
+    missing = (-900, np.array([-900., -900., 33.]), None, None)
+    msg = "Data and missing_value arrays are not brodcastable!" 
+    with pytest.raises(ValueError, match=msg):
+        st.mask_missing(data, missing)
 
 
 def test_reduce_chunk():
