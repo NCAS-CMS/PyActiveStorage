@@ -11,15 +11,18 @@ from activestorage import reductionist
 
 
 def make_response(content, status_code, dtype=None, shape=None, count=None):
-    response = requests.Response()
-    response._content = content
-    response.status_code = status_code
+    reduction_result = {
+        "bytes": content
+    }
     if dtype:
-        response.headers["x-activestorage-dtype"] = dtype
+        reduction_result["dtype"] = dtype
     if shape:
-        response.headers["x-activestorage-shape"] = shape
+        reduction_result["shape"] = shape
     if count:
-        response.headers["x-activestorage-count"] = count
+        reduction_result["count"] = count
+    response = requests.Response()
+    response._content = json.dumps(reduction_result)
+    response.status_code = status_code
     return response
 
 

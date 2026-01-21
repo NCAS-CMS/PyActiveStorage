@@ -235,15 +235,16 @@ def request(session: requests.Session, url: str, request_data: dict):
 
 def decode_result(response):
     """Decode a successful response, return as a 2-tuple of (numpy array or scalar, count)."""
-    dtype = response.headers['x-activestorage-dtype']
-    shape = json.loads(response.headers['x-activestorage-shape'])
+    reduction_result = json.loads(response.content)
+    dtype = reduction_result['dtype']
+    shape = reduction_result['shape']
 
     # Result
-    result = np.frombuffer(response.content, dtype=dtype)
+    result = np.frombuffer(bytes(reduction_result['bytes']), dtype=dtype)
     result = result.reshape(shape)
 
     # Counts
-    count = json.loads(response.headers['x-activestorage-count'])
+    count = reduction_result['count']
     # TODO: When reductionist is ready, we need to fix 'count'
 
     # Mask the result
