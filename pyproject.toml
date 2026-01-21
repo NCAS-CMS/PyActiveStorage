@@ -1,7 +1,7 @@
 [build-system]
 requires = [
-    "setuptools >= 40.6.0",
-    "setuptools_scm>=6.2",
+    "setuptools>=80",
+    "setuptools_scm>=8",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -45,7 +45,7 @@ dependencies = [
     "ujson",
 ]
 description = "A Python client for Active Storage"
-license = {text = "BSD License, Version 3-Clause"}
+license = {text = "MIT"}
 name = "PyActiveStorage"
 requires-python = ">=3.10"
 
