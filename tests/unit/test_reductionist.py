@@ -2,6 +2,7 @@ import os
 import sys
 from unittest import mock
 
+import json
 import numcodecs
 import numpy as np
 import pytest
