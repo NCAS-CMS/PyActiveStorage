@@ -47,11 +47,11 @@ def test_small_file_axis_0_1_compare_with_numpy():
 
     # use numpy and local test data
     ds = pyfive.File("tests/test_data/CMIP6-test.nc")["tas"]
-    minarr= np.min(ds[:], axis=(0, 1))
+    minarr= np.min(ds[:], axis=(0, 1), keepdims=True)
     print(len(minarr))  # 144
     print(min(minarr))  # 197.69595
-    assert len(result[0][0]) == len(minarr)
-    assert min(result[0][0]) == min(minarr)
+    assert np.min(result) == np.min(minarr)
+    np.testing.assert_array_equal(result, minarr)
 
 
 def build_active():
