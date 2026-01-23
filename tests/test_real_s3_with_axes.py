@@ -6,6 +6,37 @@ from activestorage.active import Active
 
 S3_BUCKET = "bnl"
 
+def build_active_small_file():
+    """Run an integration test with real data off S3 but with a small file."""
+    storage_options = {
+        'key': "f2d55c6dcfc7618b2c34e00b58df3cef",
+        'secret': "$/'#M{0{/4rVhp%n^(XeX$q@y#&(NM3W1->~N.Q6VP.5[@bLpi='nt]AfH)>78pT",
+        'client_kwargs': {'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"},  # final proxy
+    }
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft new Reductionist
+    bigger_file = "CMIP6-test.nc"  # tas; 15 (time) x 143 x 144 
+
+    test_file_uri = os.path.join(
+        S3_BUCKET,
+        bigger_file
+    )
+    print("S3 Test file path:", test_file_uri)
+    active = Active(test_file_uri, 'tas', storage_type="s3",
+                    storage_options=storage_options,
+                    active_storage_url=active_storage_url)
+
+    active._version = 2
+
+    return active
+
+
+def test_small_file_axis_0_1():
+    """Fails: activestorage.reductionist.ReductionistError: Reductionist error: HTTP 502: -"""
+    active = build_active_small_file()
+    result = active.min(axis=(0, 1))[:]
+    assert result == [[[[164.8125]]]]
+
+
 def build_active():
     """Run an integration test with real data off S3."""
     storage_options = {
