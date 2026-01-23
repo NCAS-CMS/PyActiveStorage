@@ -34,6 +34,7 @@ def test_small_file_axis_0_1():
     """Fails: activestorage.reductionist.ReductionistError: Reductionist error: HTTP 502: -"""
     active = build_active_small_file()
     result = active.min(axis=(0, 1))[:]
+    print("Reductionist final result", result)
     assert result == [[[[164.8125]]]]
 
 
