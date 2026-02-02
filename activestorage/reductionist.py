@@ -237,7 +237,6 @@ def decode_result(response):
     """Decode a successful response, return as a 2-tuple of (numpy array or scalar, count)."""
     reduction_result = json.loads(response.content)
     print("Reduction result: ", reduction_result)
-    print("Reduction result size: ", sys.getsizeof(reduction_result))
     dtype = reduction_result['dtype']
     shape = reduction_result['shape'] if "shape" in reduction_result else None
 
