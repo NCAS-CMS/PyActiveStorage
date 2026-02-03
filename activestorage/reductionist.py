@@ -1,5 +1,6 @@
 """Reductionist S3 Active Storage server storage interface module."""
 
+import cbor2 as cbor
 import collections.abc
 import http.client
 import json
@@ -92,7 +93,7 @@ def reduce_chunk(session,
     if DEBUG:
         print(f"Reductionist request data dictionary: {request_data}")
     api_operation = "sum" if operation == "mean" else operation or "select"
-    url = f'{server}/v1/{api_operation}/'
+    url = f'{server}/v2/{api_operation}/'
     response = request(session, url, request_data)
 
     if response.ok:
@@ -235,13 +236,13 @@ def request(session: requests.Session, url: str, request_data: dict):
 
 def decode_result(response):
     """Decode a successful response, return as a 2-tuple of (numpy array or scalar, count)."""
-    reduction_result = json.loads(response.content)
+    reduction_result = cbor.loads(response.content)
     print("Reduction result: ", reduction_result)
     dtype = reduction_result['dtype']
     shape = reduction_result['shape'] if "shape" in reduction_result else None
 
     # Result
-    result = np.frombuffer(bytes(reduction_result['bytes']), dtype=dtype)
+    result = np.frombuffer(reduction_result['bytes'], dtype=dtype)
     result = result.reshape(shape)
 
     # Counts
