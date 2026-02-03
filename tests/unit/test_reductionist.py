@@ -275,6 +275,7 @@ def test_reduce_chunk_not_found(mock_request):
     """Unit test for reduce_chunk testing 404 response."""
     result = b'"Not found"'
     response = make_response(result, 404)
+    print("Response", response, type(response))
     mock_request.return_value = response
 
     active_url = "https://s3.example.com"
