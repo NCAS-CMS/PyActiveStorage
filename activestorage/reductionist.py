@@ -237,7 +237,6 @@ def request(session: requests.Session, url: str, request_data: dict):
 def decode_result(response):
     """Decode a successful response, return as a 2-tuple of (numpy array or scalar, count)."""
     reduction_result = cbor.loads(response.content)
-    print("Reduction result: ", reduction_result)
     dtype = reduction_result['dtype']
     shape = reduction_result['shape'] if "shape" in reduction_result else None
 
