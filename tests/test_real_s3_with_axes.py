@@ -128,6 +128,8 @@ def test_no_axis():
 
 
 @pytest.mark.skip(reason="HIGHMEM: Reductionist returns a lot of response")
+# TODO this test gobbles large amounts of memory - it shouldn't - it should
+# perform like a standard global min - return a single number
 def test_no_axis_2():
     """
     Fails: it should pass: 'axis': (0, 1, 2, 3) default
@@ -139,6 +141,7 @@ def test_no_axis_2():
 
 
 @pytest.mark.skip(reason="HIGHMEM: Reductionist returns a lot of response")
+# TODO test on a machine with lots of memory
 def test_axis_0():
     active = build_active()
     result = active.min(axis=(0, ))[:]
@@ -155,6 +158,7 @@ def test_axis_0_1():
 
 
 @pytest.mark.skip(reason="HIGHMEM: Reductionist returns a lot of response")
+# TODO test on a machine with lots of memory
 def test_axis_1():
     active = build_active()
     result = active.min(axis=(1, ))[:]
