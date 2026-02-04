@@ -528,7 +528,6 @@ class Active:
             for future in concurrent.futures.as_completed(futures):
                 try:
                     result, count, out_selection = future.result()
-                    print("Adhoc: Result, count, out_selection", result, count, out_selection)
                 except Exception as exc:
                     print(exc)
                     raise
