@@ -32,9 +32,7 @@ def get_session(username: str, password: str,
 
 def reduce_chunk(session,
                  server,
-                 source,
-                 bucket,
-                 object,
+                 url,
                  offset,
                  size,
                  compression,
@@ -51,9 +49,7 @@ def reduce_chunk(session,
 
     :param server: Reductionist server URL
     :param cacert: Reductionist CA certificate path
-    :param source: S3 URL
-    :param bucket: S3 bucket
-    :param object: S3 object
+    :param url: object URL
     :param offset: offset of data in object
     :param size: size of data in object
     :param compression: optional `numcodecs.abc.Codec` compression codec
@@ -75,9 +71,7 @@ def reduce_chunk(session,
     :raises ReductionistError: if the request to Reductionist fails
     """
 
-    request_data = build_request_data(source,
-                                      bucket,
-                                      object,
+    request_data = build_request_data(url,
                                       offset,
                                       size,
                                       compression,
@@ -176,9 +170,7 @@ def encode_missing(missing):
     assert False, "Expected missing values not found"
 
 
-def build_request_data(source: str,
-                       bucket: str,
-                       object: str,
+def build_request_data(url: str,
                        offset: int,
                        size: int,
                        compression,
@@ -192,15 +184,13 @@ def build_request_data(source: str,
                        storage_type=None) -> dict:
     """Build request data for Reductionist API."""
     request_data = {
-        'source': source,
-        'bucket': bucket,
-        'object': object,
+        'interface_type': storage_type if storage_type else "s3",
+        'url': url,
         'dtype': dtype.name,
         'byte_order': encode_byte_order(dtype),
         'offset': int(offset),
         'size': int(size),
         'order': order,
-        'storage_type': storage_type,
     }
     if shape:
         request_data["shape"] = shape

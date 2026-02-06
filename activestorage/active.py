@@ -502,6 +502,8 @@ class Active:
                 session = reductionist.get_session(S3_ACCESS_KEY,
                                                    S3_SECRET_KEY,
                                                    S3_ACTIVE_STORAGE_CACERT)
+        elif self.storage_type == "https" and self._version == 2:
+            session = reductionist.get_session(None, None, False)
         else:
             session = None
 
@@ -663,9 +665,7 @@ class Active:
                 # Reductionist returns "count" as a list even for single elements
                 tmp, count = reductionist.reduce_chunk(session,
                                                        S3_ACTIVE_STORAGE_URL,
-                                                       S3_URL,
-                                                       bucket,
-                                                       object,
+                                                       f"{S3_URL}/{bucket}/{object}",
                                                        offset,
                                                        size,
                                                        compressor,
@@ -691,9 +691,7 @@ class Active:
                 tmp, count = reductionist.reduce_chunk(
                     session,
                     self.active_storage_url,
-                    self._get_endpoint_url(),
-                    bucket,
-                    object,
+                    f"{self._get_endpoint_url()}/{bucket}/{object}",
                     offset,
                     size,
                     compressor,
@@ -709,35 +707,24 @@ class Active:
         # located files; after that, we can pipe any regular https file through
         # to Reductionist, provided the https server is "closer" to Reductionist
         elif self.storage_type == "https" and self._version == 2:
-            # build a simple session
-            session = requests.Session()
-            session.auth = (None, None)
-            session.verify = False
-            bucket = "https"  # really doesn't matter
-
             # note the extra "storage_type" kwarg
-            # this currently makes Reductionist throw a wobbly
-            # E           activestorage.reductionist.ReductionistError: Reductionist error: HTTP 400: {"error": {"message": "request data is not valid", "caused_by": ["Failed to deserialize the JSON body into the target type", "storage_type: unknown field `storage_type`, expected one of `source`, `bucket`, `object`, `dtype`, `byte_order`, `offset`, `size`, `shape`, `order`, `selection`, `compression`, `filters`, `missing` at line 1 column 550"]}}  # noqa
-
             # Reductionist returns "count" as a list even for single elements
-            tmp, count = reductionist.reduce_chunk(
-                session,
-                "https://reductionist.jasmin.ac.uk/",  # Wacasoft
-                self.filename,
-                bucket,
-                self.filename,
-                offset,
-                size,
-                compressor,
-                filters,
-                self.missing,
-                np.dtype(ds.dtype),
-                chunks,
-                ds._order,
-                chunk_selection,
-                axis,
-                operation=self._method,
-                storage_type="https")
+            tmp, count = reductionist.reduce_chunk(session,
+                                                    S3_ACTIVE_STORAGE_URL,
+                                                    self.filename,
+                                                    offset,
+                                                    size,
+                                                    compressor,
+                                                    filters,
+                                                    self.missing,
+                                                    np.dtype(ds.dtype),
+                                                    chunks,
+                                                    ds._order,
+                                                    chunk_selection,
+                                                    axis,
+                                                    operation=self._method,
+                                                    storage_type="https")
+
         elif self.storage_type == 'ActivePosix' and self.version == 2:
             # This is where the DDN Fuse and Infinia wrappers go
             raise NotImplementedError
