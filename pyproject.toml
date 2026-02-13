@@ -34,6 +34,7 @@ dynamic = [
     "version",
 ]
 dependencies = [
+    "cbor2",
     "fsspec",
     "h5netcdf",
     "netcdf4",

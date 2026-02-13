@@ -7,6 +7,7 @@ channels:
 dependencies:
   - python >=3.10
   - pyfive >=0.5.0  # earliest support for advanced Pyfive
+  - cbor2
   - fsspec
   - h5netcdf
   - netcdf4

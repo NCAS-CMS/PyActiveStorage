@@ -2,6 +2,7 @@ import os
 import sys
 from unittest import mock
 
+import cbor2 as cbor
 import numcodecs
 import numpy as np
 import pytest
@@ -11,15 +12,19 @@ from activestorage import reductionist
 
 
 def make_response(content, status_code, dtype=None, shape=None, count=None):
-    response = requests.Response()
-    response._content = content
-    response.status_code = status_code
+    reduction_result = {
+        "bytes": content
+    }
     if dtype:
-        response.headers["x-activestorage-dtype"] = dtype
+        reduction_result["dtype"] = dtype
     if shape:
-        response.headers["x-activestorage-shape"] = shape
+        reduction_result["shape"] = shape
     if count:
-        response.headers["x-activestorage-count"] = count
+        reduction_result["count"] = count
+    print("Reduction result", reduction_result)
+    response = requests.Response()
+    response._content = cbor.dumps(reduction_result)
+    response.status_code = status_code
     return response
 
 
@@ -27,7 +32,7 @@ def make_response(content, status_code, dtype=None, shape=None, count=None):
 def test_reduce_chunk_defaults(mock_request):
     """Unit test for reduce_chunk with default arguments."""
     result = np.int32(134351386)
-    response = make_response(result.tobytes(), 200, "int32", "[]", "2")
+    response = make_response(result.tobytes(), 200, "int32", [], 2)
     mock_request.return_value = response
 
     active_url = "https://s3.example.com"
@@ -63,15 +68,15 @@ def test_reduce_chunk_defaults(mock_request):
     assert tmp == result
     assert count == 2
 
-    expected_url = f"{active_url}/v1/{operation}/"
+    expected_url = f"{active_url}/v2/{operation}/"
     expected_data = {
         "source": s3_url,
         "bucket": bucket,
         "object": object,
         "dtype": "int32",
+        "byte_order": sys.byteorder,
         'offset': 0,
         'size': 0,
-        "byte_order": sys.byteorder,
     }
     mock_request.assert_called_once_with(session, expected_url, expected_data)
 
@@ -86,7 +91,7 @@ def test_reduce_chunk_defaults(mock_request):
 def test_reduce_chunk_compression(mock_request, compression, filters):
     """Unit test for reduce_chunk with compression and filter arguments."""
     result = np.int32(134351386)
-    response = make_response(result.tobytes(), 200, "int32", "[]", "2")
+    response = make_response(result.tobytes(), 200, "int32", [], 2)
     mock_request.return_value = response
 
     active_url = "https://s3.example.com"
@@ -118,7 +123,7 @@ def test_reduce_chunk_compression(mock_request, compression, filters):
     assert tmp == result
     assert count == 2
 
-    expected_url = f"{active_url}/v1/{operation}/"
+    expected_url = f"{active_url}/v2/{operation}/"
     expected_data = {
         "source":
         s3_url,
@@ -149,6 +154,8 @@ def test_reduce_chunk_compression(mock_request, compression, filters):
             "id": filter.codec_id,
             "element_size": filter.elementsize
         } for filter in filters],
+        "axis":
+        axis,
     }
     mock_request.assert_called_once_with(session, expected_url, expected_data)
 
@@ -200,7 +207,7 @@ def test_reduce_chunk_missing(mock_request, missing):
     reduce_arg, api_arg = missing
 
     result = np.float32(-42.)
-    response = make_response(result.tobytes(), 200, "float32", "[]", "2")
+    response = make_response(result.tobytes(), 200, "float32", [], 2)
     mock_request.return_value = response
 
     active_url = "https://s3.example.com"
@@ -232,7 +239,7 @@ def test_reduce_chunk_missing(mock_request, missing):
     assert tmp == result
     assert count == 2
 
-    expected_url = f"{active_url}/v1/{operation}/"
+    expected_url = f"{active_url}/v2/{operation}/"
     expected_data = {
         "source":
         s3_url,
@@ -258,6 +265,8 @@ def test_reduce_chunk_missing(mock_request, missing):
         ]],
         "missing":
         api_arg,
+        "axis":
+        axis,
     }
     mock_request.assert_called_once_with(session, expected_url, expected_data)
 
@@ -267,6 +276,7 @@ def test_reduce_chunk_not_found(mock_request):
     """Unit test for reduce_chunk testing 404 response."""
     result = b'"Not found"'
     response = make_response(result, 404)
+    print("Response", response, type(response))
     mock_request.return_value = response
 
     active_url = "https://s3.example.com"
@@ -295,4 +305,5 @@ def test_reduce_chunk_not_found(mock_request):
                                   dtype, shape, order, chunk_selection, axis,
                                   operation)
 
-    assert str(exc.value) == 'Reductionist error: HTTP 404: "Not found"'
+    print("Not found exc from reductionist", str(exc.value))
+    assert str(exc.value) == 'Reductionist error: HTTP 404: -'
