@@ -6,6 +6,7 @@ import urllib
 from pathlib import Path
 from typing import Optional
 
+import aiohttp
 import fsspec
 import numpy as np
 import pyfive
@@ -83,14 +84,49 @@ def load_from_s3(uri, storage_options=None):
     return ds
 
 
-def load_from_https(uri):
+def get_endpoint_url(storage_options):
+    """
+    Return the endpoint_url defined in storage_options, or `None` if not defined.
+    """
+    if storage_options is not None:
+        endpoint_url = storage_options.get('endpoint_url')
+        if endpoint_url is not None:
+            return endpoint_url
+        client_kwargs = storage_options.get('client_kwargs')
+        if client_kwargs:
+            endpoint_url = client_kwargs.get('endpoint_url')
+            if endpoint_url is not None:
+                return endpoint_url
+    return None
+
+
+def load_from_https(uri, storage_options=None):
     """
     Load a pyfive.high_level.Dataset from a
     netCDF4 file on an https server (NGINX).
     """
-    # TODO need to test if NGINX server behind https://
-    fs = fsspec.filesystem('http')
-    http_file = fs.open(uri, 'rb')
+    if storage_options is None:
+        # TODO: fallback defaults?
+        #storage_options = {
+        #    'username': None,
+        #    'password': None,
+        #    'client_kwargs': {'endpoint_url': "http://localhost:8000"},  # final proxy
+        #}
+        nop
+    else:
+        username = storage_options.get("username", None)
+        password = storage_options.get("password", None)
+        client_kwargs = {
+            'auth': aiohttp.BasicAuth(username, password) if username and password else None
+        }
+        # This works for both http and https endpoints
+        fs = fsspec.filesystem('http', **client_kwargs)
+
+    # TODO: use default or throw an error?
+    endpoint_url = get_endpoint_url(storage_options)
+
+    http_file = fs.open(f"{endpoint_url}/{uri}", 'rb')
+
     ds = pyfive.File(http_file)
     print(f"Dataset loaded from https with Pyfive: {uri}")
     return ds
@@ -272,7 +308,7 @@ class Active:
         elif self.storage_type == "s3":
             nc = load_from_s3(self.uri, self.storage_options)
         elif self.storage_type == "https":
-            nc = load_from_https(self.uri)
+            nc = load_from_https(self.uri, self.storage_options)
         self.filename = self.uri
         self.ds = nc[ncvar]
         print("Loaded dataset", self.ds)
@@ -503,7 +539,14 @@ class Active:
                                                    S3_SECRET_KEY,
                                                    S3_ACTIVE_STORAGE_CACERT)
         elif self.storage_type == "https" and self._version == 2:
-            session = reductionist.get_session(None, None, False)
+            username, password = None, None
+            if self.storage_options is not None:
+                username = self.storage_options.get("username", None)
+                password = self.storage_options.get("password", None)
+            if username and password:
+                session = reductionist.get_session(username, password, None)
+            else:
+                session = reductionist.get_session(None, None, None)
         else:
             session = None
 
@@ -591,15 +634,9 @@ class Active:
 
     def _get_endpoint_url(self):
         """Return the endpoint_url of an S3 object store, or `None`"""
-        endpoint_url = self.storage_options.get('endpoint_url')
+        endpoint_url = get_endpoint_url(self.storage_options)
         if endpoint_url is not None:
             return endpoint_url
-
-        client_kwargs = self.storage_options.get('client_kwargs')
-        if client_kwargs:
-            endpoint_url = client_kwargs.get('endpoint_url')
-            if endpoint_url is not None:
-                return endpoint_url
 
         return f"http://{urllib.parse.urlparse(self.filename).netloc}"
 
@@ -710,8 +747,8 @@ class Active:
             # note the extra "storage_type" kwarg
             # Reductionist returns "count" as a list even for single elements
             tmp, count = reductionist.reduce_chunk(session,
-                                                    S3_ACTIVE_STORAGE_URL,
-                                                    self.filename,
+                                                    self.active_storage_url,
+                                                    f"{self._get_endpoint_url()}/{self.filename}",
                                                     offset,
                                                     size,
                                                     compressor,
