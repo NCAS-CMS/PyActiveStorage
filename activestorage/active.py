@@ -106,13 +106,18 @@ def load_from_https(uri, storage_options=None):
     netCDF4 file on an https server (NGINX).
     """
     if storage_options is None:
+        # for a basic case we can:
         # TODO: fallback defaults?
-        #storage_options = {
-        #    'username': None,
-        #    'password': None,
-        #    'client_kwargs': {'endpoint_url': "http://localhost:8000"},  # final proxy
-        #}
-        nop
+        # storage_options = {
+        #     'username': None,
+        #     'password': None,
+        #     'client_kwargs': {'endpoint_url': "http://localhost:8000"},  # final proxy
+        # }
+        # or we can simply load the file over https(s) with auth=None:
+        client_kwargs = {'auth': None}
+        # This works for both http and https endpoints
+        fs = fsspec.filesystem('http', **client_kwargs)
+        http_file = fs.open(uri, 'rb')
     else:
         username = storage_options.get("username", None)
         password = storage_options.get("password", None)
@@ -122,10 +127,9 @@ def load_from_https(uri, storage_options=None):
         # This works for both http and https endpoints
         fs = fsspec.filesystem('http', **client_kwargs)
 
-    # TODO: use default or throw an error?
-    endpoint_url = get_endpoint_url(storage_options)
-
-    http_file = fs.open(f"{endpoint_url}/{uri}", 'rb')
+        # TODO: use default or throw an error?
+        endpoint_url = get_endpoint_url(storage_options)
+        http_file = fs.open(f"{endpoint_url}/{uri}", 'rb')
 
     ds = pyfive.File(http_file)
     print(f"Dataset loaded from https with Pyfive: {uri}")
