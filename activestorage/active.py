@@ -126,10 +126,7 @@ def load_from_https(uri, storage_options=None):
         }
         # This works for both http and https endpoints
         fs = fsspec.filesystem('http', **client_kwargs)
-
-        # TODO: use default or throw an error?
-        endpoint_url = get_endpoint_url(storage_options)
-        http_file = fs.open(f"{endpoint_url}/{uri}", 'rb')
+        http_file = fs.open(uri, 'rb')
 
     ds = pyfive.File(http_file)
     print(f"Dataset loaded from https with Pyfive: {uri}")
@@ -752,7 +749,7 @@ class Active:
             # Reductionist returns "count" as a list even for single elements
             tmp, count = reductionist.reduce_chunk(session,
                                                     self.active_storage_url,
-                                                    f"{self._get_endpoint_url()}/{self.filename}",
+                                                    f"{self.uri}",
                                                     offset,
                                                     size,
                                                     compressor,
