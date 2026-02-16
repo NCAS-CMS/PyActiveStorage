@@ -11,7 +11,6 @@ S3_BUCKET = "bnl"
 # this could be a slow test on GHA depending on network load
 # also Githb machines are very far from Oxford
 @pytest.mark.slow
-@pytest.mark.skip(reason="Skip until we change Reductionist API via pull/300")
 def test_s3_dataset():
     """Run somewhat as the 'gold' test."""
     # NOTE: "https://uor-aces-o.s3-ext.jc.rl.ac.uk" is the stable S3 JASMIN
