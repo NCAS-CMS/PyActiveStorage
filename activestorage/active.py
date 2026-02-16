@@ -748,20 +748,20 @@ class Active:
             # note the extra "storage_type" kwarg
             # Reductionist returns "count" as a list even for single elements
             tmp, count = reductionist.reduce_chunk(session,
-                                                    self.active_storage_url,
-                                                    f"{self.uri}",
-                                                    offset,
-                                                    size,
-                                                    compressor,
-                                                    filters,
-                                                    self.missing,
-                                                    np.dtype(ds.dtype),
-                                                    chunks,
-                                                    ds._order,
-                                                    chunk_selection,
-                                                    axis,
-                                                    operation=self._method,
-                                                    storage_type="https")
+                                                   self.active_storage_url,
+                                                   f"{self.uri}",
+                                                   offset,
+                                                   size,
+                                                   compressor,
+                                                   filters,
+                                                   self.missing,
+                                                   np.dtype(ds.dtype),
+                                                   chunks,
+                                                   ds._order,
+                                                   chunk_selection,
+                                                   axis,
+                                                   operation=self._method,
+                                                   storage_type="https")
 
         elif self.storage_type == 'ActivePosix' and self.version == 2:
             # This is where the DDN Fuse and Infinia wrappers go
