@@ -59,8 +59,8 @@ def test_reduce_chunk_defaults(mock_request):
     # FIXME this is hacky and comes from peasantly setting the cacert to False in reductionist.py
     assert not session.verify
 
-    tmp, count = reductionist.reduce_chunk(session, active_url, s3_url, bucket,
-                                           object, offset, size, compression,
+    tmp, count = reductionist.reduce_chunk(session, active_url, s3_url,
+                                           offset, size, compression,
                                            filters, missing, dtype, shape,
                                            order, chunk_selection, axis,
                                            operation)
@@ -70,9 +70,8 @@ def test_reduce_chunk_defaults(mock_request):
 
     expected_url = f"{active_url}/v2/{operation}/"
     expected_data = {
-        "source": s3_url,
-        "bucket": bucket,
-        "object": object,
+        "interface_type": "s3",
+        "url": s3_url,
         "dtype": "int32",
         "byte_order": sys.byteorder,
         'offset': 0,
@@ -114,8 +113,8 @@ def test_reduce_chunk_compression(mock_request, compression, filters):
     session = reductionist.get_session(access_key, secret_key, cacert)
     assert session.verify == cacert
 
-    tmp, count = reductionist.reduce_chunk(session, active_url, s3_url, bucket,
-                                           object, offset, size, compression,
+    tmp, count = reductionist.reduce_chunk(session, active_url, s3_url,
+                                           offset, size, compression,
                                            filters, missing, dtype, shape,
                                            order, chunk_selection, axis,
                                            operation)
@@ -125,12 +124,9 @@ def test_reduce_chunk_compression(mock_request, compression, filters):
 
     expected_url = f"{active_url}/v2/{operation}/"
     expected_data = {
-        "source":
+        "interface_type": "s3",
+        "url":
         s3_url,
-        "bucket":
-        bucket,
-        "object":
-        object,
         "dtype":
         "int32",
         "byte_order":
@@ -230,8 +226,8 @@ def test_reduce_chunk_missing(mock_request, missing):
     operation = "min"
 
     session = reductionist.get_session(access_key, secret_key, cacert)
-    tmp, count = reductionist.reduce_chunk(session, active_url, s3_url, bucket,
-                                           object, offset, size, compression,
+    tmp, count = reductionist.reduce_chunk(session, active_url, s3_url,
+                                           offset, size, compression,
                                            filters, missing, dtype, shape,
                                            order, chunk_selection, axis,
                                            operation)
@@ -241,12 +237,9 @@ def test_reduce_chunk_missing(mock_request, missing):
 
     expected_url = f"{active_url}/v2/{operation}/"
     expected_data = {
-        "source":
+        "interface_type": "s3",
+        "url":
         s3_url,
-        "bucket":
-        bucket,
-        "object":
-        object,
         "dtype":
         "float32",
         "byte_order":
@@ -300,7 +293,7 @@ def test_reduce_chunk_not_found(mock_request):
 
     session = reductionist.get_session(access_key, secret_key, cacert)
     with pytest.raises(reductionist.ReductionistError) as exc:
-        reductionist.reduce_chunk(session, active_url, s3_url, bucket, object,
+        reductionist.reduce_chunk(session, active_url, s3_url,
                                   offset, size, compression, filters, missing,
                                   dtype, shape, order, chunk_selection, axis,
                                   operation)
