@@ -97,7 +97,6 @@ def get_endpoint_url(storage_options):
             endpoint_url = client_kwargs.get('endpoint_url')
             if endpoint_url is not None:
                 return endpoint_url
-    return None
 
 
 def load_from_https(uri, storage_options=None):
@@ -516,6 +515,10 @@ class Active:
         if self.storage_type == "s3" and self._version == 2:
             if self.storage_options is not None:
                 key, secret = None, None
+                if self.storage_options.get("anon", None) is True:
+                    print("Reductionist session for Anon S3 bucket.")
+                    session = reductionist.get_session(
+                        None, None, S3_ACTIVE_STORAGE_CACERT)
                 if "key" in self.storage_options:
                     key = self.storage_options["key"]
                 if "secret" in self.storage_options:
@@ -629,7 +632,6 @@ class Active:
         endpoint_url = get_endpoint_url(self.storage_options)
         if endpoint_url is not None:
             return endpoint_url
-
         return f"http://{urllib.parse.urlparse(self.filename).netloc}"
 
     def _process_chunk(self,
@@ -675,7 +677,6 @@ class Active:
 
         elif self.storage_type == "s3" and self._version == 2:
             # S3: pass in pre-configured storage options (credentials)
-            # print("S3 rfile is:", self.filename)
             parsed_url = urllib.parse.urlparse(self.filename)
 
             bucket = parsed_url.netloc
@@ -686,8 +687,6 @@ class Active:
             if bucket == "":
                 bucket = os.path.dirname(object)
                 object = os.path.basename(object)
-            # print("S3 bucket:", bucket)
-            # print("S3 file:", object)
             if self.storage_options is None:
 
                 # for the moment we need to force ds.dtype to be a numpy type
@@ -707,15 +706,9 @@ class Active:
                                                        axis,
                                                        operation=self._method)
             else:
-                # special case for "anon=True" buckets that work only with e.g.
-                # fs = s3fs.S3FileSystem(anon=True, client_kwargs={'endpoint_url': S3_URL})
-                # where file uri = bucketX/fileY.mc
-                # print("S3 Storage options to Reductionist:", self.storage_options)
                 if self.storage_options.get("anon", None) is True:
-                    bucket = os.path.dirname(parsed_url.path)  # bucketX
-                    object = os.path.basename(parsed_url.path)  # fileY
-                    print("S3 anon=True Bucket and File:", bucket, object)
-
+                    bucket = os.path.dirname(parsed_url.path)
+                    object = os.path.basename(parsed_url.path)
                 # Reductionist returns "count" as a list even for single elements
                 tmp, count = reductionist.reduce_chunk(
                     session,
