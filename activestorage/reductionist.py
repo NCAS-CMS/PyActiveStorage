@@ -211,9 +211,6 @@ def build_request_data(url: str,
 
     if axis is not None:
         request_data['axis'] = axis
-    elif len(axis) != len(shape):
-        raise ValueError(
-            "Can't reduce over axis subset unitl reductionist is ready")
 
     return {k: v for k, v in request_data.items() if v is not None}
 
