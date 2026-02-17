@@ -11,7 +11,6 @@ import numcodecs
 import numpy as np
 import requests
 
-REDUCTIONIST_AXIS_READY = True
 
 DEBUG = 0
 
@@ -25,6 +24,8 @@ def get_session(username: str, password: str,
     :returns: a client session object.
     """
     session = requests.Session()
+    if username is None and password is None:
+        return session
     session.auth = (username, password)
     session.verify = cacert or False
     return session
@@ -83,7 +84,6 @@ def reduce_chunk(session,
                                       chunk_selection,
                                       axis,
                                       storage_type=storage_type)
-    print(f"Reductionist request data dictionary: {request_data}")
     if DEBUG:
         print(f"Reductionist request data dictionary: {request_data}")
     api_operation = "sum" if operation == "mean" else operation or "select"
@@ -206,9 +206,9 @@ def build_request_data(url: str,
     if any(missing):
         request_data["missing"] = encode_missing(missing)
 
-    if REDUCTIONIST_AXIS_READY:
+    if axis is not None:
         request_data['axis'] = axis
-    elif axis is not None and len(axis) != len(shape):
+    elif len(axis) != len(shape):
         raise ValueError(
             "Can't reduce over axis subset unitl reductionist is ready")
 
