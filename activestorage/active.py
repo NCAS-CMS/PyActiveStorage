@@ -661,7 +661,6 @@ class Active:
         axis = self._axis
 
         if self.storage_type == 's3' and self._version == 1:
-
             tmp, count = reduce_opens3_chunk(ds._fh,
                                              offset,
                                              size,
@@ -678,7 +677,6 @@ class Active:
         elif self.storage_type == "s3" and self._version == 2:
             # S3: pass in pre-configured storage options (credentials)
             parsed_url = urllib.parse.urlparse(self.filename)
-
             bucket = parsed_url.netloc
             object = parsed_url.path
 
@@ -725,12 +723,7 @@ class Active:
                     chunk_selection,
                     axis,
                     operation=self._method)
-        # this is for testing ONLY until Reductionist is able to handle https
-        # located files; after that, we can pipe any regular https file through
-        # to Reductionist, provided the https server is "closer" to Reductionist
         elif self.storage_type == "https" and self._version == 2:
-            # note the extra "storage_type" kwarg
-            # Reductionist returns "count" as a list even for single elements
             tmp, count = reductionist.reduce_chunk(session,
                                                    self.active_storage_url,
                                                    f"{self.uri}",
