@@ -77,6 +77,21 @@ def test_https():
     print(r_min)
     assert r_min[0, 0] == f_1
     assert r_min[143, 191] == f_2
+
+    # basic auth on; username and password
+    # should work with both Active and Reductionist but we
+    # don't have such an NGINX-auth-ed file yet
+    active = Active(test_file_uri, "ta",
+                    storage_type="https",
+                    storage_options={"username": None, "password": None},
+                    active_storage_url=active_storage_url)
+    active._version = 2
+    result = active.min(axis=(0, 1))[:]
+    print("Result is", result)
+    print("Result shape is", result.shape)
+    assert result.shape == (1, 1, 144, 192)
+    assert result[0, 0, 0, 0] == f_1
+    assert result[0, 0, 143, 191] == f_2
     
 
 @pytest.mark.skip(
