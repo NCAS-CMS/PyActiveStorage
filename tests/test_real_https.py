@@ -4,12 +4,77 @@ import numpy as np
 import pytest
 
 import activestorage
+from requests.exceptions import MissingSchema
 from activestorage.active import Active, load_from_https
 
 
+def test_https():
+    """
+    Run a https test with a small enough file for the test
+    not to be marked as slow. We test all aspects here.
+    File: https://esgf.ceda.ac.uk/thredds/fileServer/esg_cmip6/CMIP6/CMIP/MOHC/UKESM1-1-LL/piControl/r1i1p1f2/Amon/ta/gn/latest/ta_Amon_UKESM1-1-LL_piControl_r1i1p1f2_gn_274301-274912.nc
+    Size: 75 MiB, variable: ta
+    Entire test uses at most 400M RES memory.
+    """
+    test_file_uri = "https://esgf.ceda.ac.uk/thredds/fileServer/esg_cmip6/CMIP6/CMIP/MOHC/UKESM1-1-LL/piControl/r1i1p1f2/Amon/ta/gn/latest/ta_Amon_UKESM1-1-LL_piControl_r1i1p1f2_gn_274301-274912.nc"
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft new Reductionist
+
+    # declared storage type, no activa storage URL
+    active = Active(test_file_uri, "ta",
+                    storage_type="https", )
+    active._version = 2
+    with pytest.raises(MissingSchema):
+        result = active.min()[0:3, 4:6, 7:9]
+
+    # declared storage type
+    active = Active(test_file_uri, "ta",
+                    storage_type="https",
+                    active_storage_url=active_storage_url)
+    active._version = 2
+    result = active.min()[0:3, 4:6, 7:9]
+    print("Result is", result)
+    assert result == np.array([220.3180694580078], dtype="float32")
+
+    # inferred storage type
+    active = Active(test_file_uri, "ta",
+                    active_storage_url=active_storage_url)
+    active._version = 2
+    result = active.min()[0:3, 4:6, 7:9]
+    print("Result is", result)
+    assert result == np.array([220.3180694580078], dtype="float32")
+
+    # set these as fixed floats
+    f_1 = 176.882080078125
+    f_2 = 190.227783203125
+
+    # inferred storage type, pop axis
+    active = Active(test_file_uri, "ta",
+                    storage_type="https",
+                    active_storage_url=active_storage_url)
+    active._version = 2
+    result = active.min(axis=(0, 1))[:]
+    print("Result is", result)
+    print("Result shape is", result.shape)
+    assert result.shape == (1, 1, 144, 192)
+    assert result[0, 0, 0, 0] == f_1
+    assert result[0, 0, 143, 191] == f_2
+
+    # load dataset with Pyfive
+    dataset = load_from_https(test_file_uri)
+    av = dataset['ta']
+    r_min = np.min(av[:], axis=(0, 1))
+    # NOTE the difference in shapes:
+    # - Reductionist: (1, 1, 144, 192)
+    # - numpy: (144, 192)
+    # Contents is identical though.
+    print(r_min)
+    assert r_min[0, 0] == f_1
+    assert r_min[143, 191] == f_2
+    
+
 @pytest.mark.skip(
     reason="save time: test_https_implicit_storage is more general.")
-def test_https():
+def test_https_v1():
     """Run a true test with a https FILE."""
     test_file_uri = "https://esgf.ceda.ac.uk/thredds/fileServer/esg_cmip6/CMIP6/AerChemMIP/MOHC/UKESM1-0-LL/ssp370SST-lowNTCF/r1i1p1f2/Amon/cl/gn/latest/cl_Amon_UKESM1-0-LL_ssp370SST-lowNTCF_r1i1p1f2_gn_205001-209912.nc"
 
@@ -21,7 +86,7 @@ def test_https():
 
 
 @pytest.mark.skip(reason="save time: 2xdata = 2xtime compared to test_https.")
-def test_https_100years():
+def test_https_v1_100years_file():
     """Run a true test with a https FILE."""
     test_file_uri = "https://esgf.ceda.ac.uk/thredds/fileServer/esg_cmip6/CMIP6/CMIP/MOHC/UKESM1-1-LL/historical/r1i1p1f2/Amon/pr/gn/latest/pr_Amon_UKESM1-1-LL_historical_r1i1p1f2_gn_195001-201412.nc"
     active = Active(test_file_uri, "pr")
@@ -31,10 +96,8 @@ def test_https_100years():
     assert result == np.array([5.4734613e-07], dtype="float32")
 
 
-# this could be a slow test on GHA depending on network load
-# also Githb machines are very far from Oxford
 @pytest.mark.slow
-def test_https_reductionist():
+def test_https_bigger_file():
     """Run a true test with a https FILE."""
     test_file_uri = "https://esgf.ceda.ac.uk/thredds/fileServer/esg_cmip6/CMIP6/AerChemMIP/MOHC/UKESM1-0-LL/ssp370SST-lowNTCF/r1i1p1f2/Amon/cl/gn/latest/cl_Amon_UKESM1-0-LL_ssp370SST-lowNTCF_r1i1p1f2_gn_205001-209912.nc"
     active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft new Reductionist
@@ -45,8 +108,6 @@ def test_https_reductionist():
     assert result == np.array([0.6909787], dtype="float32")
 
 
-# this could be a slow test on GHA depending on network load
-# also Githb machines are very far from Oxford
 @pytest.mark.slow
 def test_https_implicit_storage():
     """Run a true test with a https FILE."""
@@ -100,8 +161,6 @@ def test_https_dataset():
     assert result == np.array([0.6909787], dtype="float32")
 
 
-# this could be a slow test on GHA depending on network load
-# also Githb machines are very far from Oxford
 @pytest.mark.slow
 def test_https_dataset_implicit_storage():
     """Run a true test with a https DATASET."""
