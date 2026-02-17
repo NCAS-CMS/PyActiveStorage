@@ -6,6 +6,7 @@ import urllib
 from pathlib import Path
 from typing import Optional
 
+import aiohttp
 import fsspec
 import numpy as np
 import pyfive
@@ -83,14 +84,40 @@ def load_from_s3(uri, storage_options=None):
     return ds
 
 
-def load_from_https(uri):
+def get_endpoint_url(storage_options):
+    """
+    Return the endpoint_url defined in storage_options, or `None` if not defined.
+    """
+    if storage_options is not None:
+        endpoint_url = storage_options.get('endpoint_url')
+        if endpoint_url is not None:
+            return endpoint_url
+        client_kwargs = storage_options.get('client_kwargs')
+        if client_kwargs:
+            endpoint_url = client_kwargs.get('endpoint_url')
+            if endpoint_url is not None:
+                return endpoint_url
+
+
+def load_from_https(uri, storage_options=None):
     """
     Load a pyfive.high_level.Dataset from a
     netCDF4 file on an https server (NGINX).
+    This works for both http and https endpoints.
     """
-    # TODO need to test if NGINX server behind https://
-    fs = fsspec.filesystem('http')
-    http_file = fs.open(uri, 'rb')
+    if storage_options is None:
+        client_kwargs = {'auth': None}
+        fs = fsspec.filesystem('http', **client_kwargs)
+        http_file = fs.open(uri, 'rb')
+    else:
+        username = storage_options.get("username", None)
+        password = storage_options.get("password", None)
+        client_kwargs = {
+            'auth': aiohttp.BasicAuth(username, password) if username and password else None
+        }
+        fs = fsspec.filesystem('http', **client_kwargs)
+        http_file = fs.open(uri, 'rb')
+
     ds = pyfive.File(http_file)
     print(f"Dataset loaded from https with Pyfive: {uri}")
     return ds
@@ -272,9 +299,10 @@ class Active:
         elif self.storage_type == "s3":
             nc = load_from_s3(self.uri, self.storage_options)
         elif self.storage_type == "https":
-            nc = load_from_https(self.uri)
+            nc = load_from_https(self.uri, self.storage_options)
         self.filename = self.uri
         self.ds = nc[ncvar]
+        print("Loaded dataset", self.ds)
 
     def __get_missing_attributes(self):
         if self.ds is None:
@@ -365,19 +393,22 @@ class Active:
 
         self._method = value
 
-    @property
-    def mean(self):
+    def mean(self, axis=None):
         self._method = "mean"
+        if axis is not None:
+            self._axis = axis
         return self
 
-    @property
-    def min(self):
+    def min(self, axis=None):
         self._method = "min"
+        if axis is not None:
+            self._axis = axis
         return self
 
-    @property
-    def max(self):
+    def max(self, axis=None):
         self._method = "max"
+        if axis is not None:
+            self._axis = axis
         return self
 
     @property
@@ -484,6 +515,10 @@ class Active:
         if self.storage_type == "s3" and self._version == 2:
             if self.storage_options is not None:
                 key, secret = None, None
+                if self.storage_options.get("anon", None) is True:
+                    print("Reductionist session for Anon S3 bucket.")
+                    session = reductionist.get_session(
+                        None, None, S3_ACTIVE_STORAGE_CACERT)
                 if "key" in self.storage_options:
                     key = self.storage_options["key"]
                 if "secret" in self.storage_options:
@@ -498,6 +533,15 @@ class Active:
                 session = reductionist.get_session(S3_ACCESS_KEY,
                                                    S3_SECRET_KEY,
                                                    S3_ACTIVE_STORAGE_CACERT)
+        elif self.storage_type == "https" and self._version == 2:
+            username, password = None, None
+            if self.storage_options is not None:
+                username = self.storage_options.get("username", None)
+                password = self.storage_options.get("password", None)
+            if username and password:
+                session = reductionist.get_session(username, password, None)
+            else:
+                session = reductionist.get_session(None, None, None)
         else:
             session = None
 
@@ -585,16 +629,9 @@ class Active:
 
     def _get_endpoint_url(self):
         """Return the endpoint_url of an S3 object store, or `None`"""
-        endpoint_url = self.storage_options.get('endpoint_url')
+        endpoint_url = get_endpoint_url(self.storage_options)
         if endpoint_url is not None:
             return endpoint_url
-
-        client_kwargs = self.storage_options.get('client_kwargs')
-        if client_kwargs:
-            endpoint_url = client_kwargs.get('endpoint_url')
-            if endpoint_url is not None:
-                return endpoint_url
-
         return f"http://{urllib.parse.urlparse(self.filename).netloc}"
 
     def _process_chunk(self,
@@ -624,7 +661,6 @@ class Active:
         axis = self._axis
 
         if self.storage_type == 's3' and self._version == 1:
-
             tmp, count = reduce_opens3_chunk(ds._fh,
                                              offset,
                                              size,
@@ -640,9 +676,7 @@ class Active:
 
         elif self.storage_type == "s3" and self._version == 2:
             # S3: pass in pre-configured storage options (credentials)
-            # print("S3 rfile is:", self.filename)
             parsed_url = urllib.parse.urlparse(self.filename)
-
             bucket = parsed_url.netloc
             object = parsed_url.path
 
@@ -651,17 +685,13 @@ class Active:
             if bucket == "":
                 bucket = os.path.dirname(object)
                 object = os.path.basename(object)
-            # print("S3 bucket:", bucket)
-            # print("S3 file:", object)
             if self.storage_options is None:
 
                 # for the moment we need to force ds.dtype to be a numpy type
                 # Reductionist returns "count" as a list even for single elements
                 tmp, count = reductionist.reduce_chunk(session,
                                                        S3_ACTIVE_STORAGE_URL,
-                                                       S3_URL,
-                                                       bucket,
-                                                       object,
+                                                       f"{S3_URL}/{bucket}/{object}",
                                                        offset,
                                                        size,
                                                        compressor,
@@ -674,22 +704,14 @@ class Active:
                                                        axis,
                                                        operation=self._method)
             else:
-                # special case for "anon=True" buckets that work only with e.g.
-                # fs = s3fs.S3FileSystem(anon=True, client_kwargs={'endpoint_url': S3_URL})
-                # where file uri = bucketX/fileY.mc
-                # print("S3 Storage options to Reductionist:", self.storage_options)
                 if self.storage_options.get("anon", None) is True:
-                    bucket = os.path.dirname(parsed_url.path)  # bucketX
-                    object = os.path.basename(parsed_url.path)  # fileY
-                    print("S3 anon=True Bucket and File:", bucket, object)
-
+                    bucket = os.path.dirname(parsed_url.path)
+                    object = os.path.basename(parsed_url.path)
                 # Reductionist returns "count" as a list even for single elements
                 tmp, count = reductionist.reduce_chunk(
                     session,
                     self.active_storage_url,
-                    self._get_endpoint_url(),
-                    bucket,
-                    object,
+                    f"{self._get_endpoint_url()}/{bucket}/{object}",
                     offset,
                     size,
                     compressor,
@@ -701,39 +723,23 @@ class Active:
                     chunk_selection,
                     axis,
                     operation=self._method)
-        # this is for testing ONLY until Reductionist is able to handle https
-        # located files; after that, we can pipe any regular https file through
-        # to Reductionist, provided the https server is "closer" to Reductionist
         elif self.storage_type == "https" and self._version == 2:
-            # build a simple session
-            session = requests.Session()
-            session.auth = (None, None)
-            session.verify = False
-            bucket = "https"  # really doesn't matter
+            tmp, count = reductionist.reduce_chunk(session,
+                                                   self.active_storage_url,
+                                                   f"{self.uri}",
+                                                   offset,
+                                                   size,
+                                                   compressor,
+                                                   filters,
+                                                   self.missing,
+                                                   np.dtype(ds.dtype),
+                                                   chunks,
+                                                   ds._order,
+                                                   chunk_selection,
+                                                   axis,
+                                                   operation=self._method,
+                                                   storage_type="https")
 
-            # note the extra "storage_type" kwarg
-            # this currently makes Reductionist throw a wobbly
-            # E           activestorage.reductionist.ReductionistError: Reductionist error: HTTP 400: {"error": {"message": "request data is not valid", "caused_by": ["Failed to deserialize the JSON body into the target type", "storage_type: unknown field `storage_type`, expected one of `source`, `bucket`, `object`, `dtype`, `byte_order`, `offset`, `size`, `shape`, `order`, `selection`, `compression`, `filters`, `missing` at line 1 column 550"]}}  # noqa
-
-            # Reductionist returns "count" as a list even for single elements
-            tmp, count = reductionist.reduce_chunk(
-                session,
-                "https://reductionist.jasmin.ac.uk/",  # Wacasoft
-                self.filename,
-                bucket,
-                self.filename,
-                offset,
-                size,
-                compressor,
-                filters,
-                self.missing,
-                np.dtype(ds.dtype),
-                chunks,
-                ds._order,
-                chunk_selection,
-                axis,
-                operation=self._method,
-                storage_type="https")
         elif self.storage_type == 'ActivePosix' and self.version == 2:
             # This is where the DDN Fuse and Infinia wrappers go
             raise NotImplementedError

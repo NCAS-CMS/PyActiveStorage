@@ -1,5 +1,6 @@
 """Reductionist S3 Active Storage server storage interface module."""
 
+import cbor2 as cbor
 import collections.abc
 import http.client
 import json
@@ -10,7 +11,6 @@ import numcodecs
 import numpy as np
 import requests
 
-REDUCTIONIST_AXIS_READY = False
 
 DEBUG = 0
 
@@ -24,6 +24,11 @@ def get_session(username: str, password: str,
     :returns: a client session object.
     """
     session = requests.Session()
+    # TODO Stack-HPC
+    # we need to allow Anon buckets. though this
+    # will break connection to data server
+    # if username is None and password is None:
+    #     return session
     session.auth = (username, password)
     session.verify = cacert or False
     return session
@@ -31,9 +36,7 @@ def get_session(username: str, password: str,
 
 def reduce_chunk(session,
                  server,
-                 source,
-                 bucket,
-                 object,
+                 url,
                  offset,
                  size,
                  compression,
@@ -50,9 +53,7 @@ def reduce_chunk(session,
 
     :param server: Reductionist server URL
     :param cacert: Reductionist CA certificate path
-    :param source: S3 URL
-    :param bucket: S3 bucket
-    :param object: S3 object
+    :param url: object URL
     :param offset: offset of data in object
     :param size: size of data in object
     :param compression: optional `numcodecs.abc.Codec` compression codec
@@ -74,9 +75,7 @@ def reduce_chunk(session,
     :raises ReductionistError: if the request to Reductionist fails
     """
 
-    request_data = build_request_data(source,
-                                      bucket,
-                                      object,
+    request_data = build_request_data(url,
                                       offset,
                                       size,
                                       compression,
@@ -91,7 +90,7 @@ def reduce_chunk(session,
     if DEBUG:
         print(f"Reductionist request data dictionary: {request_data}")
     api_operation = "sum" if operation == "mean" else operation or "select"
-    url = f'{server}/v1/{api_operation}/'
+    url = f'{server}/v2/{api_operation}/'
     response = request(session, url, request_data)
 
     if response.ok:
@@ -174,9 +173,7 @@ def encode_missing(missing):
     assert False, "Expected missing values not found"
 
 
-def build_request_data(source: str,
-                       bucket: str,
-                       object: str,
+def build_request_data(url: str,
                        offset: int,
                        size: int,
                        compression,
@@ -190,15 +187,13 @@ def build_request_data(source: str,
                        storage_type=None) -> dict:
     """Build request data for Reductionist API."""
     request_data = {
-        'source': source,
-        'bucket': bucket,
-        'object': object,
+        'interface_type': storage_type if storage_type else "s3",
+        'url': url,
         'dtype': dtype.name,
         'byte_order': encode_byte_order(dtype),
         'offset': int(offset),
         'size': int(size),
         'order': order,
-        'storage_type': storage_type,
     }
     if shape:
         request_data["shape"] = shape
@@ -214,11 +209,8 @@ def build_request_data(source: str,
     if any(missing):
         request_data["missing"] = encode_missing(missing)
 
-    if REDUCTIONIST_AXIS_READY:
+    if axis is not None:
         request_data['axis'] = axis
-    elif axis is not None and len(axis) != len(shape):
-        raise ValueError(
-            "Can't reduce over axis subset unitl reductionist is ready")
 
     return {k: v for k, v in request_data.items() if v is not None}
 
@@ -234,15 +226,16 @@ def request(session: requests.Session, url: str, request_data: dict):
 
 def decode_result(response):
     """Decode a successful response, return as a 2-tuple of (numpy array or scalar, count)."""
-    dtype = response.headers['x-activestorage-dtype']
-    shape = json.loads(response.headers['x-activestorage-shape'])
+    reduction_result = cbor.loads(response.content)
+    dtype = reduction_result['dtype']
+    shape = reduction_result['shape'] if "shape" in reduction_result else None
 
     # Result
-    result = np.frombuffer(response.content, dtype=dtype)
+    result = np.frombuffer(reduction_result['bytes'], dtype=dtype)
     result = result.reshape(shape)
 
     # Counts
-    count = json.loads(response.headers['x-activestorage-count'])
+    count = reduction_result['count']
     # TODO: When reductionist is ready, we need to fix 'count'
 
     # Mask the result

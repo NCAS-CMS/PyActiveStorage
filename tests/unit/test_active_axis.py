@@ -17,6 +17,13 @@ def axis_combinations(ndim):
 
 rfile = "tests/test_data/test1.nc"
 ncvar = 'tas'
+# Dimensions
+# netcdf test1 {
+# dimensions:
+# 	time = 12 ;
+# 	bounds = 2 ;
+# 	lat = 64 ;
+# 	lon = 128 ;
 ref = netCDF4.Dataset(rfile)[ncvar][...]
 
 
@@ -76,12 +83,48 @@ def test_active_axis_format_1():
     active1 = Active(rfile, ncvar, axis=[0, 2])
     active2 = Active(rfile, ncvar, axis=(-1, -3))
 
-    x1 = active2.mean[...]
-    x2 = active2.mean[...]
+    x1 = active2.mean()[...]
+    x2 = active2.mean()[...]
 
     assert x1.shape == x2.shape
     assert (x1.mask == x2.mask).all()
     assert np.ma.allclose(x1, x2)
+
+
+def test_active_axis_format_new_api():
+    """Unit test for class:Active axis format with Numpy-style API."""
+    active1 = Active(rfile, ncvar)
+    active2 = Active(rfile, ncvar)
+
+    x1 = active2.mean(axis=(0, 2))[...]
+    assert active2._axis == (0, 2)
+    x2 = active2.mean(axis=(-1, -3))[...]
+    assert active2._axis == (-1, -3)
+
+    assert x1.shape == x2.shape
+    assert (x1.mask == x2.mask).all()
+    assert np.ma.allclose(x1, x2)
+
+    xmin = active2.min(axis=(0, 2))[...]
+    xmax = active2.max(axis=(0, 2))[...]
+    assert xmin[0][0][0] == 209.44680786132812
+    assert xmax[0][0][0] == 255.54661560058594
+
+    # use offline old case
+    active2._version = 1
+    xmin = active2.min(axis=(0, 1))[...]
+    assert xmin[0][0][0] == 217.1494140625
+
+
+def test_active_axis_format_new_api_cmip6_file():
+    """Unit test for class:Active axis format with Numpy-style API."""
+    # file is NOT chunked = 1 chunk
+    cmip6_file = "tests/test_data/CMIP6-test.nc"
+    ncvar = 'tas'
+    active = Active(cmip6_file, ncvar)
+    active._version = 1
+    xmin = active.min(axis=(0, 1))[...]
+    assert xmin[0][0][0] == 206.40918
 
 
 def test_active_axis_format_2():

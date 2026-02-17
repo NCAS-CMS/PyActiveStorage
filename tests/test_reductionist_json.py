@@ -39,7 +39,7 @@ class MockActive:
             storeinfo = self.ds.get_chunk_info_from_chunk_coord(chunk_coords)
             offset, size = storeinfo.byte_offset, storeinfo.size
             jd = reductionist.build_request_data(
-                'a', 'b', 'c', offset, size, compressor, filters, self.missing,
+                'a', offset, size, compressor, filters, self.missing,
                 self.dtype, self.array._chunks, self.ds._order,
                 chunk_selection, tuple(range(len(self.array._chunks))))
             js = json.dumps(jd)
