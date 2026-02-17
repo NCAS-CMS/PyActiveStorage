@@ -4,8 +4,36 @@ import numpy as np
 import pytest
 
 from activestorage.active import Active, load_from_s3
+from activestorage.reductionist import ReductionistError
+
 
 S3_BUCKET = "bnl"
+
+
+def test_anon_s3():
+    """Test a very basic but real S3 access."""
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft
+    bigger_file = "CMIP6-test.nc"  # tas; 15 (time) x 143 x 144 
+
+    test_file_uri = os.path.join(
+        "esmvaltool-zarr",
+        bigger_file
+    )
+    print("S3 Test file path:", test_file_uri)
+
+    # no secrets - just living life
+    active = Active(test_file_uri, 'tas',
+                    storage_options={
+                        "anon": True,
+                         'client_kwargs': {
+                             'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"
+                              }
+                          },
+                    active_storage_url=active_storage_url)
+    active._version = 2
+    with pytest.raises(ReductionistError):
+        result = active.min()[:]
+        assert result == 197.69595    
 
 
 # this could be a slow test on GHA depending on network load
@@ -23,11 +51,8 @@ def test_s3_dataset():
             'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"
         },
     }
-    # active_storage_url = "https://192.171.169.113:8080"  # Bryan VM
     active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft
-    # bigger_file = "ch330a.pc19790301-bnl.nc"  # 18GB 3400 HDF5 chunks
     bigger_file = "ch330a.pc19790301-def.nc"  # 17GB 64 HDF5 chunks
-    # bigger_file = "da193a_25_day__198808-198808.nc"  # 3GB 30 HDF5 chunks
 
     test_file_uri = os.path.join(S3_BUCKET, bigger_file)
     print("S3 Test file path:", test_file_uri)
