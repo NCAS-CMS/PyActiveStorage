@@ -19,14 +19,21 @@ def test_https():
     test_file_uri = "https://esgf.ceda.ac.uk/thredds/fileServer/esg_cmip6/CMIP6/CMIP/MOHC/UKESM1-1-LL/piControl/r1i1p1f2/Amon/ta/gn/latest/ta_Amon_UKESM1-1-LL_piControl_r1i1p1f2_gn_274301-274912.nc"
     active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft new Reductionist
 
-    # declared storage type, no activa storage URL
+    # v1: all local
+    active = Active(test_file_uri, "ta")
+    active._version = 1
+    result = active.min()[0:3, 4:6, 7:9]
+    print("Result is", result)
+    assert result == np.array([220.3180694580078], dtype="float32")
+
+    # v2: declared storage type, no activa storage URL
     active = Active(test_file_uri, "ta",
                     storage_type="https", )
     active._version = 2
     with pytest.raises(MissingSchema):
         result = active.min()[0:3, 4:6, 7:9]
 
-    # declared storage type
+    # v2: declared storage type
     active = Active(test_file_uri, "ta",
                     storage_type="https",
                     active_storage_url=active_storage_url)
@@ -35,7 +42,7 @@ def test_https():
     print("Result is", result)
     assert result == np.array([220.3180694580078], dtype="float32")
 
-    # inferred storage type
+    # v2: inferred storage type
     active = Active(test_file_uri, "ta",
                     active_storage_url=active_storage_url)
     active._version = 2
@@ -47,7 +54,7 @@ def test_https():
     f_1 = 176.882080078125
     f_2 = 190.227783203125
 
-    # inferred storage type, pop axis
+    # v2: inferred storage type, pop axis
     active = Active(test_file_uri, "ta",
                     storage_type="https",
                     active_storage_url=active_storage_url)
