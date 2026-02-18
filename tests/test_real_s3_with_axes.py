@@ -23,7 +23,7 @@ def build_active_test1_file():
         bigger_file
     )
     print("S3 Test file path:", test_file_uri)
-    active = Active(test_file_uri, 'tas', storage_type="s3",
+    active = Active(test_file_uri, 'tas', interface_type="s3",
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
 
@@ -47,7 +47,7 @@ def build_active_small_file():
         bigger_file
     )
     print("S3 Test file path:", test_file_uri)
-    active = Active(test_file_uri, 'tas', storage_type="s3",
+    active = Active(test_file_uri, 'tas', interface_type="s3",
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
 
@@ -102,7 +102,7 @@ def build_active():
         bigger_file
     )
     print("S3 Test file path:", test_file_uri)
-    active = Active(test_file_uri, 'm01s30i111', storage_type="s3",  # 'm01s06i247_4', storage_type="s3",
+    active = Active(test_file_uri, 'm01s30i111', interface_type="s3",  # 'm01s06i247_4', interface_type="s3",
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
 

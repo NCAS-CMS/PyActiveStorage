@@ -78,10 +78,10 @@ def test_s3_dataset():
     test_file_uri = os.path.join(S3_BUCKET, bigger_file)
     print("S3 Test file path:", test_file_uri)
 
-    # file: explicit storage_type
+    # file: explicit interface_type
     active = Active(test_file_uri,
                     'UM_m01s16i202_vn1106',
-                    storage_type="s3",
+                    interface_type="s3",
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
     active._version = 2
@@ -89,7 +89,7 @@ def test_s3_dataset():
     print("Result is", result)
     assert result == 5098.625
 
-    # file: implicit storage_type
+    # file: implicit interface_type
     active = Active(test_file_uri,
                     'UM_m01s16i202_vn1106',
                     storage_options=storage_options,
@@ -103,9 +103,9 @@ def test_s3_dataset():
     dataset = load_from_s3(test_file_uri, storage_options=storage_options)
     av = dataset['UM_m01s16i202_vn1106']
 
-    # dataset: explicit storage_type
+    # dataset: explicit interface_type
     active = Active(av,
-                    storage_type="s3",
+                    interface_type="s3",
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
     active._version = 2
@@ -113,7 +113,7 @@ def test_s3_dataset():
     print("Result is", result)
     assert result == 5098.625
 
-    # dataset: implicit storage_type
+    # dataset: implicit interface_type
     active = Active(av,
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
