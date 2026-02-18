@@ -60,6 +60,17 @@ def test_s3_small_dataset():
     print("Result is", result)
     assert result == 222.09129333496094
 
+    # load and pass dataset
+    dataset = load_from_s3(test_file_uri, storage_options=storage_options)
+    av = dataset['tas']
+    active = Active(av,
+                    storage_options=storage_options,
+                    active_storage_url=active_storage_url)
+    active._version = 2
+    result = active.min()[0:3, 4:6, 7:9]
+    print("Result is", result)
+    assert result == 222.09129333496094
+
 
 @pytest.mark.slow
 def test_s3_dataset():
