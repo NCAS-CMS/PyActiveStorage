@@ -36,7 +36,7 @@ def test_anon_s3():
         assert result == 197.69595    
 
 
-def test_s3_small_dataset():
+def test_s3_small_file():
     """Run an S3 test on a small file."""
     storage_options = {
         'key': "f2d55c6dcfc7618b2c34e00b58df3cef",
@@ -53,6 +53,33 @@ def test_s3_small_dataset():
     print("S3 Test file path:", test_file_uri)
     active = Active(test_file_uri,
                     'tas',
+                    storage_options=storage_options,
+                    active_storage_url=active_storage_url)
+    active._version = 2
+    result = active.min()[0:3, 4:6, 7:9]
+    print("Result is", result)
+    assert result == 222.09129333496094
+
+
+@pytest.mark.xfail(reason="Pyfive needs PR #197")
+def test_s3_small_dataset():
+    """Run an S3 test on a small file."""
+    storage_options = {
+        'key': "f2d55c6dcfc7618b2c34e00b58df3cef",
+        'secret':
+        "$/'#M{0{/4rVhp%n^(XeX$q@y#&(NM3W1->~N.Q6VP.5[@bLpi='nt]AfH)>78pT",
+        'client_kwargs': {
+            'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"
+        },
+    }
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft
+    bigger_file = "CMIP6-test.nc"  # tas; 15 (time) x 143 x 144
+
+    test_file_uri = os.path.join(S3_BUCKET, bigger_file)
+    # load and pass dataset
+    dataset = load_from_s3(test_file_uri, storage_options=storage_options)
+    av = dataset['tas']
+    active = Active(av,
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
     active._version = 2
@@ -78,10 +105,10 @@ def test_s3_dataset():
     test_file_uri = os.path.join(S3_BUCKET, bigger_file)
     print("S3 Test file path:", test_file_uri)
 
-    # file: explicit storage_type
+    # file: explicit interface_type
     active = Active(test_file_uri,
                     'UM_m01s16i202_vn1106',
-                    storage_type="s3",
+                    interface_type="s3",
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
     active._version = 2
@@ -89,7 +116,7 @@ def test_s3_dataset():
     print("Result is", result)
     assert result == 5098.625
 
-    # file: implicit storage_type
+    # file: implicit interface_type
     active = Active(test_file_uri,
                     'UM_m01s16i202_vn1106',
                     storage_options=storage_options,
@@ -103,9 +130,9 @@ def test_s3_dataset():
     dataset = load_from_s3(test_file_uri, storage_options=storage_options)
     av = dataset['UM_m01s16i202_vn1106']
 
-    # dataset: explicit storage_type
+    # dataset: explicit interface_type
     active = Active(av,
-                    storage_type="s3",
+                    interface_type="s3",
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
     active._version = 2
@@ -113,7 +140,7 @@ def test_s3_dataset():
     print("Result is", result)
     assert result == 5098.625
 
-    # dataset: implicit storage_type
+    # dataset: implicit interface_type
     active = Active(av,
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)

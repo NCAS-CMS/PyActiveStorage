@@ -48,7 +48,7 @@ def reduce_chunk(session,
                  chunk_selection,
                  axis,
                  operation,
-                 storage_type=None):
+                 interface_type=None):
     """Perform a reduction on a chunk using Reductionist.
 
     :param server: Reductionist server URL
@@ -70,7 +70,7 @@ def reduce_chunk(session,
                             obtained or operated upon.
     :param axis: tuple of the axes to be reduced (non-negative integers)
     :param operation: name of operation to perform
-    :param storage_type: optional testing flag to allow HTTPS reduction
+    :param interface_type: optional testing flag to allow HTTPS reduction
     :returns: the reduced data as a numpy array or scalar
     :raises ReductionistError: if the request to Reductionist fails
     """
@@ -86,7 +86,7 @@ def reduce_chunk(session,
                                       order,
                                       chunk_selection,
                                       axis,
-                                      storage_type=storage_type)
+                                      interface_type=interface_type)
     if DEBUG:
         print(f"Reductionist request data dictionary: {request_data}")
     api_operation = "sum" if operation == "mean" else operation or "select"
@@ -184,10 +184,10 @@ def build_request_data(url: str,
                        order,
                        selection,
                        axis,
-                       storage_type=None) -> dict:
+                       interface_type=None) -> dict:
     """Build request data for Reductionist API."""
     request_data = {
-        'interface_type': storage_type if storage_type else "s3",
+        'interface_type': interface_type if interface_type else "s3",
         'url': url,
         'dtype': dtype.name,
         'byte_order': encode_byte_order(dtype),

@@ -22,7 +22,7 @@ from activestorage.dummy_data import make_vanilla_ncdata
 @mock.patch.object(activestorage.active, "load_from_s3")
 @mock.patch.object(activestorage.active.reductionist, "reduce_chunk")
 def test_s3(mock_reduce, mock_load, tmp_path):
-    """Test stack when call to Active contains storage_type == s3."""
+    """Test stack when call to Active contains interface_type == s3."""
 
     # Since this is a unit test, we can't assume that an S3 object store or
     # active storage server is available. Therefore, we mock out the remote
@@ -69,7 +69,7 @@ def test_s3(mock_reduce, mock_load, tmp_path):
     test_file = str(tmp_path / "test.nc")
     make_vanilla_ncdata(test_file)
 
-    active = Active(uri, "data", storage_type="s3")
+    active = Active(uri, "data", interface_type="s3")
     active._version = 2
     active._method = "max"
 
@@ -107,7 +107,7 @@ def test_s3(mock_reduce, mock_load, tmp_path):
 
 @mock.patch.object(activestorage.active, "load_from_s3")
 def test_reductionist_version_0(mock_load, tmp_path):
-    """Test stack when call to Active contains storage_type == s3 using version 0."""
+    """Test stack when call to Active contains interface_type == s3 using version 0."""
 
     def load_from_s3(uri, storage_options=None):
         return pyfive.File(test_file)
@@ -118,7 +118,7 @@ def test_reductionist_version_0(mock_load, tmp_path):
     test_file = str(tmp_path / "test.nc")
     make_vanilla_ncdata(test_file)
 
-    active = Active(uri, "data", storage_type="s3")
+    active = Active(uri, "data", interface_type="s3")
     active._version = 0
 
     result = active[::]
@@ -135,13 +135,13 @@ def test_s3_load_failure(mock_load):
     mock_load.side_effect = FileNotFoundError
 
     with pytest.raises(FileNotFoundError):
-        Active(uri, "data", storage_type="s3")
+        Active(uri, "data", interface_type="s3")
 
 
 @mock.patch.object(activestorage.active, "load_from_s3")
 @mock.patch.object(activestorage.active.reductionist, "reduce_chunk")
 def test_reductionist_connection(mock_reduce, mock_load, tmp_path):
-    """Test stack when call to Active contains storage_type == s3."""
+    """Test stack when call to Active contains interface_type == s3."""
 
     def load_from_s3(uri, storage_options=None):
         return pyfive.File(test_file)
@@ -153,7 +153,7 @@ def test_reductionist_connection(mock_reduce, mock_load, tmp_path):
     test_file = str(tmp_path / "test.nc")
     make_vanilla_ncdata(test_file)
 
-    active = Active(uri, "data", storage_type="s3")
+    active = Active(uri, "data", interface_type="s3")
     active._version = 2
     active._method = "max"
 
@@ -164,7 +164,7 @@ def test_reductionist_connection(mock_reduce, mock_load, tmp_path):
 @mock.patch.object(activestorage.active, "load_from_s3")
 @mock.patch.object(activestorage.active.reductionist, "reduce_chunk")
 def test_reductionist_bad_request(mock_reduce, mock_load, tmp_path):
-    """Test stack when call to Active contains storage_type == s3."""
+    """Test stack when call to Active contains interface_type == s3."""
 
     def load_from_s3(uri, storage_options=None):
         return pyfive.File(test_file)
@@ -177,7 +177,7 @@ def test_reductionist_bad_request(mock_reduce, mock_load, tmp_path):
     test_file = str(tmp_path / "test.nc")
     make_vanilla_ncdata(test_file)
 
-    active = Active(uri, "data", storage_type="s3")
+    active = Active(uri, "data", interface_type="s3")
     active._version = 2
     active._method = "max"
 

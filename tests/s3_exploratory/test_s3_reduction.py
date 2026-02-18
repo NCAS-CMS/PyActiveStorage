@@ -68,7 +68,7 @@ def test_Active():
     print("S3 file uri", s3_testfile_uri)
 
     # run Active on s3 file
-    active = Active(s3_testfile_uri, "data", storage_type="s3")
+    active = Active(s3_testfile_uri, "data", interface_type="s3")
     active.method = "mean"
     result1 = active[0:2, 4:6, 7:9]
     print(result1)
@@ -116,7 +116,7 @@ def test_with_valid_netCDF_file(test_data_path):
     print("S3 file uri", s3_testfile_uri)
 
     # run Active on s3 file
-    active = Active(s3_testfile_uri, "TREFHT", storage_type="s3")
+    active = Active(s3_testfile_uri, "TREFHT", interface_type="s3")
     active._version = 2
     active.method = "mean"
     active.components = True
