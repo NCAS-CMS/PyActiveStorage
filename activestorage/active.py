@@ -20,7 +20,7 @@ from activestorage.hdf2numcodec import decode_filters
 from activestorage.storage import reduce_chunk, reduce_opens3_chunk
 
 
-def return_storage_type(uri):
+def return_interface_type(uri):
     """
     Extract the gateway-protocol to infer what type of storage
     """
@@ -187,7 +187,7 @@ class Active:
                  dataset: Optional[str | Path | object],
                  ncvar: str = None,
                  axis: tuple = None,
-                 storage_type: str = None,
+                 interface_type: str = None,
                  max_threads: int = 100,
                  storage_options: dict = None,
                  active_storage_url: str = None) -> None:
@@ -218,9 +218,9 @@ class Active:
             self.ds = dataset
         self.uri = dataset
 
-        # determine the storage_type
+        # determine the interface_type
         # based on what we have available
-        if not storage_type:
+        if not interface_type:
             if not input_variable:
                 check_uri = self.uri
             else:
@@ -236,20 +236,20 @@ class Active:
                     else:
                         check_uri = os.path.join(base_url,
                                                  self.ds.id._filename)
-            storage_type = return_storage_type(check_uri)
+            interface_type = return_interface_type(check_uri)
 
-        # still allow for a passable storage_type
+        # still allow for a passable interface_type
         # for special cases eg "special-POSIX" ie DDN
-        if not storage_type and storage_options is not None:
-            storage_type = urllib.parse.urlparse(dataset).scheme
-        self.storage_type = storage_type
+        if not interface_type and storage_options is not None:
+            interface_type = urllib.parse.urlparse(dataset).scheme
+        self.interface_type = interface_type
 
         # set correct filename attr
-        if input_variable and not self.storage_type:
+        if input_variable and not self.interface_type:
             self.filename = self.ds
-        elif input_variable and self.storage_type == "s3":
+        elif input_variable and self.interface_type == "s3":
             self.filename = self.ds.id._filename
-        elif input_variable and self.storage_type == "https":
+        elif input_variable and self.interface_type == "https":
             self.filename = self.ds
 
         # get storage_options
@@ -258,7 +258,7 @@ class Active:
 
         # basic check on file
         if not input_variable:
-            if not os.path.isfile(self.uri) and not self.storage_type:
+            if not os.path.isfile(self.uri) and not self.interface_type:
                 raise ValueError(
                     f"Must use existing file for uri. {self.uri} not found")
 
@@ -294,11 +294,11 @@ class Active:
         and `_filename` attribute.
         """
         ncvar = self.ncvar
-        if self.storage_type is None:
+        if self.interface_type is None:
             nc = pyfive.File(self.uri)
-        elif self.storage_type == "s3":
+        elif self.interface_type == "s3":
             nc = load_from_s3(self.uri, self.storage_options)
-        elif self.storage_type == "https":
+        elif self.interface_type == "https":
             nc = load_from_https(self.uri, self.storage_options)
         self.filename = self.uri
         self.ds = nc[ncvar]
@@ -512,7 +512,7 @@ class Active:
             out = np.ma.empty(out_shape, dtype=out_dtype, order=ds._order)
 
         # Create a shared session object.
-        if self.storage_type == "s3" and self._version == 2:
+        if self.interface_type == "s3" and self._version == 2:
             if self.storage_options is not None:
                 key, secret = None, None
                 if self.storage_options.get("anon", None) is True:
@@ -533,7 +533,7 @@ class Active:
                 session = reductionist.get_session(S3_ACCESS_KEY,
                                                    S3_SECRET_KEY,
                                                    S3_ACTIVE_STORAGE_CACERT)
-        elif self.storage_type == "https" and self._version == 2:
+        elif self.interface_type == "https" and self._version == 2:
             username, password = None, None
             if self.storage_options is not None:
                 username = self.storage_options.get("username", None)
@@ -660,7 +660,7 @@ class Active:
         # Axes over which to apply a reduction
         axis = self._axis
 
-        if self.storage_type == 's3' and self._version == 1:
+        if self.interface_type == 's3' and self._version == 1:
             tmp, count = reduce_opens3_chunk(ds._fh,
                                              offset,
                                              size,
@@ -674,7 +674,7 @@ class Active:
                                              axis=axis,
                                              method=self.method)
 
-        elif self.storage_type == "s3" and self._version == 2:
+        elif self.interface_type == "s3" and self._version == 2:
             # S3: pass in pre-configured storage options (credentials)
             parsed_url = urllib.parse.urlparse(self.filename)
             bucket = parsed_url.netloc
@@ -723,7 +723,7 @@ class Active:
                     chunk_selection,
                     axis,
                     operation=self._method)
-        elif self.storage_type == "https" and self._version == 2:
+        elif self.interface_type == "https" and self._version == 2:
             tmp, count = reductionist.reduce_chunk(session,
                                                    self.active_storage_url,
                                                    f"{self.uri}",
@@ -738,9 +738,9 @@ class Active:
                                                    chunk_selection,
                                                    axis,
                                                    operation=self._method,
-                                                   storage_type="https")
+                                                   interface_type="https")
 
-        elif self.storage_type == 'ActivePosix' and self.version == 2:
+        elif self.interface_type == 'ActivePosix' and self.version == 2:
             # This is where the DDN Fuse and Infinia wrappers go
             raise NotImplementedError
         else:
