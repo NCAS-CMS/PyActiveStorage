@@ -36,7 +36,7 @@ def test_anon_s3():
         assert result == 197.69595    
 
 
-def test_s3_small_dataset():
+def test_s3_small_file():
     """Run an S3 test on a small file."""
     storage_options = {
         'key': "f2d55c6dcfc7618b2c34e00b58df3cef",
@@ -60,6 +60,22 @@ def test_s3_small_dataset():
     print("Result is", result)
     assert result == 222.09129333496094
 
+
+@pytest.mark.xfail(reason="Pyfive needs PR #197")
+def test_s3_small_dataset():
+    """Run an S3 test on a small file."""
+    storage_options = {
+        'key': "f2d55c6dcfc7618b2c34e00b58df3cef",
+        'secret':
+        "$/'#M{0{/4rVhp%n^(XeX$q@y#&(NM3W1->~N.Q6VP.5[@bLpi='nt]AfH)>78pT",
+        'client_kwargs': {
+            'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"
+        },
+    }
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft
+    bigger_file = "CMIP6-test.nc"  # tas; 15 (time) x 143 x 144
+
+    test_file_uri = os.path.join(S3_BUCKET, bigger_file)
     # load and pass dataset
     dataset = load_from_s3(test_file_uri, storage_options=storage_options)
     av = dataset['tas']
