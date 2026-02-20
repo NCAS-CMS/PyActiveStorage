@@ -61,8 +61,6 @@ def test_s3_small_file():
     assert result == 222.09129333496094
 
 
-# TODO un-xfail immediately after Pyfive released with PR #197
-@pytest.mark.xfail(reason="Pyfive needs PR #197")
 def test_s3_small_dataset():
     """Run an S3 test on a small file."""
     storage_options = {
