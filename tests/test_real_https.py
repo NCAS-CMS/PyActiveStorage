@@ -92,6 +92,20 @@ def test_https():
     assert result.shape == (1, 1, 144, 192)
     assert result[0, 0, 0, 0] == f_1
     assert result[0, 0, 143, 191] == f_2
+
+    # run with pyfive.Dataset instead of File
+    dataset = load_from_https(test_file_uri)
+    av = dataset['ta']
+    active = Active(av,
+                    active_storage_url=active_storage_url)
+    active._version = 2
+    print("Interface type", active.interface_type)
+    result = active.min(axis=(0, 1))[:]
+    print("Result is", result)
+    print("Result shape is", result.shape)
+    assert result.shape == (1, 1, 144, 192)
+    assert result[0, 0, 0, 0] == f_1
+    assert result[0, 0, 143, 191] == f_2
     
 
 @pytest.mark.skip(

@@ -250,7 +250,7 @@ class Active:
         elif input_variable and self.interface_type == "s3":
             self.filename = self.ds.id._filename
         elif input_variable and self.interface_type == "https":
-            self.filename = self.ds
+            self.filename = self.ds.id._filename
 
         # get storage_options
         self.storage_options = storage_options
@@ -726,7 +726,7 @@ class Active:
         elif self.interface_type == "https" and self._version == 2:
             tmp, count = reductionist.reduce_chunk(session,
                                                    self.active_storage_url,
-                                                   f"{self.uri}",
+                                                   self.filename,
                                                    offset,
                                                    size,
                                                    compressor,
