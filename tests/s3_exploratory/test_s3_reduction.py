@@ -149,7 +149,7 @@ def test_reductionist_reduce_chunk():
     session = get_session(S3_ACCESS_KEY, S3_SECRET_KEY,
                           S3_ACTIVE_STORAGE_CACERT)
     tmp, count = reductionist_reduce_chunk(session, S3_ACTIVE_STORAGE_URL,
-                                           S3_URL, S3_BUCKET, object, offset,
+                                           S3_URL, offset,
                                            size, None, None, [],
                                            np.dtype("int32"), (32, ), "C", [
                                                slice(0, 2, 1),
