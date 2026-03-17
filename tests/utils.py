@@ -7,7 +7,7 @@ import s3fs
 from activestorage.config import *
 
 
-def get_storage_type():
+def get_interface_type():
     if USE_S3:
         return "s3"
     else:

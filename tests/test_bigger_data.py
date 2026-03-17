@@ -106,12 +106,12 @@ def save_cl_file_with_a(tmp_path):
 
 def test_cl_old_method(tmp_path):
     ncfile = save_cl_file_with_a(tmp_path)
-    active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
+    active = Active(ncfile, "cl", interface_type=utils.get_interface_type())
     active._version = 0
     d = active[4:5, 1:2]
     mean_result = np.mean(d)
 
-    active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
+    active = Active(ncfile, "cl", interface_type=utils.get_interface_type())
     active._version = 2
     active.method = "mean"
     active.components = True
@@ -128,15 +128,15 @@ def test_cl_old_method(tmp_path):
 
 def test_cl_mean(tmp_path):
     ncfile = save_cl_file_with_a(tmp_path)
-    active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
+    active = Active(ncfile, "cl", interface_type=utils.get_interface_type())
     active._version = 0
     d = active[4:5, 1:2]
     mean_result = np.mean(d)
 
-    active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
+    active = Active(ncfile, "cl", interface_type=utils.get_interface_type())
     active._version = 2
     active.components = True
-    result2 = active.mean[4:5, 1:2]
+    result2 = active.mean()[4:5, 1:2]
     print(result2, ncfile)
     # expect {'sum': array([[[[264.]]]], dtype=float32), 'n': array([[[[12]]]])}
     # check for typing and structure
@@ -149,34 +149,34 @@ def test_cl_mean(tmp_path):
 
 def test_cl_min(tmp_path):
     ncfile = save_cl_file_with_a(tmp_path)
-    active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
+    active = Active(ncfile, "cl", interface_type=utils.get_interface_type())
     active._version = 2
-    result2 = active.min[4:5, 1:2]
+    result2 = active.min()[4:5, 1:2]
     np.testing.assert_array_equal(result2,
                                   np.array([[[[22.]]]], dtype="float32"))
 
 
 def test_cl_max(tmp_path):
     ncfile = save_cl_file_with_a(tmp_path)
-    active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
+    active = Active(ncfile, "cl", interface_type=utils.get_interface_type())
     active._version = 2
-    result2 = active.max[4:5, 1:2]
+    result2 = active.max()[4:5, 1:2]
     np.testing.assert_array_equal(result2,
                                   np.array([[[[22.]]]], dtype="float32"))
 
 
 def test_cl_global_max(tmp_path):
     ncfile = save_cl_file_with_a(tmp_path)
-    active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
+    active = Active(ncfile, "cl", interface_type=utils.get_interface_type())
     active._version = 2
-    result2 = active.max[:]
+    result2 = active.max()[:]
     np.testing.assert_array_equal(result2,
                                   np.array([[[[22.]]]], dtype="float32"))
 
 
 def test_cl_maxxx(tmp_path):
     ncfile = save_cl_file_with_a(tmp_path)
-    active = Active(ncfile, "cl", storage_type=utils.get_storage_type())
+    active = Active(ncfile, "cl", interface_type=utils.get_interface_type())
     active._version = 2
     with pytest.raises(AttributeError):
         result2 = active.maxxx[:]
@@ -184,15 +184,15 @@ def test_cl_maxxx(tmp_path):
 
 def test_ps(tmp_path):
     ncfile = save_cl_file_with_a(tmp_path)
-    active = Active(ncfile, "ps", storage_type=utils.get_storage_type())
+    active = Active(ncfile, "ps", interface_type=utils.get_interface_type())
     active._version = 0
     d = active[4:5, 1:2]
     mean_result = np.mean(d)
 
-    active = Active(ncfile, "ps", storage_type=utils.get_storage_type())
+    active = Active(ncfile, "ps", interface_type=utils.get_interface_type())
     active._version = 2
     active.components = True
-    result2 = active.mean[4:5, 1:2]
+    result2 = active.mean()[4:5, 1:2]
     print(result2, ncfile)
     # expect {'sum': array([[[22.]]]), 'n': array([[[4]]])}
     # check for typing and structure
@@ -202,7 +202,7 @@ def test_ps(tmp_path):
     np.testing.assert_array_equal(mean_result, result2["sum"] / result2["n"])
 
 
-def test_ps_implicit_storage_type(tmp_path):
+def test_ps_implicit_interface_type(tmp_path):
     """
     Test a Minio S3 file that's not behind a HTTPS URI
     s3://pyactivestorage/common_cl_a.nc
@@ -246,7 +246,7 @@ def test_native_emac_model_fails(test_data_path):
     uri = utils.write_to_storage(ncfile)
 
     if USE_S3:
-        active = Active(uri, "aps_ave", storage_type=utils.get_storage_type())
+        active = Active(uri, "aps_ave", interface_type=utils.get_interface_type())
         with pytest.raises(InvalidHDF5Err):
             active[...]
     else:
@@ -265,12 +265,12 @@ def test_cesm2_native(test_data_path):
     """
     ncfile = str(test_data_path / "cesm2_native.nc")
     uri = utils.write_to_storage(ncfile)
-    active = Active(uri, "TREFHT", storage_type=utils.get_storage_type())
+    active = Active(uri, "TREFHT", interface_type=utils.get_interface_type())
     active._version = 0
     d = active[4:5, 1:2]
     mean_result = np.mean(d)
 
-    active = Active(uri, "TREFHT", storage_type=utils.get_storage_type())
+    active = Active(uri, "TREFHT", interface_type=utils.get_interface_type())
     active._version = 2
     active.method = "mean"
     active.components = True
@@ -294,12 +294,12 @@ def test_daily_data(test_data_path):
     """
     ncfile = str(test_data_path / "daily_data.nc")
     uri = utils.write_to_storage(ncfile)
-    active = Active(uri, "ta", storage_type=utils.get_storage_type())
+    active = Active(uri, "ta", interface_type=utils.get_interface_type())
     active._version = 0
     d = active[4:5, 1:2]
     mean_result = np.mean(d)
 
-    active = Active(uri, "ta", storage_type=utils.get_storage_type())
+    active = Active(uri, "ta", interface_type=utils.get_interface_type())
     active._version = 2
     active.method = "mean"
     active.components = True
@@ -320,13 +320,13 @@ def test_daily_data_masked(test_data_path):
     """
     ncfile = str(test_data_path / "daily_data_masked.nc")
     uri = utils.write_to_storage(ncfile)
-    active = Active(uri, "ta", storage_type=utils.get_storage_type())
+    active = Active(uri, "ta", interface_type=utils.get_interface_type())
     active._version = 0
     d = active[:]
     d = np.ma.masked_where(d == 999., d)
     mean_result = np.ma.mean(d)
 
-    active = Active(uri, "ta", storage_type=utils.get_storage_type())
+    active = Active(uri, "ta", interface_type=utils.get_interface_type())
     active._version = 2
     active.method = "mean"
     active.components = True
@@ -350,7 +350,7 @@ def test_daily_data_masked_no_stats_yes_components(test_data_path):
     """
     ncfile = str(test_data_path / "daily_data_masked.nc")
     uri = utils.write_to_storage(ncfile)
-    active = Active(uri, "ta", storage_type=utils.get_storage_type())
+    active = Active(uri, "ta", interface_type=utils.get_interface_type())
     active._version = 2
     active.components = True
     raised = "Setting components to True for None statistical method."
@@ -365,7 +365,7 @@ def test_daily_data_masked_no_stats_no_components(test_data_path):
     """
     ncfile = str(test_data_path / "daily_data_masked.nc")
     uri = utils.write_to_storage(ncfile)
-    active = Active(uri, "ta", storage_type=utils.get_storage_type())
+    active = Active(uri, "ta", interface_type=utils.get_interface_type())
     active._version = 2
     result2 = active[3:4, 0, 2][0][0]
     assert result2 == 250.35127
@@ -379,9 +379,9 @@ def test_daily_data_masked_two_stats(test_data_path):
     uri = utils.write_to_storage(ncfile)
 
     # first a mean
-    active = Active(uri, "ta", storage_type=utils.get_storage_type())
+    active = Active(uri, "ta", interface_type=utils.get_interface_type())
     active._version = 2
-    result2 = active.min[:]
+    result2 = active.min()[:]
     assert result2 == 245.0020751953125
 
     # then recycle Active object for something else

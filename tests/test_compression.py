@@ -70,7 +70,7 @@ def test_compression_and_filters(tmp_path: str, compression: str,
     """
     test_file = create_compressed_dataset(tmp_path, compression, shuffle)
 
-    active = Active(test_file, 'data', storage_type=utils.get_storage_type())
+    active = Active(test_file, 'data', interface_type=utils.get_interface_type())
     active._version = 1
     active._method = "min"
     result = active[0:2, 4:6, 7:9]
@@ -97,12 +97,12 @@ def test_compression_and_filters_cmip6_data(storage_options,
     check_dataset_filters(test_file, "tas", "zlib", False)
 
     print("Test file and storage options", test_file, storage_options)
-    if not utils.get_storage_type():
+    if not utils.get_interface_type():
         storage_options = None
         active_storage_url = None
     active = Active(test_file,
                     'tas',
-                    storage_type=utils.get_storage_type(),
+                    interface_type=utils.get_interface_type(),
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
     active._version = 1
@@ -133,12 +133,12 @@ def test_compression_and_filters_obs4mips_data(storage_options,
     check_dataset_filters(test_file, "rlut", "zlib", False)
 
     print("Test file and storage options", test_file, storage_options)
-    if not utils.get_storage_type():
+    if not utils.get_interface_type():
         storage_options = None
         active_storage_url = None
     active = Active(test_file,
                     'rlut',
-                    storage_type=utils.get_storage_type(),
+                    interface_type=utils.get_interface_type(),
                     storage_options=storage_options,
                     active_storage_url=active_storage_url)
     active._version = 1

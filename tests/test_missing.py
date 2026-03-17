@@ -32,7 +32,7 @@ def load_dataset(testfile):
 
 def active_zero(testfile):
     """Run Active with no active storage (version=0)."""
-    active = Active(testfile, "data", storage_type=utils.get_storage_type())
+    active = Active(testfile, "data", interface_type=utils.get_interface_type())
     active._version = 0
     d = active[0:2, 4:6, 7:9]
 
@@ -46,7 +46,7 @@ def active_zero(testfile):
 
 def active_two(testfile):
     """Run Active with active storage (version=2)."""
-    active = Active(testfile, "data", storage_type=utils.get_storage_type())
+    active = Active(testfile, "data", interface_type=utils.get_interface_type())
     active._version = 2
     active.method = "mean"
     active.components = True

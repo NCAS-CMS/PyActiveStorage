@@ -69,7 +69,7 @@ There are some (relatively obsolete) documents from our exploration of zarr inte
 ## Storage types
 
 PyActiveStorage is designed to interact with various storage backends.
-The storage backend is automatically detected, but can still be specified using the `storage_type` argument to the `Active` constructor.
+The storage backend is automatically detected, but can still be specified using the `interface_type` argument to the `Active` constructor.
 There are two main integration points for a storage backend:
 
 #. Load netCDF metadata
@@ -78,7 +78,7 @@ There are two main integration points for a storage backend:
 ### Local file
 
 The default storage backend is a local file.
-To use a local file, use a `storage_type` of `None`, which is its default value.
+To use a local file, use a `interface_type` of `None`, which is its default value.
 netCDF metadata is loaded using the [netCDF4](https://pypi.org/project/netCDF4/) library.
 The chunk reductions are implemented in `activestorage.storage` using NumPy.
 
@@ -87,7 +87,7 @@ The chunk reductions are implemented in `activestorage.storage` using NumPy.
 We now have support for Active runs with netCDF4 files on S3, from [PR 89](https://github.com/NCAS-CMS/PyActiveStorage/pull/89).
 To achieve this we integrate with [Reductionist](https://github.com/stackhpc/reductionist-rs), an S3 Active Storage Server.
 Reductionist is typically deployed "near" to an S3-compatible object store and provides an API to perform numerical reductions on object data.
-To use Reductionist, use a `storage_type` of `s3`.
+To use Reductionist, use a `interface_type` of `s3`.
 
 To load metadata, netCDF files are opened using `s3fs`, with `h5netcdf` used to put the open file (which is nothing more than a memory view of the netCDF file) into an hdf5/netCDF-like object format.
 Chunk reductions are implemented in `activestorage.reductionist`, with each operation resulting in an API request to the Reductionist server.

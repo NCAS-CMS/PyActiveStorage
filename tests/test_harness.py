@@ -30,7 +30,7 @@ def test_read0(tmp_path):
     Test a normal read slicing the data an interesting way, using version 0 (native interface)
     """
     test_file = create_test_dataset(tmp_path)
-    active = Active(test_file, 'data', storage_type=utils.get_storage_type())
+    active = Active(test_file, 'data', interface_type=utils.get_interface_type())
     active._version = 0
     d = active[0:2, 4:6, 7:9]
     # d.data is a memoryview object in both local POSIX and remote S3 storages
@@ -45,11 +45,11 @@ def test_read1(tmp_path):
     Test a normal read slicing the data an interesting way, using version 1 (replicating native interface in our code)
     """
     test_file = create_test_dataset(tmp_path)
-    active = Active(test_file, 'data', storage_type=utils.get_storage_type())
+    active = Active(test_file, 'data', interface_type=utils.get_interface_type())
     active._version = 0
     d0 = active[0:2, 4:6, 7:9]
 
-    active = Active(test_file, 'data', storage_type=utils.get_storage_type())
+    active = Active(test_file, 'data', interface_type=utils.get_interface_type())
     active._version = 1
     d1 = active[0:2, 4:6, 7:9]
     assert np.array_equal(d0, d1)
@@ -60,12 +60,12 @@ def test_active(tmp_path):
     Shows what we expect an active example test to achieve and provides "the right answer"
     """
     test_file = create_test_dataset(tmp_path)
-    active = Active(test_file, 'data', storage_type=utils.get_storage_type())
+    active = Active(test_file, 'data', interface_type=utils.get_interface_type())
     active._version = 0
     d = active[0:2, 4:6, 7:9]
     mean_result = np.mean(d)
 
-    active = Active(test_file, 'data', storage_type=utils.get_storage_type())
+    active = Active(test_file, 'data', interface_type=utils.get_interface_type())
     active.method = "mean"
     result2 = active[0:2, 4:6, 7:9]
     assert mean_result == result2
@@ -76,12 +76,12 @@ def testActiveComponents(tmp_path):
     Shows what we expect an active example test to achieve and provides "the right answer"
     """
     test_file = create_test_dataset(tmp_path)
-    active = Active(test_file, "data", storage_type=utils.get_storage_type())
+    active = Active(test_file, "data", interface_type=utils.get_interface_type())
     active._version = 0
     d = active[0:2, 4:6, 7:9]
     mean_result = np.mean(d)
 
-    active = Active(test_file, "data", storage_type=utils.get_storage_type())
+    active = Active(test_file, "data", interface_type=utils.get_interface_type())
     active._version = 2
     active.method = "mean"
     active.components = True
