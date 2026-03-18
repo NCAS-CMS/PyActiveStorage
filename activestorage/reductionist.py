@@ -24,11 +24,6 @@ def get_session(username: str, password: str,
     :returns: a client session object.
     """
     session = requests.Session()
-    # TODO Stack-HPC
-    # we need to allow Anon buckets. though this
-    # will break connection to data server
-    # if username is None and password is None:
-    #     return session
     session.auth = (username, password)
     session.verify = cacert or False
     return session
