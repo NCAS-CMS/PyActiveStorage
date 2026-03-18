@@ -86,6 +86,7 @@ def reduce_chunk(session,
         print(f"Reductionist request data dictionary: {request_data}")
     api_operation = "sum" if operation == "mean" else operation or "select"
     url = f'{server}/v2/{api_operation}/'
+    print("Reductionist Session auth:", session.auth)
     response = request(session, url, request_data)
 
     if response.ok:
