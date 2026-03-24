@@ -11,6 +11,8 @@ import numcodecs
 import numpy as np
 import requests
 
+from io import BytesIO
+
 
 DEBUG = 0
 
@@ -224,9 +226,30 @@ def request(session: requests.Session, url: str, request_data: dict):
     return response
 
 
+def object_hook(decoder, obj):
+    if isinstance(obj, dict):
+        #new_obj = dict(obj)
+        #for k, v in new_obj.items():
+        #    if isinstance(v, list):
+        #        print("Found list", len(v))
+        #        new_obj[k] = np.array(v)
+        #return new_obj
+        new_obj = {}
+        new_obj["bytes"] = obj["bytes"]
+        new_obj["dtype"] = obj["dtype"]
+        new_obj["count"] = []
+    return new_obj
+
+
 def decode_result(response):
     """Decode a successful response, return as a 2-tuple of (numpy array or scalar, count)."""
-    reduction_result = cbor.loads(response.content)
+    decoder = cbor.CBORDecoder(
+        BytesIO(response.content),
+        object_hook=object_hook
+    )
+    #reduction_result = cbor.loads(response.content)
+    reduction_result = decoder.decode()
+    # print("XXX red res", reduction_result)
     dtype = reduction_result['dtype']
     shape = reduction_result['shape'] if "shape" in reduction_result else None
 
