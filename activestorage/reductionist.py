@@ -227,29 +227,26 @@ def request(session: requests.Session, url: str, request_data: dict):
 
 
 def object_hook(decoder, obj):
-    # if isinstance(obj, dict):
+    if isinstance(obj, dict):
         # converting to arrays doesn't really impact much
+        # apart from, of cource, counts which is HUGE - even so, this below works
+        # but only for when counts is not needed
         # dict_keys(['bytes', 'dtype', 'shape', 'count', 'byte_order'])
         # [<class 'bytes'>, <class 'str'>, <class 'list'>, <class 'list'>, <class 'str'>]
-        # new_obj = {}
-        # new_obj["bytes"] = np.array(obj["bytes"])
-        # new_obj["dtype"] = obj["dtype"]
-        # new_obj["count"] = np.array(obj["count"])
-        # new_obj["shape"] = obj["shape"]
-        # new_obj["dtype"] = obj["dtype"]
-        # new_obj["byte_order"] = obj["byte_order"]
-    return obj
+        new_obj = {}
+        new_obj["bytes"] = obj["bytes"]
+        new_obj["dtype"] = obj["dtype"]
+        new_obj["count"] = []  # np.array(obj["count"]): worse than list
+        new_obj["shape"] = obj["shape"]
+        new_obj["dtype"] = obj["dtype"]
+        new_obj["byte_order"] = obj["byte_order"]
+    return new_obj
 
 
 def decode_result(response):
     """Decode a successful response, return as a 2-tuple of (numpy array or scalar, count)."""
-    decoder = cbor.CBORDecoder(
-        BytesIO(response.content),
-        object_hook=object_hook
-    )
-    #reduction_result = cbor.loads(response.content)
-    reduction_result = decoder.decode()
-    # print("XXX red res", reduction_result)
+    decoder = cbor.CBORDecoder(BytesIO(response.content), object_hook=object_hook)
+    reduction_result = decoder.decode_from_bytes(response.content)
     dtype = reduction_result['dtype']
     shape = reduction_result['shape'] if "shape" in reduction_result else None
 
