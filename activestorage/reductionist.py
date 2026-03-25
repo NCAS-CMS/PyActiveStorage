@@ -227,18 +227,18 @@ def request(session: requests.Session, url: str, request_data: dict):
 
 
 def object_hook(decoder, obj):
-    if isinstance(obj, dict):
-        #new_obj = dict(obj)
-        #for k, v in new_obj.items():
-        #    if isinstance(v, list):
-        #        print("Found list", len(v))
-        #        new_obj[k] = np.array(v)
-        #return new_obj
-        new_obj = {}
-        new_obj["bytes"] = obj["bytes"]
-        new_obj["dtype"] = obj["dtype"]
-        new_obj["count"] = []
-    return new_obj
+    # if isinstance(obj, dict):
+        # converting to arrays doesn't really impact much
+        # dict_keys(['bytes', 'dtype', 'shape', 'count', 'byte_order'])
+        # [<class 'bytes'>, <class 'str'>, <class 'list'>, <class 'list'>, <class 'str'>]
+        # new_obj = {}
+        # new_obj["bytes"] = np.array(obj["bytes"])
+        # new_obj["dtype"] = obj["dtype"]
+        # new_obj["count"] = np.array(obj["count"])
+        # new_obj["shape"] = obj["shape"]
+        # new_obj["dtype"] = obj["dtype"]
+        # new_obj["byte_order"] = obj["byte_order"]
+    return obj
 
 
 def decode_result(response):
