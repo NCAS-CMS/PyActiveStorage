@@ -31,9 +31,9 @@ def test_anon_s3():
                           },
                     active_storage_url=active_storage_url)
     active._version = 2
-    with pytest.raises(ReductionistError):
-        result = active.min()[:]
-        assert result == 197.69595    
+
+    result = active.min()[:]
+    assert result == 197.69595    
 
 
 def test_s3_small_file():

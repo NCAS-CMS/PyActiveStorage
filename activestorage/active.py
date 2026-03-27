@@ -515,20 +515,19 @@ class Active:
         if self.interface_type == "s3" and self._version == 2:
             if self.storage_options is not None:
                 key, secret = None, None
-                if self.storage_options.get("anon", None) is True:
-                    print("Reductionist session for Anon S3 bucket.")
-                    session = reductionist.get_session(
-                        None, None, S3_ACTIVE_STORAGE_CACERT)
                 if "key" in self.storage_options:
                     key = self.storage_options["key"]
                 if "secret" in self.storage_options:
                     secret = self.storage_options["secret"]
-                if key and secret:
-                    session = reductionist.get_session(
-                        key, secret, S3_ACTIVE_STORAGE_CACERT)
+                elif self.storage_options.get("anon", None) is True:
+                    print("Reductionist session for Anon S3 bucket.")
+                    key = None
+                    secret = None
                 else:
-                    session = reductionist.get_session(
-                        S3_ACCESS_KEY, S3_SECRET_KEY, S3_ACTIVE_STORAGE_CACERT)
+                    key = S3_ACCESS_KEY
+                    secret = S3_SECRET_KEY
+                session = reductionist.get_session(
+                    key, secret, S3_ACTIVE_STORAGE_CACERT)
             else:
                 session = reductionist.get_session(S3_ACCESS_KEY,
                                                    S3_SECRET_KEY,

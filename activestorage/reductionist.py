@@ -24,11 +24,6 @@ def get_session(username: str, password: str,
     :returns: a client session object.
     """
     session = requests.Session()
-    # TODO Stack-HPC
-    # we need to allow Anon buckets. though this
-    # will break connection to data server
-    # if username is None and password is None:
-    #     return session
     session.auth = (username, password)
     session.verify = cacert or False
     return session
@@ -91,6 +86,7 @@ def reduce_chunk(session,
         print(f"Reductionist request data dictionary: {request_data}")
     api_operation = "sum" if operation == "mean" else operation or "select"
     url = f'{server}/v2/{api_operation}/'
+    print("Reductionist Session auth:", session.auth)
     response = request(session, url, request_data)
 
     if response.ok:
