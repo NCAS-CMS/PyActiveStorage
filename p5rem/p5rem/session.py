@@ -9,7 +9,18 @@ import subprocess
 import threading
 from typing import Any
 
-from .protocol import ERROR, FILE_CLOSE, FILE_OPEN, GET_CHUNK, HEARTBEAT, LIST, REDUCE, STAT, VAR_OPEN, read_message, write_message
+from .protocol import CHUNK_DATA, ERROR, FILE_INFO, FILE_CLOSE, FILE_OPEN, GET_CHUNK, HEARTBEAT, LIST, LIST_RESULT, REDUCE, REDUCTION_RESULT, STAT, STAT_RESULT, VAR_INFO, VAR_OPEN, read_message, write_message
+
+REQUEST_RESPONSE_TYPES = {
+	LIST: LIST_RESULT,
+	STAT: STAT_RESULT,
+	FILE_OPEN: FILE_INFO,
+	VAR_OPEN: VAR_INFO,
+	GET_CHUNK: CHUNK_DATA,
+	REDUCE: REDUCTION_RESULT,
+	FILE_CLOSE: FILE_CLOSE,
+	HEARTBEAT: HEARTBEAT,
+}
 
 
 class SessionError(RuntimeError):
@@ -21,6 +32,23 @@ class ResponseError(SessionError):
 
 	def __init__(self, message: str, *, response: Mapping[str, Any]):
 		super().__init__(message)
+		self.response = dict(response)
+
+
+class UnexpectedResponseError(SessionError):
+	"""Raised when a request receives the wrong response type."""
+
+	def __init__(
+		self,
+		message: str,
+		*,
+		request_type: str,
+		expected_types: tuple[str, ...],
+		response: Mapping[str, Any],
+	) -> None:
+		super().__init__(message)
+		self.request_type = request_type
+		self.expected_types = expected_types
 		self.response = dict(response)
 
 
@@ -58,7 +86,14 @@ class p5remSession:
 	def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
 		self.close()
 
-	def request(self, message_type: str, /, **fields: Any) -> dict[str, Any]:
+	def request(
+		self,
+		message_type: str,
+		/,
+		*,
+		expected_type: str | tuple[str, ...] | None = None,
+		**fields: Any,
+	) -> dict[str, Any]:
 		"""Send one request and wait for one response."""
 
 		with self._lock:
@@ -67,6 +102,18 @@ class p5remSession:
 
 		if response["type"] == ERROR:
 			raise ResponseError(response.get("message", "remote server returned an error"), response=response)
+
+		expected_types = self._expected_types_for(message_type, expected_type)
+		if expected_types is not None and response["type"] not in expected_types:
+			raise UnexpectedResponseError(
+				(
+					f"request {message_type!r} expected response type "
+					f"{expected_types} but received {response['type']!r}"
+				),
+				request_type=message_type,
+				expected_types=expected_types,
+				response=response,
+			)
 
 		return response
 
@@ -86,6 +133,13 @@ class p5remSession:
 		"""Open a remote file and return its metadata."""
 
 		return self.request(FILE_OPEN, path=path)
+
+	def open(self, path: str):
+		"""Open a remote file as a pyfive-like proxy."""
+
+		from .proxy import p5remProxy
+
+		return p5remProxy(self, path)
 
 	def var_open(self, path: str, varname: str) -> dict[str, Any]:
 		"""Open a remote variable and return its metadata."""
@@ -127,6 +181,20 @@ class p5remSession:
 
 		return self.request(HEARTBEAT)
 
+	def _expected_types_for(
+		self,
+		message_type: str,
+		expected_type: str | tuple[str, ...] | None,
+	) -> tuple[str, ...] | None:
+		if expected_type is None:
+			inferred = REQUEST_RESPONSE_TYPES.get(message_type)
+			return (inferred,) if inferred is not None else None
+
+		if isinstance(expected_type, str):
+			return (expected_type,)
+
+		return tuple(expected_type)
+
 	def close(self) -> None:
 		"""Close attached streams and terminate the subprocess if needed."""
 
@@ -155,4 +223,11 @@ class p5remSession:
 Session = p5remSession
 
 
-__all__ = ["ResponseError", "Session", "SessionError", "p5remSession"]
+__all__ = [
+	"REQUEST_RESPONSE_TYPES",
+	"ResponseError",
+	"Session",
+	"SessionError",
+	"UnexpectedResponseError",
+	"p5remSession",
+]
