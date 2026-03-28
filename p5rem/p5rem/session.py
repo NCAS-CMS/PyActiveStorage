@@ -1,0 +1,1 @@
+"""Session stubs for SSH-backed request handling."""

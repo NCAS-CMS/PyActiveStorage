@@ -1,0 +1,1 @@
+"""Cache stubs for persistent metadata and chunk storage."""

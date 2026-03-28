@@ -1,0 +1,1 @@
+"""Protocol stubs for CBOR framing and message types."""
