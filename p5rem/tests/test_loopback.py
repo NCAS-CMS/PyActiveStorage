@@ -127,6 +127,44 @@ def test_loopback_proxy_round_trip() -> None:
 		_stop_loopback_server(*connection)
 
 
+def test_contiguous_file_data_and_coordinates_round_trip() -> None:
+	connection = _start_loopback_server(ServerStub)
+	session = connection[0]
+	data_path = str(Path(__file__).parent / "data" / "contiguous_eg.nc")
+	try:
+		with session.open(data_path) as proxy:
+			ref_file = pyfive.File(data_path)
+
+			assert set(proxy.keys()) == set(ref_file.keys())
+
+			# Validate all contiguous variables round-trip correctly.
+			for name in proxy.keys():
+				remote = proxy[name]
+				local = ref_file[name]
+
+				assert remote.chunks is None
+				assert remote.shape == local.shape
+				assert remote.dtype == local.dtype
+				assert np.allclose(remote[()], local[()])
+
+			# Validate coordinate linkage attributes on the data variable.
+			q_attrs = proxy["q"].attrs
+			assert q_attrs.get("coordinates") == ref_file["q"].attrs.get("coordinates")
+			assert proxy["lat"].attrs.get("bounds") == ref_file["lat"].attrs.get("bounds")
+			assert proxy["lon"].attrs.get("bounds") == ref_file["lon"].attrs.get("bounds")
+
+			# Exercise data access through coordinates and bounds variables.
+			assert np.allclose(proxy["lat"][()], ref_file["lat"][()])
+			assert np.allclose(proxy["lon"][()], ref_file["lon"][()])
+			assert np.allclose(proxy["lat_bnds"][()], ref_file["lat_bnds"][()])
+			assert np.allclose(proxy["lon_bnds"][()], ref_file["lon_bnds"][()])
+			assert np.allclose(proxy["time"][()], ref_file["time"][()])
+
+		assert proxy.closed is True
+	finally:
+		_stop_loopback_server(*connection)
+
+
 def test_loopback_error_response_raises_response_error() -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
