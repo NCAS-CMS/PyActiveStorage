@@ -7,7 +7,7 @@ from contextlib import suppress
 from io import BufferedIOBase
 import subprocess
 import threading
-from typing import Any
+from typing import Any, Callable
 
 from .cache import P5RemCache, get_default_cache
 from .protocol import CHUNK_DATA, ERROR, FILE_INFO, FILE_CLOSE, FILE_OPEN, GET_CHUNK, HEARTBEAT, LIST, LIST_RESULT, REDUCE, REDUCTION_RESULT, STAT, STAT_RESULT, VAR_INFO, VAR_OPEN, read_message, write_message
@@ -65,6 +65,9 @@ class p5remSession:
 		stdin: BufferedIOBase | None = None,
 		stdout: BufferedIOBase | None = None,
 		cache: P5RemCache | None = None,
+		heartbeat_interval: float | None = None,
+		heartbeat_max_failures: int = 3,
+		heartbeat_failure_callback: Callable[[p5remSession, Exception], None] | None = None,
 	) -> None:
 		self.host = host
 		self.username = username
@@ -74,9 +77,17 @@ class p5remSession:
 		self._lock = threading.RLock()
 		self._cache = cache if cache is not None else (get_default_cache() if host is not None else None)
 		self._path_mtime: dict[str, float] = {}
+		self._heartbeat_interval = heartbeat_interval
+		self._heartbeat_max_failures = max(1, int(heartbeat_max_failures))
+		self._heartbeat_failure_callback = heartbeat_failure_callback
+		self._heartbeat_stop = threading.Event()
+		self._heartbeat_thread: threading.Thread | None = None
 
 		if self._stdin is None or self._stdout is None:
 			raise ValueError("session requires readable stdout and writable stdin streams")
+
+		if heartbeat_interval is not None and heartbeat_interval > 0:
+			self.start_heartbeat(interval=heartbeat_interval)
 
 	@property
 	def process(self) -> subprocess.Popen[bytes] | None:
@@ -225,6 +236,60 @@ class p5remSession:
 
 		return self.request(HEARTBEAT)
 
+	def set_heartbeat_failure_callback(
+		self,
+		callback: Callable[[p5remSession, Exception], None] | None,
+	) -> None:
+		"""Set callback invoked after repeated heartbeat failures."""
+
+		self._heartbeat_failure_callback = callback
+
+	def start_heartbeat(
+		self,
+		*,
+		interval: float | None = None,
+		max_failures: int | None = None,
+	) -> None:
+		"""Start background heartbeat loop if not already running."""
+
+		if interval is not None:
+			self._heartbeat_interval = interval
+		if max_failures is not None:
+			self._heartbeat_max_failures = max(1, int(max_failures))
+		if self._heartbeat_interval is None or self._heartbeat_interval <= 0:
+			raise ValueError("heartbeat interval must be > 0")
+		if self._heartbeat_thread is not None and self._heartbeat_thread.is_alive():
+			return
+
+		self._heartbeat_stop.clear()
+		thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
+		thread.start()
+		self._heartbeat_thread = thread
+
+	def stop_heartbeat(self) -> None:
+		"""Stop background heartbeat loop."""
+
+		self._heartbeat_stop.set()
+		thread = self._heartbeat_thread
+		self._heartbeat_thread = None
+		if thread is not None and thread.is_alive() and thread is not threading.current_thread():
+			thread.join(timeout=1)
+
+	def _heartbeat_loop(self) -> None:
+		failures = 0
+		while not self._heartbeat_stop.wait(float(self._heartbeat_interval or 0)):
+			try:
+				self.heartbeat()
+				failures = 0
+			except Exception as exc:
+				failures += 1
+				if failures >= self._heartbeat_max_failures:
+					callback = self._heartbeat_failure_callback
+					if callback is not None:
+						with suppress(Exception):
+							callback(self, exc)
+					failures = 0
+
 	@property
 	def _host_cache_key(self) -> str:
 		return self.host if self.host is not None else "local"
@@ -255,6 +320,8 @@ class p5remSession:
 
 	def close(self) -> None:
 		"""Close attached streams and terminate the subprocess if needed."""
+
+		self.stop_heartbeat()
 
 		stdin = self._stdin
 		stdout = self._stdout

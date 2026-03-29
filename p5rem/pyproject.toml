@@ -30,3 +30,8 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["p5rem*"]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: optional integration tests requiring external services",
+]
