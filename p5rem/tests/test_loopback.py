@@ -165,6 +165,36 @@ def test_contiguous_file_data_and_coordinates_round_trip() -> None:
 		_stop_loopback_server(*connection)
 
 
+def test_enum_file_round_trip() -> None:
+	connection = _start_loopback_server(ServerStub)
+	session = connection[0]
+	data_path = str(Path(__file__).parent / "data" / "enum_variable.nc")
+	try:
+		with session.open(data_path) as proxy:
+			ref_file = pyfive.File(data_path)
+
+			assert "enum_var" in proxy.keys()
+			assert "axis" in proxy.keys()
+
+			enum_remote = proxy["enum_var"]
+			enum_ref = ref_file["enum_var"]
+			assert enum_remote.chunks is None
+			assert enum_remote.shape == enum_ref.shape
+			assert enum_remote.dtype == enum_ref.dtype
+			assert np.array_equal(enum_remote[()], enum_ref[()])
+			assert np.array_equal(enum_remote[1:4], enum_ref[1:4])
+
+			axis_remote = proxy["axis"]
+			axis_ref = ref_file["axis"]
+			assert axis_remote.shape == axis_ref.shape
+			assert axis_remote.dtype == axis_ref.dtype
+			assert np.allclose(axis_remote[()], axis_ref[()])
+
+		assert proxy.closed is True
+	finally:
+		_stop_loopback_server(*connection)
+
+
 def test_loopback_error_response_raises_response_error() -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
