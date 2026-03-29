@@ -1,1 +1,68 @@
 # p5rem
+
+Remote HDF5/NetCDF access over SSH stdio, using a small remote pyfive-based server and a local proxy API.
+
+## Usage
+
+For a minimal non-GUI example that defines the remote host and Python command directly in the script, see:
+
+- [examples/read_remote_slice.py](examples/read_remote_slice.py)
+- [doc/user-guide.md](doc/user-guide.md)
+
+## Testing
+
+The test suite is split into two groups:
+
+- Default tests: pure unit and loopback tests that do not require a real SSH target.
+- Integration tests: real SSH-backed tests marked with `@pytest.mark.integration`.
+
+The integration marker exists so the normal test run can stay fast and self-contained, while the real SSH path is still exercised explicitly when credentials and a remote test directory are available.
+
+### Default test run
+
+```bash
+/Users/bnl28/miniforge3/envs/work26/bin/python -m pytest -m "not integration"
+# or
+make test
+```
+
+### Real SSH integration run
+
+Create a local environment override file such as `tests/testenv.sh`:
+
+```bash
+#!/usr/bin/env sh
+
+export P5REM_SSH_HOST_ALIAS="xfer1"
+export P5REM_SSH_PYTHON="conda run -n jas26 python"
+export P5REM_SSH_LOGIN_SHELL="1"
+export P5REM_SSH_REMOTE_DIR="p5test"
+```
+
+Then run:
+
+```bash
+source tests/testenv.sh
+/Users/bnl28/miniforge3/envs/work26/bin/python -m pytest -m integration
+# or
+make test-integration
+```
+
+Notes:
+
+- `P5REM_SSH_PYTHON` may be set to `conda run -n <env> python`; p5rem automatically adds `--no-capture-output` when bootstrapping the remote server so the SSH stdio protocol remains binary-clean.
+- `P5REM_SSH_LOGIN_SHELL=1` wraps the remote command with `bash -lc`, which is useful on HPC systems where conda is only initialized in login-shell startup files.
+- The remote round-trip test reuses the same file-comparison assertions as the loopback tests.
+
+### Standalone acid test
+
+There is also a CLI wrapper for the same shared SSH round-trip assertions:
+
+```bash
+source tests/testenv.sh
+/Users/bnl28/miniforge3/envs/work26/bin/python tests/acid_test.py
+# or
+make acid-test
+```
+
+This is useful for manual debugging, but the canonical automated SSH test path is the `pytest -m integration` run above.

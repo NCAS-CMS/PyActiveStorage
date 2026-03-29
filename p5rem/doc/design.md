@@ -461,17 +461,45 @@ def test_mtime_invalidation():
     assert cache.get(key_mtime_2) is None  # different mtime = miss
 ```
 
-### Layer 5: SSH integration (optional, not in CI)
+### Layer 5: SSH integration (optional)
 
-Full end-to-end against a real SSH server. Marked explicitly, excluded from normal CI:
+Full end-to-end against a real SSH server. These tests are marked explicitly with `@pytest.mark.integration` so they can be selected separately from the fast local suite.
 
-```python
-@pytest.mark.integration
-def test_full_ssh_session():
-    with p5rem.Session(host="hpc.cluster.edu", username="user") as session:
-        with session.open("/scratch/user/data/model.nc") as f:
-            fields = cf.read(f)
+What this means in practice:
+
+- Normal local development run: `pytest -m "not integration"`
+- Real SSH run when credentials and a remote test directory are available: `pytest -m integration`
+- A CI system could use the same split if it has access to a suitable SSH target, but the key point is simply that the real-SSH path is opt-in rather than part of the default test run.
+
+The important implementation detail is that the SSH-backed round-trip test uses the same shared file assertions as the loopback tests. SSH is only the transport difference; the file-behaviour checks are common.
+
+Current layout:
+
+- `tests/roundtrip_assertions.py` — shared file comparison logic used by both loopback and SSH tests
+- `tests/test_loopback.py` — socketpair loopback transport, real server logic, shared assertions
+- `tests/test_roundtrip_integration.py` — real SSH transport, same shared assertions
+- `tests/acid_test.py` — standalone CLI wrapper around the same SSH helpers and shared assertions
+- `tests/integration_helpers.py` — common SSH test configuration/bootstrap helpers
+
+Typical SSH test setup:
+
+```bash
+#!/usr/bin/env sh
+
+export P5REM_SSH_HOST_ALIAS="xfer1"
+export P5REM_SSH_PYTHON="conda run -n jas26 python"
+export P5REM_SSH_LOGIN_SHELL="1"
+export P5REM_SSH_REMOTE_DIR="p5test"
 ```
+
+Run the SSH-backed pytest tests with:
+
+```bash
+source tests/testenv.sh
+pytest -m integration
+```
+
+`P5REM_SSH_PYTHON` can remain as `conda run -n <env> python`. During bootstrap p5rem automatically inserts `--no-capture-output`, because `conda run` otherwise captures stdio and breaks the binary request/response transport over SSH.
 
 ### Test data
 
@@ -489,7 +517,7 @@ Layer 1: protocol    — pure unit tests, no I/O
 Layer 2: loopback    — subprocess, real HDF5, no SSH
 Layer 3: proxy       — mock session, tests pyfive-like interface
 Layer 4: cache       — diskcache integration
-Layer 5: SSH         — marked integration, excluded from CI
+Layer 5: SSH         — marked integration, selected explicitly
 ```
 
 Layers 1-4 give high confidence before SSH is ever involved.

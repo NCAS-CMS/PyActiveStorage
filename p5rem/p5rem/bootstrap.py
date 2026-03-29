@@ -3,33 +3,44 @@
 from __future__ import annotations
 
 from contextlib import suppress
-from dataclasses import dataclass
+import logging
 from pathlib import Path
 from pathlib import PurePosixPath
 import shlex
 import threading
 from typing import Any, Callable
-
 import paramiko
-
 from .session import SessionError, p5remSession
+from time import perf_counter
+
+log = logging.getLogger(__name__)
+_DEFAULT_REMOTE_SERVER = str(Path(__file__).parent / "server" / "remote_server.py")
 
 
 class BootstrapError(RuntimeError):
 	"""Raised when bootstrap operations fail."""
 
-
-@dataclass
 class BootstrappedProcess:
 	"""Minimal process-like wrapper around a Paramiko channel."""
 
-	client: Any
-	channel: Any
-	stdin: Any
-	stdout: Any
-	stderr: Any
-	remote_path: str
-	command: str
+	def __init__(
+		self,
+		*,
+		client: Any,
+		channel: Any,
+		stdin: Any,
+		stdout: Any,
+		stderr: Any,
+		remote_path: str,
+		command: str,
+	) -> None:
+		self.client = client
+		self.channel = channel
+		self.stdin = stdin
+		self.stdout = stdout
+		self.stderr = stderr
+		self.remote_path = remote_path
+		self.command = command
 
 	def poll(self) -> int | None:
 		if self.channel.exit_status_ready():
@@ -74,32 +85,6 @@ def _ensure_remote_dir(sftp: Any, remote_dir: str) -> None:
 			sftp.stat(current)
 		except Exception:
 			sftp.mkdir(current)
-
-
-def _upload_directory(sftp: Any, local_dir: str, remote_base: str) -> None:
-	"""Recursively upload a local directory to remote via SFTP, skipping unnecessary files."""
-	local_path = Path(local_dir)
-	if not local_path.is_dir():
-		raise ValueError(f"not a directory: {local_dir}")
-
-	# Skip these patterns
-	skip_names = {"__pycache__", ".pyc", ".git", ".gitignore", ".pytest_cache"}
-
-	for local_file in local_path.rglob("*"):
-		# Skip unwanted files and directories
-		if any(part in skip_names for part in local_file.parts):
-			continue
-		if local_file.suffix == ".pyc":
-			continue
-
-		if local_file.is_dir():
-			remote_dir = str(PurePosixPath(remote_base) / local_file.relative_to(local_path))
-			_ensure_remote_dir(sftp, remote_dir)
-		else:
-			remote_path = str(PurePosixPath(remote_base) / local_file.relative_to(local_path))
-			remote_dir = str(PurePosixPath(remote_path).parent)
-			_ensure_remote_dir(sftp, remote_dir)
-			sftp.put(str(local_file), remote_path)
 
 
 def _normalise_remote_python(remote_python: str) -> list[str]:
@@ -169,7 +154,6 @@ def _resolve_ssh_connect_params(
 	}
 
 
-_DEFAULT_REMOTE_SERVER = str(Path(__file__).parent / "server" / "remote_server.py")
 
 
 def bootstrap_server(
@@ -215,7 +199,16 @@ def bootstrap_server(
 		"allow_agent": True,
 		"look_for_keys": True,
 	}
+	t1 = perf_counter()
+	log.info(
+		"Connecting to %s:%s as %s",
+		connect_params["hostname"],
+		connect_params["port"],
+		connect_params["username"],
+	)
 	client.connect(**connect_kwargs)
+	t2 = perf_counter()
+	log.info("SSH connection established (%.2f seconds)", t2 - t1)
 
 	try:
 		sftp = client.open_sftp()
@@ -223,6 +216,7 @@ def bootstrap_server(
 			_ensure_remote_dir(sftp, remote_dir)
 			remote_path = str(PurePosixPath(remote_dir) / remote_filename)
 			sftp.put(local_script_path, remote_path)
+			log.info("Uploaded server script to %s (%.2f seconds)", remote_path, perf_counter() - t2)
 			try:
 				sftp.chmod(remote_path, 0o700)
 			except Exception:
@@ -236,6 +230,7 @@ def bootstrap_server(
 			raise BootstrapError("ssh transport not available")
 		channel = transport.open_session()
 		command = _build_command(remote_python, remote_path, args, login_shell=login_shell)
+		log.info("Starting remote server: %s", command)
 		channel.exec_command(command)
 
 		stdin = channel.makefile("wb")
@@ -269,11 +264,14 @@ def bootstrap_session(
 	key_filename: str | None = None,
 	ssh_config_path: str | None = None,
 	login_shell: bool = False,
+	use_cache: bool = True,
 	args: tuple[str, ...] = (),
 	ssh_client_factory: Callable[[], Any] | None = None,
 ) -> p5remSession:
 	"""Bootstrap and return a ``p5remSession`` bound to remote stdio streams."""
 
+	log.info("Bootstrapping session to %s", host)
+	p1 = perf_counter()
 	proc = bootstrap_server(
 		host=host,
 		username=username,
@@ -290,13 +288,17 @@ def bootstrap_session(
 		args=args,
 		ssh_client_factory=ssh_client_factory,
 	)
-	return p5remSession(
-		host=host,
+	session = p5remSession(
+		host=host if use_cache else None,
 		username=username,
 		process=proc,
 		stdin=proc.stdin,
 		stdout=proc.stdout,
+		cache=None,
 	)
+	p2 = perf_counter()
+	log.info("Session bootstrapped (host=%s, cache=%s, time=%.2f seconds)", host, "enabled" if use_cache else "disabled", p2 - p1)
+	return session
 
 
 class ReconnectingBootstrappedSession:
@@ -317,6 +319,7 @@ class ReconnectingBootstrappedSession:
 		self._connect()
 
 	def _connect(self) -> p5remSession:
+		log.info("ReconnectingBootstrappedSession: connecting")
 		session = bootstrap_session(**self._bootstrap_kwargs)
 		session.set_heartbeat_failure_callback(lambda _session, _exc: self.reconnect())
 		if self._heartbeat_interval is not None and self._heartbeat_interval > 0:
@@ -335,6 +338,7 @@ class ReconnectingBootstrappedSession:
 			return self._session
 
 	def reconnect(self) -> p5remSession:
+		log.info("ReconnectingBootstrappedSession: reconnecting")
 		with self._lock:
 			old = self._session
 			self._session = None

@@ -5,9 +5,14 @@ from __future__ import annotations
 from collections.abc import Mapping
 from contextlib import suppress
 from io import BufferedIOBase
+import logging
 import subprocess
 import threading
+from time import perf_counter
 from typing import Any, Callable
+from p5rem.proxy import rFile
+
+log = logging.getLogger(__name__)
 
 # Import cache optionally - may not be available on remote servers
 try:
@@ -92,6 +97,12 @@ class p5remSession:
 		if self._stdin is None or self._stdout is None:
 			raise ValueError("session requires readable stdout and writable stdin streams")
 
+		log.info(
+			"Session created (host=%s, cache=%s)",
+			self.host or "local",
+			type(self._cache).__name__ if self._cache is not None else "none",
+		)
+
 		if heartbeat_interval is not None and heartbeat_interval > 0:
 			self.start_heartbeat(interval=heartbeat_interval)
 
@@ -153,6 +164,7 @@ class p5remSession:
 	def file_open(self, path: str) -> dict[str, Any]:
 		"""Open a remote file and return its metadata."""
 
+		log.debug("Opening remote file: %s", path)
 		host_key = self._host_cache_key
 		if self._cache is not None:
 			mtime = self._remote_mtime(path)
@@ -160,10 +172,12 @@ class p5remSession:
 				cached = self._cache.get_file_meta(host_key, path, mtime)
 				if cached is not None:
 					self._path_mtime[path] = mtime
+					log.debug("Cache hit for file metadata: %s", path)
 					return cached
 
 		response = self.request(FILE_OPEN, path=path)
 		result = dict(response)
+		log.debug("File opened: %s (%d top-level keys)", path, len(result.get("keys", ())))
 		mtime_value = result.get("mtime")
 		if isinstance(mtime_value, (int, float)):
 			self._path_mtime[path] = float(mtime_value)
@@ -173,23 +187,25 @@ class p5remSession:
 
 	def open(self, path: str):
 		"""Open a remote file as a pyfive-like proxy."""
-
-		from .proxy import rFile
-
 		return rFile(self, path)
 
 	def var_open(self, path: str, varname: str) -> dict[str, Any]:
 		"""Open a remote variable and return its metadata."""
 
+		log.debug("Fetching metadata for variable %r in %s", varname, path)
+		p1 = perf_counter()
 		host_key = self._host_cache_key
 		mtime = self._path_mtime.get(path)
 		if self._cache is not None and mtime is not None:
 			cached = self._cache.get_var_meta(host_key, path, varname, mtime)
 			if cached is not None:
+				log.debug("Cache hit for variable metadata: %r in %s", varname, path)
 				return cached
 
 		response = self.request(VAR_OPEN, path=path, varname=varname)
 		result = dict(response)
+		p2 = perf_counter()
+		log.debug("Variable metadata received: %r shape=%s dtype=%s (%.3f s)", varname, result.get("shape"), result.get("dtype"), p2 - p1)
 		if self._cache is not None and mtime is not None:
 			self._cache.set_var_meta(host_key, path, varname, mtime, result)
 		return result
@@ -197,12 +213,14 @@ class p5remSession:
 	def get_chunk(self, path: str, varname: str, byte_offset: int, size: int, **fields: Any) -> dict[str, Any]:
 		"""Request raw chunk bytes from the remote server."""
 
+		log.debug("Fetching chunk offset=%d size=%d for %r in %s", byte_offset, size, varname, path)
 		host_key = self._host_cache_key
 		mtime = self._path_mtime.get(path)
 		if self._cache is not None and mtime is not None:
 			with self._cache.transact():
 				cached = self._cache.get_chunk(host_key, path, byte_offset, size, mtime)
 				if cached is not None:
+					log.debug("Cache hit for chunk offset=%d size=%d", byte_offset, size)
 					return cached
 
 		response = self.request(
@@ -271,6 +289,7 @@ class p5remSession:
 		thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
 		thread.start()
 		self._heartbeat_thread = thread
+		log.info("Heartbeat started (interval=%.1fs, max_failures=%d)", self._heartbeat_interval, self._heartbeat_max_failures)
 
 	def stop_heartbeat(self) -> None:
 		"""Stop background heartbeat loop."""
@@ -280,6 +299,7 @@ class p5remSession:
 		self._heartbeat_thread = None
 		if thread is not None and thread.is_alive() and thread is not threading.current_thread():
 			thread.join(timeout=1)
+		log.info("Heartbeat stopped")
 
 	def _heartbeat_loop(self) -> None:
 		failures = 0

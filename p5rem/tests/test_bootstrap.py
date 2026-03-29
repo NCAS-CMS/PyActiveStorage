@@ -275,6 +275,32 @@ def test_bootstrap_explicit_connection_values_override_ssh_config(tmp_path: Path
 		proc.close()
 
 
+def test_bootstrap_session_can_disable_default_cache(monkeypatch) -> None:
+	proc = object()
+	recorded: dict[str, Any] = {}
+
+	def fake_bootstrap_server(**kwargs):
+		_ = kwargs
+		return type("Proc", (), {"stdin": object(), "stdout": object()})()
+
+	def fake_session(**kwargs):
+		recorded.update(kwargs)
+		return object()
+
+	monkeypatch.setattr(bootstrap_module, "bootstrap_server", fake_bootstrap_server)
+	monkeypatch.setattr(bootstrap_module, "p5remSession", fake_session)
+
+	result = bootstrap_module.bootstrap_session(
+		host="fake-host",
+		remote_python="python3",
+		use_cache=False,
+	)
+
+	assert result is not None
+	assert recorded["host"] is None
+	assert recorded["cache"] is None
+
+
 def test_reconnecting_bootstrap_session_retries_after_session_error(monkeypatch) -> None:
 	class DummySession:
 		def __init__(self, fails_once: bool) -> None:

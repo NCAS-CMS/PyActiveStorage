@@ -4,10 +4,14 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass
+import logging
 from typing import Any
 
 import numpy as np
 from pyfive.h5d import DatasetID, StoreInfo
+from time import perf_counter
+
+log = logging.getLogger(__name__)
 
 
 class _AtomicProxyType:
@@ -152,7 +156,11 @@ class rDataset:
 	def __getitem__(self, args: Any):
 		"""Return a NumPy view/value for the requested selection."""
 
+		log.debug("Selection %r from %r in %s", args, self._varname, self._path)
+		t1 = perf_counter()
 		data = self.id.get_data(args, self.fillvalue)
+		t2 = perf_counter()
+		log.debug("Received selection data in %.2f seconds", t2 - t1)
 		if self._astype is None:
 			return data
 		return data.astype(self._astype)
@@ -217,6 +225,7 @@ class rDataset:
 	def _load_meta(self) -> dict[str, Any]:
 		"""Fetch dataset metadata once from the server."""
 
+		log.debug("Loading metadata for %r in %s", self._varname, self._path)
 		return dict(self._session.var_open(self._path, self._varname))
 
 	def astype(self, dtype: str | np.dtype[Any]) -> rDataset:
@@ -245,7 +254,9 @@ class rFile:
 	def __init__(self, session: Any, path: str) -> None:
 		self._session = session
 		self._path = path
+		log.debug("Opening remote file: %s", path)
 		self._meta = dict(session.file_open(path))
+		log.debug("Remote file opened: %s (%d top-level keys)", path, len(self._meta.get("keys", ())))
 		self._datasets: dict[str, rDataset] = {}
 		self._closed = False
 
