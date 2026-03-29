@@ -175,6 +175,106 @@ def test_bootstrap_command_quotes_arguments(tmp_path: Path) -> None:
 		proc.close()
 
 
+def test_bootstrap_adds_no_capture_output_for_conda_run(tmp_path: Path) -> None:
+	remote_root = tmp_path / "remote"
+	remote_root.mkdir()
+	local_script = tmp_path / "server.py"
+	local_script.write_text("print('ok')\n", encoding="utf-8")
+	client = _FakeSSHClient(remote_root)
+
+	proc = bootstrap_server(
+		host="fake-host",
+		username="fake-user",
+		password="fake-pass",
+		local_script_path=str(local_script),
+		remote_dir=".p5rem",
+		remote_filename="boot.py",
+		remote_python="conda run -n jas26 python",
+		login_shell=True,
+		ssh_client_factory=lambda: client,
+	)
+	try:
+		inner_command = shlex.split(proc.command)[2]
+		parts = shlex.split(inner_command)
+		assert parts[:4] == ["conda", "run", "--no-capture-output", "-n"]
+		assert parts[4:6] == ["jas26", "python"]
+	finally:
+		proc.close()
+
+
+def test_bootstrap_resolves_shortname_from_ssh_config(tmp_path: Path) -> None:
+	remote_root = tmp_path / "remote"
+	remote_root.mkdir()
+	local_script = tmp_path / "server.py"
+	local_script.write_text("print('ok')\n", encoding="utf-8")
+	ssh_config = tmp_path / "ssh_config"
+	ssh_config.write_text(
+		"Host shortname\n"
+		"  HostName resolved.example.org\n"
+		"  User config-user\n"
+		"  Port 2202\n"
+		"  IdentityFile /tmp/config-key\n",
+		encoding="utf-8",
+	)
+
+	client = _FakeSSHClient(remote_root)
+	proc = bootstrap_server(
+		host="shortname",
+		local_script_path=str(local_script),
+		remote_dir=".p5rem",
+		remote_filename="boot.py",
+		remote_python="python3",
+		ssh_config_path=str(ssh_config),
+		ssh_client_factory=lambda: client,
+	)
+	try:
+		assert client.connect_args is not None
+		assert client.connect_args["hostname"] == "resolved.example.org"
+		assert client.connect_args["username"] == "config-user"
+		assert client.connect_args["port"] == 2202
+		assert client.connect_args["key_filename"] == "/tmp/config-key"
+	finally:
+		proc.close()
+
+
+def test_bootstrap_explicit_connection_values_override_ssh_config(tmp_path: Path) -> None:
+	remote_root = tmp_path / "remote"
+	remote_root.mkdir()
+	local_script = tmp_path / "server.py"
+	local_script.write_text("print('ok')\n", encoding="utf-8")
+	ssh_config = tmp_path / "ssh_config"
+	ssh_config.write_text(
+		"Host shortname\n"
+		"  HostName resolved.example.org\n"
+		"  User config-user\n"
+		"  Port 2202\n"
+		"  IdentityFile /tmp/config-key\n",
+		encoding="utf-8",
+	)
+
+	client = _FakeSSHClient(remote_root)
+	proc = bootstrap_server(
+		host="shortname",
+		username="explicit-user",
+		port=2022,
+		key_filename="/tmp/explicit-key",
+		local_script_path=str(local_script),
+		remote_dir=".p5rem",
+		remote_filename="boot.py",
+		remote_python="python3",
+		ssh_config_path=str(ssh_config),
+		ssh_client_factory=lambda: client,
+	)
+	try:
+		assert client.connect_args is not None
+		assert client.connect_args["hostname"] == "resolved.example.org"
+		assert client.connect_args["username"] == "explicit-user"
+		assert client.connect_args["port"] == 2022
+		assert client.connect_args["key_filename"] == "/tmp/explicit-key"
+	finally:
+		proc.close()
+
+
 def test_reconnecting_bootstrap_session_retries_after_session_error(monkeypatch) -> None:
 	class DummySession:
 		def __init__(self, fails_once: bool) -> None:

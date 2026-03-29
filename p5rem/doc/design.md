@@ -125,6 +125,40 @@ get_chunk  → server: id._get_raw_chunk() → raw bytes (2MB typical)
 - pyactivestorage is leveraged directly as the reduction component
 - Only the reduced result travels over the wire, not raw chunk data
 
+### GUI Integration: Environment Discovery
+
+For GUI applications (e.g. xconv2), p5rem provides a utility to discover available Python/conda environments on the remote HPC **before bootstrapping the server**. This allows the GUI to:
+
+1. **Detect available environments** via `discover_remote_conda_envs()` — queries `conda env list` over SSH
+2. **Let users select** which Python environment to use for the server
+3. **Bootstrap with the selected environment** using `bootstrap_session()` or `ReconnectingBootstrappedSession`
+
+```python
+from p5rem import discover_remote_conda_envs, bootstrap_session
+
+# Step 1: Discover available conda environments (no server needed, just SSH)
+envs = discover_remote_conda_envs(
+    host="xfer1",
+    ssh_config_path="~/.ssh/config",
+    login_shell=True,  # Required on HPC systems with modules
+)
+# envs = {"base": "/path/to/miniforge3", "jas26": "/path/to/miniforge3/envs/jas26", ...}
+
+# Step 2: User selects environment from GUI dropdown → "jas26"
+# Step 3: Bootstrap server with selected environment
+session = bootstrap_session(
+    host="xfer1",
+    remote_python="conda run -n jas26 python",
+    local_script_path="/path/to/server.py",
+    login_shell=True,
+)
+
+# Step 4: Use session as normal for file operations
+proxy = session.open("/path/to/data.nc")
+```
+
+No server process is required to discover environments — only SSH access via Paramiko.
+
 ### cf-python / cfdm integration
 
 - Client side uses cf-python (not xarray) for CF-conventions-aware data handling

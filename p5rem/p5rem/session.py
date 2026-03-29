@@ -9,7 +9,13 @@ import subprocess
 import threading
 from typing import Any, Callable
 
-from .cache import P5RemCache, get_default_cache
+# Import cache optionally - may not be available on remote servers
+try:
+	from .cache import P5RemCache, get_default_cache
+except ImportError:
+	P5RemCache = None  # type: ignore
+	get_default_cache = None  # type: ignore
+
 from .protocol import CHUNK_DATA, ERROR, FILE_INFO, FILE_CLOSE, FILE_OPEN, GET_CHUNK, HEARTBEAT, LIST, LIST_RESULT, REDUCE, REDUCTION_RESULT, STAT, STAT_RESULT, VAR_INFO, VAR_OPEN, read_message, write_message
 
 REQUEST_RESPONSE_TYPES = {
@@ -75,7 +81,7 @@ class p5remSession:
 		self._stdin = stdin if stdin is not None else getattr(process, "stdin", None)
 		self._stdout = stdout if stdout is not None else getattr(process, "stdout", None)
 		self._lock = threading.RLock()
-		self._cache = cache if cache is not None else (get_default_cache() if host is not None else None)
+		self._cache = cache if cache is not None else (get_default_cache() if (host is not None and get_default_cache is not None) else None)
 		self._path_mtime: dict[str, float] = {}
 		self._heartbeat_interval = heartbeat_interval
 		self._heartbeat_max_failures = max(1, int(heartbeat_max_failures))

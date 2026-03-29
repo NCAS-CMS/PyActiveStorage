@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import suppress
 from dataclasses import dataclass
+from pathlib import Path
 from pathlib import PurePosixPath
 import shlex
 import threading
@@ -75,39 +76,146 @@ def _ensure_remote_dir(sftp: Any, remote_dir: str) -> None:
 			sftp.mkdir(current)
 
 
-def _build_command(remote_python: str, remote_path: str, args: tuple[str, ...]) -> str:
-	argv = [remote_python, "-u", remote_path, *args]
-	return " ".join(shlex.quote(item) for item in argv)
+def _upload_directory(sftp: Any, local_dir: str, remote_base: str) -> None:
+	"""Recursively upload a local directory to remote via SFTP, skipping unnecessary files."""
+	local_path = Path(local_dir)
+	if not local_path.is_dir():
+		raise ValueError(f"not a directory: {local_dir}")
+
+	# Skip these patterns
+	skip_names = {"__pycache__", ".pyc", ".git", ".gitignore", ".pytest_cache"}
+
+	for local_file in local_path.rglob("*"):
+		# Skip unwanted files and directories
+		if any(part in skip_names for part in local_file.parts):
+			continue
+		if local_file.suffix == ".pyc":
+			continue
+
+		if local_file.is_dir():
+			remote_dir = str(PurePosixPath(remote_base) / local_file.relative_to(local_path))
+			_ensure_remote_dir(sftp, remote_dir)
+		else:
+			remote_path = str(PurePosixPath(remote_base) / local_file.relative_to(local_path))
+			remote_dir = str(PurePosixPath(remote_path).parent)
+			_ensure_remote_dir(sftp, remote_dir)
+			sftp.put(str(local_file), remote_path)
+
+
+def _normalise_remote_python(remote_python: str) -> list[str]:
+	"""Return a shell argv for the remote Python launcher.
+
+	When ``conda run`` is used, force live stdio passthrough so the remote
+	server can speak the binary protocol over SSH.
+	"""
+
+	argv = shlex.split(remote_python)
+	if argv[:2] == ["conda", "run"]:
+		has_live_stdio = "--no-capture-output" in argv or "--live-stream" in argv
+		if not has_live_stdio:
+			argv.insert(2, "--no-capture-output")
+	return argv
+
+
+def _build_command(
+	remote_python: str,
+	remote_path: str,
+	args: tuple[str, ...],
+	*,
+	login_shell: bool,
+) -> str:
+	argv = [*_normalise_remote_python(remote_python), "-u", remote_path, *args]
+	command = shlex.join(argv)
+	if login_shell:
+		return f"bash -lc {shlex.quote(command)}"
+	return command
+
+
+def _resolve_ssh_connect_params(
+	*,
+	host: str,
+	username: str | None,
+	port: int | None,
+	key_filename: str | None,
+	ssh_config_path: str | None,
+) -> dict[str, Any]:
+	resolved_host = host
+	resolved_user = username
+	resolved_port = port
+	resolved_key = key_filename
+
+	config_path = Path(ssh_config_path).expanduser() if ssh_config_path else Path.home() / ".ssh" / "config"
+	if config_path.exists():
+		ssh_config = paramiko.SSHConfig()
+		with config_path.open("r", encoding="utf-8") as handle:
+			ssh_config.parse(handle)
+		options = ssh_config.lookup(host)
+		resolved_host = str(options.get("hostname", resolved_host))
+		if resolved_user is None and "user" in options:
+			resolved_user = str(options["user"])
+		if resolved_port is None and "port" in options:
+			resolved_port = int(options["port"])
+		if resolved_key is None and "identityfile" in options and options["identityfile"]:
+			resolved_key = str(options["identityfile"][0])
+
+	if resolved_port is None:
+		resolved_port = 22
+
+	return {
+		"hostname": resolved_host,
+		"username": resolved_user,
+		"port": int(resolved_port),
+		"key_filename": resolved_key,
+	}
+
+
+_DEFAULT_REMOTE_SERVER = str(Path(__file__).parent / "server" / "remote_server.py")
 
 
 def bootstrap_server(
 	*,
 	host: str,
-	username: str,
-	local_script_path: str,
+	username: str | None = None,
+	local_script_path: str | None = None,
 	remote_dir: str = ".p5rem",
 	remote_filename: str = "p5rem_server.py",
 	remote_python: str = "python3",
-	port: int = 22,
+	port: int | None = None,
 	timeout: float = 10.0,
 	password: str | None = None,
 	key_filename: str | None = None,
+	ssh_config_path: str | None = None,
+	login_shell: bool = False,
 	args: tuple[str, ...] = (),
 	ssh_client_factory: Callable[[], Any] | None = None,
 ) -> BootstrappedProcess:
 	"""Upload a server script over SFTP and execute it via SSH."""
 
+	if local_script_path is None:
+		local_script_path = _DEFAULT_REMOTE_SERVER
+
 	client_factory = ssh_client_factory or paramiko.SSHClient
 	client = client_factory()
 	client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-	client.connect(
-		hostname=host,
-		port=port,
+	connect_params = _resolve_ssh_connect_params(
+		host=host,
 		username=username,
-		password=password,
+		port=port,
 		key_filename=key_filename,
-		timeout=timeout,
+		ssh_config_path=ssh_config_path,
 	)
+	connect_kwargs: dict[str, Any] = {
+		"hostname": connect_params["hostname"],
+		"port": connect_params["port"],
+		"username": connect_params["username"],
+		"password": password,
+		"key_filename": connect_params["key_filename"],
+		"timeout": timeout,
+		# Support agent-based auth and discovered keys even when key_filename is unset.
+		"allow_agent": True,
+		"look_for_keys": True,
+	}
+	client.connect(**connect_kwargs)
 
 	try:
 		sftp = client.open_sftp()
@@ -127,7 +235,7 @@ def bootstrap_server(
 		if transport is None:
 			raise BootstrapError("ssh transport not available")
 		channel = transport.open_session()
-		command = _build_command(remote_python, remote_path, args)
+		command = _build_command(remote_python, remote_path, args, login_shell=login_shell)
 		channel.exec_command(command)
 
 		stdin = channel.makefile("wb")
@@ -150,15 +258,17 @@ def bootstrap_server(
 def bootstrap_session(
 	*,
 	host: str,
-	username: str,
-	local_script_path: str,
+	username: str | None = None,
+	local_script_path: str | None = None,
 	remote_dir: str = ".p5rem",
 	remote_filename: str = "p5rem_server.py",
 	remote_python: str = "python3",
-	port: int = 22,
+	port: int | None = None,
 	timeout: float = 10.0,
 	password: str | None = None,
 	key_filename: str | None = None,
+	ssh_config_path: str | None = None,
+	login_shell: bool = False,
 	args: tuple[str, ...] = (),
 	ssh_client_factory: Callable[[], Any] | None = None,
 ) -> p5remSession:
@@ -175,6 +285,8 @@ def bootstrap_session(
 		timeout=timeout,
 		password=password,
 		key_filename=key_filename,
+		ssh_config_path=ssh_config_path,
+		login_shell=login_shell,
 		args=args,
 		ssh_client_factory=ssh_client_factory,
 	)
@@ -297,6 +409,116 @@ def bootstrap_reconnecting_session(
 	)
 
 
+def discover_remote_conda_envs(
+	*,
+	host: str,
+	username: str | None = None,
+	port: int | None = None,
+	password: str | None = None,
+	key_filename: str | None = None,
+	ssh_config_path: str | None = None,
+	timeout: float = 10.0,
+	login_shell: bool = True,
+) -> dict[str, str]:
+	"""
+	Discover available conda environments on a remote system.
+
+	Executes `conda env list` via SSH and parses the output to extract environment
+	names and their corresponding paths. Does NOT require the p5rem server.
+
+	Args:
+		host: SSH hostname or config alias.
+		username: SSH username (resolved from config if None).
+		port: SSH port (resolved from config if None).
+		password: SSH password (if key auth fails).
+		key_filename: Path to identity file (resolved from config if None).
+		ssh_config_path: Path to SSH config file; defaults to ~/.ssh/config.
+		timeout: SSH operation timeout in seconds.
+		login_shell: If True, wraps `conda env list` with `bash -lc` to ensure
+			conda is initialized in the login shell context.
+
+	Returns:
+		Dict mapping environment name to its path. Examples:
+		```python
+		{
+			"base": "/path/to/miniforge3",
+			"work26": "/path/to/miniforge3/envs/work26",
+			"jas26": "/path/to/miniforge3/envs/jas26",
+		}
+		```
+
+	Raises:
+		BootstrapError: If SSH connection or command execution fails.
+	"""
+	# Resolve SSH connection parameters using SSH config
+	connect_params = _resolve_ssh_connect_params(
+		host=host,
+		username=username,
+		port=port,
+		key_filename=key_filename,
+		ssh_config_path=ssh_config_path,
+	)
+
+	client = paramiko.SSHClient()
+	client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+	try:
+		# Connect with optional password fallback and agent/key discovery
+		client.connect(
+			connect_params["hostname"],
+			port=connect_params["port"],
+			username=connect_params["username"],
+			password=password,
+			key_filename=connect_params.get("key_filename"),
+			timeout=timeout,
+			allow_agent=True,
+			look_for_keys=True,
+		)
+
+		# Build command to list conda environments
+		cmd = "conda env list"
+		if login_shell:
+			cmd = f"bash -lc {shlex.quote(cmd)}"
+
+		# Execute remotely
+		_stdin, stdout, stderr = client.exec_command(cmd, timeout=timeout)
+		output = stdout.read().decode("utf-8", errors="ignore")
+		error = stderr.read().decode("utf-8", errors="ignore")
+
+		if stdout.channel.recv_exit_status() != 0:
+			raise BootstrapError(
+				f"remote 'conda env list' failed: {error or output}"
+			)
+
+		# Parse output: each line is "name  /path/to/env" (or "*" prefix for active env)
+		envs: dict[str, str] = {}
+		for line in output.split("\n"):
+			line = line.strip()
+			if not line or line.startswith("#"):
+				continue
+			# Remove leading "*" if present (marks active env)
+			if line.startswith("*"):
+				line = line[1:].strip()
+			# Split on whitespace; first part is name, rest is path
+			parts = line.split()
+			if len(parts) >= 2:
+				name = parts[0]
+				path = parts[-1]  # Last part is the path
+				if not path.startswith("-"):  # Skip lines with flags
+					envs[name] = path
+
+		return envs
+
+	except paramiko.AuthenticationException as exc:
+		raise BootstrapError(f"SSH authentication failed for {host}: {exc}") from exc
+	except paramiko.SSHException as exc:
+		raise BootstrapError(f"SSH error connecting to {host}: {exc}") from exc
+	except Exception as exc:
+		raise BootstrapError(f"error discovering remote conda envs: {exc}") from exc
+	finally:
+		client.close()
+
+
 __all__ = [
 	"BootstrappedProcess",
 	"BootstrapError",
@@ -304,4 +526,5 @@ __all__ = [
 	"bootstrap_reconnecting_session",
 	"bootstrap_server",
 	"bootstrap_session",
+	"discover_remote_conda_envs",
 ]

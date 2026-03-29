@@ -14,6 +14,7 @@ import numpy as np
 
 from p5rem.session import ResponseError, UnexpectedResponseError, p5remSession
 from p5rem.server.stub import ServerStub
+from tests.roundtrip_assertions import assert_roundtrip_file_matches
 
 
 class WrongHeartbeatServer(ServerStub):
@@ -191,6 +192,17 @@ def test_enum_file_round_trip() -> None:
 			assert np.allclose(axis_remote[()], axis_ref[()])
 
 		assert proxy.closed is True
+	finally:
+		_stop_loopback_server(*connection)
+
+
+@pytest.mark.parametrize("filename", ["test1.nc", "contiguous_eg.nc", "enum_variable.nc"])
+def test_loopback_shared_roundtrip_assertions(filename: str) -> None:
+	connection = _start_loopback_server(ServerStub)
+	session = connection[0]
+	data_path = Path(__file__).parent / "data" / filename
+	try:
+		assert_roundtrip_file_matches(session, data_path, str(data_path))
 	finally:
 		_stop_loopback_server(*connection)
 

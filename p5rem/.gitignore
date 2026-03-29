@@ -35,3 +35,6 @@ ENV/
 
 # Local runtime and log files
 *.log
+
+# Local test integration environment overrides
+tests/testenv.sh
