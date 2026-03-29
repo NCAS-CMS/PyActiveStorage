@@ -12,8 +12,10 @@ logging.getLogger("p5rem").setLevel(logging.DEBUG)
 REMOTE_HOST = "xfer1"
 REMOTE_PYTHON = "conda run -n jas26 python"
 REMOTE_FILE = "p5test/test1.nc"
+REMOTE_FILE = "canari/public/bnl/da193a_25_3hr__198807-198807.nc"
 VARIABLE = "tas"
-SELECTION = (0, slice(None), slice(None))
+VARIABLE = "m01s00i507_10"
+SELECTION = (slice(None), slice(None), slice(None))
 
 def main() -> None:
 	with bootstrap_session(
