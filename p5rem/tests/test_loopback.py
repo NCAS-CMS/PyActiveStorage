@@ -5,9 +5,12 @@ from __future__ import annotations
 import socket
 import threading
 from contextlib import suppress
+from pathlib import Path
 from typing import Any
 
+import pyfive
 import pytest
+import numpy as np
 
 from p5rem.session import ResponseError, UnexpectedResponseError, p5remSession
 from p5rem.server.stub import ServerStub
@@ -33,9 +36,19 @@ class LoopbackServer(ServerStub):
 			"shape": [2, 3],
 			"dtype": "float32",
 			"chunks": [1, 3],
-			"index": {"kind": "mock"},
+			"index": [
+				{
+					"chunk_offset": [0, 0],
+					"byte_offset": 10,
+					"size": 4,
+					"filter_mask": 0,
+				}
+			],
 			"fragmented": False,
 			"attrs": {"units": "K"},
+			"fillvalue": None,
+			"filter_pipeline": None,
+			"order": "C",
 		}
 
 	def handle_get_chunk(self, path: str, varname: str, byte_offset: int, size: int, **fields: Any) -> dict[str, Any]:
@@ -51,14 +64,7 @@ class LoopbackServer(ServerStub):
 		}
 
 	def handle_reduce(self, path: str, varname: str, byte_offset: int, size: int, operation: str, **fields: Any) -> dict[str, Any]:
-		self._get_dataset(path, varname)
-		return {
-			"type": "REDUCTION_RESULT",
-			"path": path,
-			"varname": varname,
-			"operation": operation,
-			"value": 7.5,
-		}
+		raise NotImplementedError("REDUCE handling is not implemented yet")
 
 
 class WrongHeartbeatServer(ServerStub):
@@ -146,15 +152,15 @@ def test_loopback_proxy_round_trip(loopback_session) -> None:
 
 		dataset = proxy["temperature"]
 		assert dataset.shape == (2, 3)
-		assert dataset.dtype == "float32"
+		assert dataset.dtype == np.dtype("float32")
 		assert dataset.chunks == (1, 3)
 		assert dataset.attrs == {"units": "K"}
 
 		chunk = dataset.get_chunk(10, 4)
-		reduction = dataset.reduce(10, 4, "mean")
 
 		assert chunk["data"] == b"xxxx"
-		assert reduction["value"] == 7.5
+		with pytest.raises(ResponseError, match="not implemented"):
+			dataset.reduce(10, 4, "mean")
 
 	assert proxy.closed is True
 
@@ -175,5 +181,98 @@ def test_unexpected_response_type_raises() -> None:
 	try:
 		with pytest.raises(UnexpectedResponseError, match="expected response type"):
 			session.heartbeat()
+	finally:
+		_stop_loopback_server(*connection)
+
+
+def test_real_server_var_open_includes_rich_metadata() -> None:
+	connection = _start_loopback_server(ServerStub)
+	session = connection[0]
+	data_path = Path(__file__).parent / "data" / "test1.nc"
+	try:
+		file_info = session.file_open(str(data_path))
+		assert "tas" in file_info["keys"]
+
+		chunked = session.var_open(str(data_path), "tas")
+		assert chunked["layout"] == "chunked"
+		assert chunked["chunks"] == [6, 32, 32]
+		assert isinstance(chunked["attrs"], dict)
+		assert "units" in chunked["attrs"]
+		assert isinstance(chunked["index"], list)
+		assert len(chunked["index"]) > 0
+		assert {"chunk_offset", "byte_offset", "size", "filter_mask"}.issubset(chunked["index"][0])
+
+		contiguous = session.var_open(str(data_path), "bounds")
+		assert contiguous["layout"] == "contiguous"
+		assert contiguous["chunks"] is None
+		assert isinstance(contiguous["index"], list)
+		assert len(contiguous["index"]) == 1
+		assert contiguous["index"][0]["size"] > 0
+
+		session.file_close(str(data_path))
+	finally:
+		_stop_loopback_server(*connection)
+
+
+def test_real_server_get_chunk_for_chunked_and_contiguous() -> None:
+	connection = _start_loopback_server(ServerStub)
+	session = connection[0]
+	data_path = Path(__file__).parent / "data" / "test1.nc"
+	try:
+		session.file_open(str(data_path))
+
+		chunked = session.var_open(str(data_path), "tas")
+		entry = chunked["index"][0]
+		chunk_response = session.get_chunk(
+			str(data_path),
+			"tas",
+			entry["byte_offset"],
+			entry["size"],
+		)
+		pyfive_file = pyfive.File(str(data_path))
+		pyfive_dataset = pyfive_file["tas"]
+		storeinfo = pyfive_dataset.id.index[tuple(entry["chunk_offset"])]
+		expected_chunk_bytes = pyfive_dataset.id._get_raw_chunk(storeinfo)
+
+		assert chunk_response["type"] == "CHUNK_DATA"
+		assert isinstance(chunk_response["data"], bytes)
+		assert len(chunk_response["data"]) == entry["size"]
+		assert chunk_response["data"] == expected_chunk_bytes
+
+		with open(data_path, "rb") as handle:
+			handle.seek(entry["byte_offset"])
+			on_disk_chunk_bytes = handle.read(entry["size"])
+		assert chunk_response["data"] == on_disk_chunk_bytes
+
+		contiguous = session.var_open(str(data_path), "bounds")
+		contiguous_entry = contiguous["index"][0]
+		contig_response = session.get_chunk(
+			str(data_path),
+			"bounds",
+			contiguous_entry["byte_offset"],
+			contiguous_entry["size"],
+		)
+		assert contig_response["type"] == "CHUNK_DATA"
+		assert isinstance(contig_response["data"], bytes)
+		assert len(contig_response["data"]) == contiguous_entry["size"]
+
+		with open(data_path, "rb") as handle:
+			handle.seek(contiguous_entry["byte_offset"])
+			expected_contiguous = handle.read(contiguous_entry["size"])
+		assert contig_response["data"] == expected_contiguous
+
+		session.file_close(str(data_path))
+	finally:
+		_stop_loopback_server(*connection)
+
+
+def test_real_server_reduce_is_not_implemented() -> None:
+	connection = _start_loopback_server(ServerStub)
+	session = connection[0]
+	data_path = Path(__file__).parent / "data" / "test1.nc"
+	try:
+		session.file_open(str(data_path))
+		with pytest.raises(ResponseError, match="not implemented"):
+			session.reduce(str(data_path), "tas", 0, 0, "mean")
 	finally:
 		_stop_loopback_server(*connection)

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 
-from p5rem import Session, p5remDataset, p5remProxy
+from p5rem import Session, p5remProxy, rDataset
 
 
 class MockSession:
@@ -25,17 +26,55 @@ class MockSession:
 
 	def var_open(self, path: str, varname: str) -> dict[str, object]:
 		self.var_open_calls.append((path, varname))
+		if varname == "temperature":
+			return {
+				"shape": [2, 3],
+				"dtype": "float32",
+				"chunks": [2, 3],
+				"index": [
+					{
+						"chunk_offset": [0, 0],
+						"byte_offset": 100,
+						"size": 24,
+						"filter_mask": 0,
+					}
+				],
+				"attrs": {"units": "K"},
+				"fillvalue": None,
+				"filter_pipeline": None,
+				"order": "C",
+				"layout": "chunked",
+				"fragmented": False,
+			}
 		return {
-			"shape": [180, 360],
+			"shape": [4],
 			"dtype": "float32",
-			"chunks": [45, 90],
-			"index": {"kind": "btree"},
+			"chunks": None,
+			"index": [
+				{
+					"chunk_offset": [0],
+					"byte_offset": 200,
+					"size": 16,
+					"filter_mask": 0,
+				}
+			],
+			"attrs": {},
+			"fillvalue": None,
+			"filter_pipeline": None,
+			"order": "C",
+			"layout": "contiguous",
 			"fragmented": varname == "pressure",
 		}
 
 	def get_chunk(self, path: str, varname: str, byte_offset: int, size: int, **fields: object) -> dict[str, object]:
 		self.chunk_calls.append((path, varname, byte_offset, size, fields))
-		return {"type": "CHUNK_DATA", "data": b"abc", "size": size}
+		if varname == "temperature":
+			data = np.arange(6, dtype=np.float32).tobytes()
+			return {"type": "CHUNK_DATA", "data": data, "size": len(data)}
+		if varname == "pressure":
+			data = np.array([10.0, 20.0, 30.0, 40.0], dtype=np.float32).tobytes()
+			return {"type": "CHUNK_DATA", "data": data, "size": len(data)}
+		return {"type": "CHUNK_DATA", "data": b"", "size": 0}
 
 	def reduce(
 		self,
@@ -80,15 +119,16 @@ def test_dataset_metadata_is_loaded_lazily_and_cached() -> None:
 
 		dataset = proxy["temperature"]
 
-		assert isinstance(dataset, p5remDataset)
+		assert isinstance(dataset, rDataset)
 		assert session.var_open_calls == []
-		assert dataset.shape == (180, 360)
-		assert dataset.dtype == "float32"
-		assert dataset.chunks == (45, 90)
-		assert dataset.index == {"kind": "btree"}
+		assert dataset.shape == (2, 3)
+		assert dataset.dtype == np.dtype("float32")
+		assert dataset.chunks == (2, 3)
+		assert isinstance(dataset.index, list)
+		assert dataset.attrs == {"units": "K"}
 		assert dataset.fragmented is False
 		assert session.var_open_calls == [("/data/example.nc", "temperature")]
-		assert dataset.shape == (180, 360)
+		assert dataset.shape == (2, 3)
 		assert session.var_open_calls == [("/data/example.nc", "temperature")]
 
 
@@ -99,13 +139,39 @@ def test_dataset_operations_delegate_to_session() -> None:
 		chunk_response = dataset.get_chunk(1024, 4096, storeinfo={"offset": 1024})
 		reduction_response = dataset.reduce(1024, 4096, "mean", axis=0)
 
-		assert chunk_response["data"] == b"abc"
+		assert chunk_response["data"] == np.array([10.0, 20.0, 30.0, 40.0], dtype=np.float32).tobytes()
 		assert reduction_response["value"] == 42.0
 		assert session.chunk_calls == [
 			("/data/example.nc", "pressure", 1024, 4096, {"storeinfo": {"offset": 1024}})
 		]
 		assert session.reduce_calls == [
 			("/data/example.nc", "pressure", 1024, 4096, "mean", {"axis": 0})
+		]
+
+
+def test_dataset_getitem_reads_chunked_data() -> None:
+		session = MockSession()
+		dataset = p5remProxy(session, "/data/example.nc")["temperature"]
+
+		result = dataset[:, 1:]
+
+		expected = np.arange(6, dtype=np.float32).reshape(2, 3)[:, 1:]
+		assert np.array_equal(result, expected)
+		assert session.chunk_calls == [
+			("/data/example.nc", "temperature", 100, 24, {"chunk_coord": [0, 0]})
+		]
+
+
+def test_dataset_getitem_reads_contiguous_data() -> None:
+		session = MockSession()
+		dataset = p5remProxy(session, "/data/example.nc")["pressure"]
+
+		result = dataset[1:3]
+
+		expected = np.array([20.0, 30.0], dtype=np.float32)
+		assert np.array_equal(result, expected)
+		assert session.chunk_calls == [
+			("/data/example.nc", "pressure", 200, 16, {})
 		]
 
 
