@@ -16,57 +16,6 @@ from p5rem.session import ResponseError, UnexpectedResponseError, p5remSession
 from p5rem.server.stub import ServerStub
 
 
-class LoopbackServer(ServerStub):
-	def handle_file_open(self, path: str) -> dict[str, Any]:
-		self._open_files[path] = {"temperature": object()}
-		return {
-			"type": "FILE_INFO",
-			"path": path,
-			"keys": ["temperature"],
-			"attrs": {"title": "loopback"},
-			"mtime": 12345,
-		}
-
-	def handle_var_open(self, path: str, varname: str) -> dict[str, Any]:
-		self._get_dataset(path, varname)
-		return {
-			"type": "VAR_INFO",
-			"path": path,
-			"varname": varname,
-			"shape": [2, 3],
-			"dtype": "float32",
-			"chunks": [1, 3],
-			"index": [
-				{
-					"chunk_offset": [0, 0],
-					"byte_offset": 10,
-					"size": 4,
-					"filter_mask": 0,
-				}
-			],
-			"fragmented": False,
-			"attrs": {"units": "K"},
-			"fillvalue": None,
-			"filter_pipeline": None,
-			"order": "C",
-		}
-
-	def handle_get_chunk(self, path: str, varname: str, byte_offset: int, size: int, **fields: Any) -> dict[str, Any]:
-		self._get_dataset(path, varname)
-		return {
-			"type": "CHUNK_DATA",
-			"path": path,
-			"varname": varname,
-			"byte_offset": byte_offset,
-			"size": size,
-			"filter_mask": 0,
-			"data": b"x" * size,
-		}
-
-	def handle_reduce(self, path: str, varname: str, byte_offset: int, size: int, operation: str, **fields: Any) -> dict[str, Any]:
-		raise NotImplementedError("REDUCE handling is not implemented yet")
-
-
 class WrongHeartbeatServer(ServerStub):
 	def handle_heartbeat(self) -> dict[str, Any]:
 		return {"type": "LIST_RESULT", "path": "/", "entries": []}
@@ -118,7 +67,7 @@ def _stop_loopback_server(
 
 @pytest.fixture
 def loopback_session(tmp_path):
-	connection = _start_loopback_server(LoopbackServer)
+	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
 	try:
 		yield session, tmp_path
@@ -141,32 +90,45 @@ def test_loopback_list_and_stat(loopback_session) -> None:
 	assert stat_result["size"] == len("placeholder")
 
 
-def test_loopback_proxy_round_trip(loopback_session) -> None:
-	session, tmp_path = loopback_session
-	path = str(tmp_path / "mock.nc")
+def test_loopback_proxy_round_trip() -> None:
+	connection = _start_loopback_server(ServerStub)
+	session = connection[0]
+	data_path = str(Path(__file__).parent / "data" / "test1.nc")
+	try:
+		with session.open(data_path) as proxy:
+			assert "tas" in proxy.keys()
+			assert isinstance(proxy.attrs, dict)
+			assert isinstance(proxy.mtime, float)
 
-	with session.open(path) as proxy:
-		assert proxy.keys() == ["temperature"]
-		assert proxy.attrs == {"title": "loopback"}
-		assert proxy.mtime == 12345
+			# Chunked, shuffle+deflate compressed variable
+			ref_file = pyfive.File(data_path)
+			tas = proxy["tas"]
+			assert tas.shape == (12, 64, 128)
+			assert tas.dtype == ref_file["tas"].dtype
+			assert tas.chunks == (6, 32, 32)
+			assert "units" in tas.attrs
 
-		dataset = proxy["temperature"]
-		assert dataset.shape == (2, 3)
-		assert dataset.dtype == np.dtype("float32")
-		assert dataset.chunks == (1, 3)
-		assert dataset.attrs == {"units": "K"}
+			# Read first time step; decompression happens client-side
+			data = tas[0, :, :]
+			assert data.shape == (64, 128)
+			assert np.allclose(data, ref_file["tas"][0, :, :])
 
-		chunk = dataset.get_chunk(10, 4)
+			# Contiguous variable with UNDEFINED_ADDRESS → proxy returns fillvalue
+			bounds_data = proxy["bounds"][()]
+			ref_bounds = ref_file["bounds"][()]
+			assert bounds_data.shape == ref_bounds.shape
+			assert np.allclose(bounds_data, ref_bounds)
 
-		assert chunk["data"] == b"xxxx"
-		with pytest.raises(ResponseError, match="not implemented"):
-			dataset.reduce(10, 4, "mean")
+			with pytest.raises(ResponseError, match="not implemented"):
+				session.reduce(data_path, "tas", 0, 100, "mean")
 
-	assert proxy.closed is True
+		assert proxy.closed is True
+	finally:
+		_stop_loopback_server(*connection)
 
 
 def test_loopback_error_response_raises_response_error() -> None:
-	connection = _start_loopback_server(LoopbackServer)
+	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
 	try:
 		with pytest.raises(ResponseError, match="file is not open"):
@@ -206,8 +168,8 @@ def test_real_server_var_open_includes_rich_metadata() -> None:
 		assert contiguous["layout"] == "contiguous"
 		assert contiguous["chunks"] is None
 		assert isinstance(contiguous["index"], list)
-		assert len(contiguous["index"]) == 1
-		assert contiguous["index"][0]["size"] > 0
+		# bounds has UNDEFINED_ADDRESS (no stored data) so index is empty
+		assert contiguous["index"] == []
 
 		session.file_close(str(data_path))
 	finally:
@@ -244,22 +206,9 @@ def test_real_server_get_chunk_for_chunked_and_contiguous() -> None:
 			on_disk_chunk_bytes = handle.read(entry["size"])
 		assert chunk_response["data"] == on_disk_chunk_bytes
 
+		# bounds has UNDEFINED_ADDRESS (no stored data); its index should be empty
 		contiguous = session.var_open(str(data_path), "bounds")
-		contiguous_entry = contiguous["index"][0]
-		contig_response = session.get_chunk(
-			str(data_path),
-			"bounds",
-			contiguous_entry["byte_offset"],
-			contiguous_entry["size"],
-		)
-		assert contig_response["type"] == "CHUNK_DATA"
-		assert isinstance(contig_response["data"], bytes)
-		assert len(contig_response["data"]) == contiguous_entry["size"]
-
-		with open(data_path, "rb") as handle:
-			handle.seek(contiguous_entry["byte_offset"])
-			expected_contiguous = handle.read(contiguous_entry["size"])
-		assert contig_response["data"] == expected_contiguous
+		assert contiguous["index"] == []
 
 		session.file_close(str(data_path))
 	finally:

@@ -132,20 +132,16 @@ def test_dataset_metadata_is_loaded_lazily_and_cached() -> None:
 		assert session.var_open_calls == [("/data/example.nc", "temperature")]
 
 
-def test_dataset_operations_delegate_to_session() -> None:
+def test_dataset_data_acquisition_uses_session_chunk_requests() -> None:
 		session = MockSession()
-		dataset = rFile(session, "/data/example.nc")["pressure"]
+		dataset = rFile(session, "/data/example.nc")["temperature"]
 
-		chunk_response = dataset.get_chunk(1024, 4096, storeinfo={"offset": 1024})
-		reduction_response = dataset.reduce(1024, 4096, "mean", axis=0)
+		result = dataset[()]
 
-		assert chunk_response["data"] == np.array([10.0, 20.0, 30.0, 40.0], dtype=np.float32).tobytes()
-		assert reduction_response["value"] == 42.0
+		expected = np.arange(6, dtype=np.float32).reshape(2, 3)
+		assert np.array_equal(result, expected)
 		assert session.chunk_calls == [
-			("/data/example.nc", "pressure", 1024, 4096, {"storeinfo": {"offset": 1024}})
-		]
-		assert session.reduce_calls == [
-			("/data/example.nc", "pressure", 1024, 4096, "mean", {"axis": 0})
+			("/data/example.nc", "temperature", 100, 24, {"chunk_coord": [0, 0]})
 		]
 
 

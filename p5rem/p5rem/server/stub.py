@@ -100,7 +100,7 @@ class ServerStub:
 			"type": FILE_INFO,
 			"path": path,
 			"keys": list(file_handle.keys()),
-			"attrs": dict(getattr(file_handle, "attrs", {})),
+			"attrs": self._serialise_value(dict(getattr(file_handle, "attrs", {}))),
 			"mtime": os.path.getmtime(path),
 		}
 
@@ -216,6 +216,16 @@ class ServerStub:
 		if data_offset is None:
 			return None
 
+		try:
+			from pyfive.core import UNDEFINED_ADDRESS as _UNDEF
+		except ImportError:
+			_UNDEF = 0xFFFFFFFFFFFFFFFF
+
+		if int(data_offset) == _UNDEF:
+			# No data stored in the file (HDF5 UNDEFINED_ADDRESS);
+			# the client should return the fill value without fetching.
+			return []
+
 		return [
 			{
 				"chunk_offset": [0],
@@ -279,6 +289,13 @@ class ServerStub:
 		return data, 0, absolute_offset, len(data)
 
 	def _serialise_value(self, value: Any) -> Any:
+		# HDF5 object references are file-internal and meaningless to a remote client
+		try:
+			from pyfive.core import Reference as _PyfiveRef
+			if isinstance(value, _PyfiveRef):
+				return None
+		except ImportError:
+			pass
 		if hasattr(value, "tolist") and callable(value.tolist):
 			return self._serialise_value(value.tolist())
 		if hasattr(value, "item") and callable(value.item):
@@ -286,10 +303,11 @@ class ServerStub:
 				return self._serialise_value(value.item())
 		if isinstance(value, Mapping):
 			return {key: self._serialise_value(item) for key, item in value.items()}
-		if isinstance(value, tuple):
+		if isinstance(value, (tuple, list)):
 			return [self._serialise_value(item) for item in value]
-		if isinstance(value, list):
-			return [self._serialise_value(item) for item in value]
+		# Safety net: anything not natively serialisable by cbor2 is dropped
+		if not isinstance(value, (bool, int, float, str, bytes, type(None))):
+			return None
 		return value
 
 

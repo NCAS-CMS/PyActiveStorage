@@ -80,7 +80,11 @@ class _RemoteDatasetID(DatasetID):
 				self.data_offset = int(index_entries[0]["byte_offset"])
 				self._contiguous_nbytes = int(index_entries[0]["size"])
 			else:
-				self.data_offset = 0
+				# Empty index means no data stored (UNDEFINED_ADDRESS in HDF5).
+				# Use pyfive's own sentinel so get_data() returns the fill value
+				# without attempting any network fetch.
+				from pyfive.core import UNDEFINED_ADDRESS
+				self.data_offset = UNDEFINED_ADDRESS
 				self._contiguous_nbytes = 0
 
 	def _build_index(self) -> None:
@@ -210,12 +214,10 @@ class rDataset:
 
 		return bool(self._ensure_meta().get("fragmented", False))
 
-	def refresh(self) -> dict[str, Any]:
-		"""Reload dataset metadata from the server."""
+	def _load_meta(self) -> dict[str, Any]:
+		"""Fetch dataset metadata once from the server."""
 
-		self._meta = dict(self._session.var_open(self._path, self._varname))
-		self._id = None
-		return dict(self._meta)
+		return dict(self._session.var_open(self._path, self._varname))
 
 	def astype(self, dtype: str | np.dtype[Any]) -> rDataset:
 		"""Set conversion dtype for data returned from __getitem__."""
@@ -231,32 +233,9 @@ class rDataset:
 			self._id = _RemoteDatasetID(self._session, self._path, self._varname, self._ensure_meta())
 		return self._id
 
-	def get_chunk(self, byte_offset: int, size: int, **fields: Any) -> dict[str, Any]:
-		"""Delegate chunk retrieval to the session."""
-
-		return self._session.get_chunk(
-			self._path,
-			self._varname,
-			byte_offset,
-			size,
-			**fields,
-		)
-
-	def reduce(self, byte_offset: int, size: int, operation: str, **fields: Any) -> dict[str, Any]:
-		"""Delegate remote reduction requests to the session."""
-
-		return self._session.reduce(
-			self._path,
-			self._varname,
-			byte_offset,
-			size,
-			operation,
-			**fields,
-		)
-
 	def _ensure_meta(self) -> dict[str, Any]:
 		if self._meta is None:
-			self.refresh()
+			self._meta = self._load_meta()
 		return self._meta
 
 
@@ -338,13 +317,6 @@ class rFile:
 
 		return [self[name] for name in self._keys]
 
-	def refresh(self) -> dict[str, Any]:
-		"""Reload file metadata from the server."""
-
-		self._ensure_open()
-		self._meta = dict(self._session.file_open(self._path))
-		self._datasets.clear()
-		return dict(self._meta)
 
 	def close(self) -> None:
 		"""Release the remote file handle once."""
