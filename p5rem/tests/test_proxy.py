@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from p5rem import Session, p5remProxy, rDataset
+from p5rem import Session, rDataset, rFile
 
 
 class MockSession:
@@ -96,7 +96,7 @@ class MockSession:
 def test_proxy_loads_file_metadata_immediately() -> None:
 		session = MockSession()
 
-		proxy = p5remProxy(session, "/data/example.nc")
+		proxy = rFile(session, "/data/example.nc")
 
 		assert proxy.keys() == ["temperature", "pressure"]
 		assert proxy.attrs == {"title": "example"}
@@ -109,13 +109,13 @@ def test_session_open_returns_proxy() -> None:
 
 		proxy = Session.open(session, "/data/example.nc")
 
-		assert isinstance(proxy, p5remProxy)
+		assert isinstance(proxy, rFile)
 		assert proxy.filename == "/data/example.nc"
 
 
 def test_dataset_metadata_is_loaded_lazily_and_cached() -> None:
 		session = MockSession()
-		proxy = p5remProxy(session, "/data/example.nc")
+		proxy = rFile(session, "/data/example.nc")
 
 		dataset = proxy["temperature"]
 
@@ -134,7 +134,7 @@ def test_dataset_metadata_is_loaded_lazily_and_cached() -> None:
 
 def test_dataset_operations_delegate_to_session() -> None:
 		session = MockSession()
-		dataset = p5remProxy(session, "/data/example.nc")["pressure"]
+		dataset = rFile(session, "/data/example.nc")["pressure"]
 
 		chunk_response = dataset.get_chunk(1024, 4096, storeinfo={"offset": 1024})
 		reduction_response = dataset.reduce(1024, 4096, "mean", axis=0)
@@ -151,7 +151,7 @@ def test_dataset_operations_delegate_to_session() -> None:
 
 def test_dataset_getitem_reads_chunked_data() -> None:
 		session = MockSession()
-		dataset = p5remProxy(session, "/data/example.nc")["temperature"]
+		dataset = rFile(session, "/data/example.nc")["temperature"]
 
 		result = dataset[:, 1:]
 
@@ -164,7 +164,7 @@ def test_dataset_getitem_reads_chunked_data() -> None:
 
 def test_dataset_getitem_reads_contiguous_data() -> None:
 		session = MockSession()
-		dataset = p5remProxy(session, "/data/example.nc")["pressure"]
+		dataset = rFile(session, "/data/example.nc")["pressure"]
 
 		result = dataset[1:3]
 
@@ -178,7 +178,7 @@ def test_dataset_getitem_reads_contiguous_data() -> None:
 def test_proxy_context_manager_closes_file_once() -> None:
 		session = MockSession()
 
-		with p5remProxy(session, "/data/example.nc") as proxy:
+		with rFile(session, "/data/example.nc") as proxy:
 			assert proxy["temperature"].name == "temperature"
 
 		assert session.file_close_calls == ["/data/example.nc"]
@@ -187,8 +187,8 @@ def test_proxy_context_manager_closes_file_once() -> None:
 
 def test_closed_proxy_rejects_further_access() -> None:
 		session = MockSession()
-		proxy = p5remProxy(session, "/data/example.nc")
+		proxy = rFile(session, "/data/example.nc")
 		proxy.close()
 
-		with pytest.raises(ValueError, match="closed p5remProxy"):
+		with pytest.raises(ValueError, match="closed rFile"):
 			proxy.keys()

@@ -29,7 +29,7 @@ The fundamental insight is that p5rem is a **thin proxy over a remote pyfive ins
 ```
 Client (desktop)                        Server (HPC)
 
-p5remProxy                              pyfive.File (local, fast Lustre I/O)
+rFile                                   pyfive.File (local, fast Lustre I/O)
     │                                       │
     ├── file_open()   ──────────────────►  f = pyfive.File(path)
     │   ◄── keys, attrs, mtime ──────────  return serialise(f.keys(), f.attrs)
@@ -129,7 +129,7 @@ get_chunk  → server: id._get_raw_chunk() → raw bytes (2MB typical)
 
 - Client side uses cf-python (not xarray) for CF-conventions-aware data handling
 - Next release of cfdm uses h5netcdf with pyfive by default
-- cfdm receives a p5remProxy which looks like a pyfive.File — no cfdm changes needed
+- cfdm receives an rFile which looks like a pyfive.File — no cfdm changes needed
 
 ### Chunk Caching: diskcache
 
@@ -231,7 +231,7 @@ p5rem/
     ├── p5rem/
     │   ├── __init__.py
     │   ├── protocol.py     — CBOR framing, message types, encode/decode
-    │   ├── proxy.py        — p5remProxy: looks like pyfive.File to cfdm
+    │   ├── proxy.py        — rFile: looks like pyfive.File to cfdm
     │   ├── session.py      — persistent connection, request/response, heartbeat
     │   ├── cache.py        — diskcache wrapper, stampede protection, management API
     │   ├── bootstrap.py    — SFTP upload and remote process launch (paramiko)
@@ -250,12 +250,12 @@ p5rem/
 
 ## Key Interfaces
 
-### proxy.py — p5remProxy
+### proxy.py — rFile
 
 Looks like a pyfive.File to cfdm/h5netcdf. Populated from cached FILE_OPEN and VAR_OPEN responses. Chunk reads delegate to session.get_chunk().
 
 ```python
-class p5remProxy:
+class rFile:
     def __init__(self, session, path):
         meta = session.file_open(path)   # one round trip
         self._keys = meta['keys']
@@ -268,7 +268,7 @@ class p5remProxy:
     def attrs(self): return self._attrs
 
     def __getitem__(self, varname):
-        return p5remDataset(self._session, self._path, varname)
+        return rDataset(self._session, self._path, varname)
 ```
 
 ### server/stub.py
@@ -406,7 +406,7 @@ def local_server():
 
 ### Layer 3: Proxy tests (mock session)
 
-Test p5remProxy against a mock session — verifies proxy presents the correct pyfive-like interface to cfdm without any real data or network:
+Test rFile against a mock session — verifies proxy presents the correct pyfive-like interface to cfdm without any real data or network:
 
 ```python
 class MockSession:

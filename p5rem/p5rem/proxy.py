@@ -260,7 +260,7 @@ class rDataset:
 		return self._meta
 
 
-class p5remProxy:
+class rFile:
 	"""Pyfive-like file proxy backed by remote metadata calls."""
 
 	def __init__(self, session: Any, path: str) -> None:
@@ -271,9 +271,9 @@ class p5remProxy:
 		self._closed = False
 
 	def __repr__(self) -> str:
-		return f"p5remProxy(path={self._path!r})"
+		return f"rFile(path={self._path!r})"
 
-	def __enter__(self) -> p5remProxy:
+	def __enter__(self) -> rFile:
 		return self
 
 	def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
@@ -357,14 +357,10 @@ class p5remProxy:
 
 	def _ensure_open(self) -> None:
 		if self._closed:
-			raise ValueError("I/O operation on closed p5remProxy")
+			raise ValueError("I/O operation on closed rFile")
 
 	@property
 	def _keys(self) -> tuple[str, ...]:
 		return tuple(self._meta.get("keys", ()))
 
-
-p5remDataset = rDataset
-
-
-__all__ = ["p5remDataset", "p5remProxy", "rDataset"]
+__all__ = ["rDataset", "rFile"]

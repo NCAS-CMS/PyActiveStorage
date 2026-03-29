@@ -137,9 +137,9 @@ class p5remSession:
 	def open(self, path: str):
 		"""Open a remote file as a pyfive-like proxy."""
 
-		from .proxy import p5remProxy
+		from .proxy import rFile
 
-		return p5remProxy(self, path)
+		return rFile(self, path)
 
 	def var_open(self, path: str, varname: str) -> dict[str, Any]:
 		"""Open a remote variable and return its metadata."""
