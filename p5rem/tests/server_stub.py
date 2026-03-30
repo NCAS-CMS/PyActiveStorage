@@ -1,4 +1,4 @@
-"""Server-side request dispatch loop and default handlers."""
+"""Server-side request dispatch loop and default handlers (test fixture)."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import sys
 import traceback
 from typing import Any
 
-from ..protocol import CHUNK_DATA, ERROR, FILE_CLOSE, FILE_INFO, FILE_OPEN, GET_CHUNK, HEARTBEAT, LIST, LIST_RESULT, REDUCE, STAT, STAT_RESULT, VAR_INFO, VAR_OPEN, read_message, write_message
+from p5rem.protocol import CHUNK_DATA, ERROR, FILE_CLOSE, FILE_INFO, FILE_OPEN, GET_CHUNK, HEARTBEAT, LIST, LIST_RESULT, REDUCE, STAT, STAT_RESULT, VAR_INFO, VAR_OPEN, read_message, write_message
 
 
 class ServerStub:
@@ -311,12 +311,4 @@ class ServerStub:
 		return value
 
 
-def main() -> int:
-	"""Run the server stub until stdin closes."""
-
-	server = ServerStub()
-	server.serve_forever()
-	return 0
-
-
-__all__ = ["ServerStub", "main"]
+__all__ = ["ServerStub"]

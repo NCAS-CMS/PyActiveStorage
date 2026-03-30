@@ -14,7 +14,7 @@ from .session import SessionError, p5remSession
 from time import perf_counter
 
 log = logging.getLogger(__name__)
-_DEFAULT_REMOTE_SERVER = str(Path(__file__).parent / "server" / "remote_server.py")
+_DEFAULT_REMOTE_SERVER = str(Path(__file__).parent / "remote_server.py")
 
 
 class BootstrapError(RuntimeError):
