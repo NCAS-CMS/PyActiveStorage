@@ -16,7 +16,8 @@ def reduce_chunk(rfile,
                  order,
                  chunk_selection,
                  axis,
-                 method=None):
+                 method=None,
+                 option_disable_chunk_cache=False,):
     """
     We do our own read of chunks and decoding etc
 
