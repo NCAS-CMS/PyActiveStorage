@@ -13,7 +13,7 @@ import pytest
 import numpy as np
 
 from p5rem.session import ResponseError, UnexpectedResponseError, p5remSession
-from tests.server_stub import ServerStub
+from p5rem.remote_server import ServerStub
 from tests.roundtrip_assertions import assert_roundtrip_file_matches
 
 

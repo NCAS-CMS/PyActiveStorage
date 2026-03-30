@@ -73,7 +73,7 @@ def write_message(stream: BufferedIOBase, message: dict[str, Any]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Server stub (inlined from p5rem.server.stub)
+# Server stub 
 # ---------------------------------------------------------------------------
 
 class ServerStub:

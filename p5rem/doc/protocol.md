@@ -25,64 +25,8 @@ via PyActiveStorage.
 The following sequence diagram illustrates a complete read operation, including
 starting and stopping a session:
 
-```plantuml
-@startuml read_remote_slice
-participant "User Code" as User
-participant "p5remSession" as Session
-participant "Client\n(Paramiko SSH)" as Client
-participant "Remote Server\n(remote_server.py)" as Server
+![read_remote_slice.svg]
 
-User -> Session: bootstrap_session()
-Session -> Client: SSH connect\n& upload remote_server.py
-Client -> Server: Execute remote_server.py
-
-== session.open(REMOTE_FILE) ==
-
-User -> Session: open(path)
-Session -> Session: create rFile proxy
-Session -> Client: FILE_OPEN request
-Client -> Server: {type: "FILE_OPEN",\npath: "p5test/test1.nc"}
-Server -> Server: pyfive.File(path)
-Server -> Client: FILE_INFO response
-Client -> Session: {type: "FILE_INFO",\nkeys: [...], attrs: {...}, mtime: ...}
-Session -> User: rFile proxy
-
-== remote_file[VARIABLE] ==
-
-User -> Session: __getitem__("tas")
-Session -> Session: create rDataset proxy
-Session -> User: rDataset proxy
-
-== remote_file[VARIABLE][SELECTION] ==
-
-User -> Session: rDataset.__getitem__\n((0, slice(None), slice(None)))
-Session -> Session: ensure_meta()\n — lazy metadata load
-Session -> Client: VAR_OPEN request
-Client -> Server: {type: "VAR_OPEN",\npath: "p5test/test1.nc",\nvarname: "tas"}
-Server -> Server: dataset = file["tas"]
-Server -> Server: extract\nshape/dtype/chunks/index
-Server -> Client: VAR_INFO response
-Client -> Session: {type: "VAR_INFO",\nshape: [...], dtype: "float32",\nindex: [...], ...}
-Session -> Session: id.get_data(selection, fillvalue)
-Session -> Client: GET_CHUNK request(s)
-Client -> Server: {type: "GET_CHUNK",\npath: "...", varname: "tas",\nbyte_offset: ..., size: ...}
-Server -> Server: _get_raw_chunk(storeinfo)
-Server -> Client: CHUNK_DATA response
-Client -> Session: {type: "CHUNK_DATA",\ndata: b"...", byte_offset: ..., size: ...}
-Session -> Session: decompress & deserialize
-Session -> User: numpy.ndarray
-
-== Cleanup ==
-
-User -> Session: with context exit
-Session -> Client: FILE_CLOSE request
-Client -> Server: {type: "FILE_CLOSE",\npath: "p5test/test1.nc"}
-Server -> Server: file.close()
-Server -> Client: FILE_CLOSE response
-Session -> Client: Close SSH connection
-
-@enduml
-```
 
 ### Key Design Points
 
