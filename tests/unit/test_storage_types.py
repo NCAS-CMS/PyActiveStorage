@@ -46,6 +46,7 @@ def test_s3(mock_reduce, mock_load, tmp_path):
         chunk_selection,
         axis,
         operation,
+        option_disable_chunk_cache,
     ):
         return activestorage.storage.reduce_chunk(
             test_file,
@@ -60,6 +61,7 @@ def test_s3(mock_reduce, mock_load, tmp_path):
             chunk_selection,
             axis,
             np.max,
+            False,
         )
 
     mock_load.side_effect = load_from_s3
@@ -102,6 +104,7 @@ def test_s3(mock_reduce, mock_load, tmp_path):
         mock.ANY,
         mock.ANY,
         operation="max",
+        option_disable_chunk_cache=False,
     )
 
 
