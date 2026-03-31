@@ -260,6 +260,7 @@ def test_reduce_chunk_missing(mock_request, missing):
         api_arg,
         "axis":
         axis,
+        "option_count_as_bytes": True,
     }
     mock_request.assert_called_once_with(session, expected_url, expected_data)
 
