@@ -24,8 +24,10 @@ def get_session(username: str, password: str,
     :returns: a client session object.
     """
     session = requests.Session()
-    session.auth = (username, password)
     session.verify = cacert or False
+    if username is None and password is None:
+         return session
+    session.auth = (username, password)
     return session
 
 
