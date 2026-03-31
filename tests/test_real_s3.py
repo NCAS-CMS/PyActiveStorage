@@ -29,7 +29,8 @@ def test_anon_s3():
                              'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"
                               }
                           },
-                    active_storage_url=active_storage_url)
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
     active._version = 2
     with pytest.raises(ReductionistError):
         result = active.min()[:]
