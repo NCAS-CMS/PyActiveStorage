@@ -26,7 +26,7 @@ def get_session(username: str, password: str,
     session = requests.Session()
     session.verify = cacert or False
     if username is None and password is None:
-         return session
+        return session
     session.auth = (username, password)
     return session
 
