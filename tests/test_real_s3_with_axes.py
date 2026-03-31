@@ -25,7 +25,8 @@ def build_active_test1_file():
     print("S3 Test file path:", test_file_uri)
     active = Active(test_file_uri, 'tas', interface_type="s3",
                     storage_options=storage_options,
-                    active_storage_url=active_storage_url)
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
 
     active._version = 2
 
@@ -49,7 +50,8 @@ def build_active_small_file():
     print("S3 Test file path:", test_file_uri)
     active = Active(test_file_uri, 'tas', interface_type="s3",
                     storage_options=storage_options,
-                    active_storage_url=active_storage_url)
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
 
     active._version = 2
 
@@ -104,7 +106,8 @@ def build_active():
     print("S3 Test file path:", test_file_uri)
     active = Active(test_file_uri, 'm01s30i111', interface_type="s3",  # 'm01s06i247_4', interface_type="s3",
                     storage_options=storage_options,
-                    active_storage_url=active_storage_url)
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
 
     active._version = 2
 
