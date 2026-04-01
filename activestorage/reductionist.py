@@ -24,13 +24,10 @@ def get_session(username: str, password: str,
     :returns: a client session object.
     """
     session = requests.Session()
-    # TODO Stack-HPC
-    # we need to allow Anon buckets. though this
-    # will break connection to data server
-    # if username is None and password is None:
-    #     return session
-    session.auth = (username, password)
     session.verify = cacert or False
+    if username is None and password is None:
+        return session
+    session.auth = (username, password)
     return session
 
 
@@ -261,8 +258,13 @@ class ReductionistError(Exception):
 
 def decode_and_raise_error(response):
     """Decode an error response and raise ReductionistError."""
-    try:
-        error = json.dumps(response.json())
+    if response.status_code == http.client.INTERNAL_SERVER_ERROR:
+        try:
+            error = json.dumps(response.json())
+        except requests.exceptions.JSONDecodeError as exc:
+            error = http.client.responses.get(response.status_code, "-")
+            raise ReductionistError(response.status_code, error) from exc
         raise ReductionistError(response.status_code, error)
-    except requests.exceptions.JSONDecodeError as exc:
-        raise ReductionistError(response.status_code, "-") from exc
+
+    error = http.client.responses.get(response.status_code, "-")
+    raise ReductionistError(response.status_code, error)
