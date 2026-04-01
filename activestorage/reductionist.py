@@ -88,7 +88,6 @@ def reduce_chunk(session,
         print(f"Reductionist request data dictionary: {request_data}")
     api_operation = "sum" if operation == "mean" else operation or "select"
     url = f'{server}/v2/{api_operation}/'
-    print("Reductionist Session auth:", session.auth)
     response = request(session, url, request_data)
 
     if response.ok:
@@ -253,8 +252,13 @@ class ReductionistError(Exception):
 
 def decode_and_raise_error(response):
     """Decode an error response and raise ReductionistError."""
-    try:
-        error = json.dumps(response.json())
+    if response.status_code == http.client.INTERNAL_SERVER_ERROR:
+        try:
+            error = json.dumps(response.json())
+        except requests.exceptions.JSONDecodeError as exc:
+            error = http.client.responses.get(response.status_code, "-")
+            raise ReductionistError(response.status_code, error) from exc
         raise ReductionistError(response.status_code, error)
-    except requests.exceptions.JSONDecodeError as exc:
-        raise ReductionistError(response.status_code, "-") from exc
+
+    error = http.client.responses.get(response.status_code, "-")
+    raise ReductionistError(response.status_code, error)

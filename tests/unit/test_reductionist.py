@@ -299,4 +299,42 @@ def test_reduce_chunk_not_found(mock_request):
                                   operation)
 
     print("Not found exc from reductionist", str(exc.value))
-    assert str(exc.value) == 'Reductionist error: HTTP 404: -'
+    assert str(exc.value) == 'Reductionist error: HTTP 404: Not Found'
+
+
+@mock.patch.object(reductionist, 'request')
+def test_reductionist_internal_server_error_json(mock_request):
+    """Unit test for Reductionist 500 JSON response."""
+    response = requests.Response()
+    response.status_code = 500
+    response._content = b'{"detail": "backend exploded"}'
+    response.headers["Content-Type"] = "application/json"
+    mock_request.return_value = response
+
+    active_url = "https://s3.example.com"
+    access_key = "fake-access"
+    secret_key = "fake-secret"
+    cacert = None
+    s3_url = "https://active.example.com"
+    offset = 2
+    size = 128
+    compression = None
+    filters = None
+    missing = []
+    dtype = np.dtype("int32")
+    shape = (32, )
+    axis = (0, )
+    order = "C"
+    chunk_selection = [slice(0, 2, 1)]
+    operation = "min"
+
+    session = reductionist.get_session(access_key, secret_key, cacert)
+    with pytest.raises(reductionist.ReductionistError) as exc:
+        reductionist.reduce_chunk(session, active_url, s3_url,
+                                  offset, size, compression, filters, missing,
+                                  dtype, shape, order, chunk_selection, axis,
+                                  operation)
+
+    assert (
+        str(exc.value) == 'Reductionist error: HTTP 500: {"detail": "backend exploded"}'
+    )
