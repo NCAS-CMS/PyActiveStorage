@@ -8,6 +8,7 @@ It has NO imports from the p5rem package — only pyfive, cbor2, and stdlib.
 from __future__ import annotations
 
 from collections.abc import Mapping
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
 from io import BufferedIOBase
 import math
@@ -30,6 +31,7 @@ STAT = "STAT"
 FILE_OPEN = "FILE_OPEN"
 VAR_OPEN = "VAR_OPEN"
 GET_CHUNK = "GET_CHUNK"
+GET_CHUNKS = "GET_CHUNKS"
 REDUCE = "REDUCE"
 FILE_CLOSE = "FILE_CLOSE"
 HEARTBEAT = "HEARTBEAT"
@@ -39,11 +41,12 @@ STAT_RESULT = "STAT_RESULT"
 FILE_INFO = "FILE_INFO"
 VAR_INFO = "VAR_INFO"
 CHUNK_DATA = "CHUNK_DATA"
+CHUNKS_DONE = "CHUNKS_DONE"
 ERROR = "ERROR"
 
 ALL_TYPES = frozenset({
-    LIST, STAT, FILE_OPEN, VAR_OPEN, GET_CHUNK, REDUCE, FILE_CLOSE, HEARTBEAT,
-    LIST_RESULT, STAT_RESULT, FILE_INFO, VAR_INFO, CHUNK_DATA, ERROR,
+    LIST, STAT, FILE_OPEN, VAR_OPEN, GET_CHUNK, GET_CHUNKS, REDUCE, FILE_CLOSE, HEARTBEAT,
+    LIST_RESULT, STAT_RESULT, FILE_INFO, VAR_INFO, CHUNK_DATA, CHUNKS_DONE, ERROR,
 })
 
 
@@ -104,8 +107,23 @@ class ServerStub:
                 request = read_message(self.input_stream)
             except EOFError:
                 return
-            response = self.dispatch(request)
-            write_message(self.output_stream, response)
+            request_type = request.get("type", "")
+            if request_type == GET_CHUNKS:
+                # Streaming handler: writes multiple messages then CHUNKS_DONE.
+                fields = {k: v for k, v in request.items() if k != "type"}
+                try:
+                    self.handle_get_chunks(**fields)
+                except Exception as exc:
+                    write_message(self.output_stream, {
+                        "type": ERROR,
+                        "message": str(exc) or exc.__class__.__name__,
+                        "request_type": request_type,
+                        "error_class": exc.__class__.__name__,
+                        "traceback": traceback.format_exc(),
+                    })
+            else:
+                response = self.dispatch(request)
+                write_message(self.output_stream, response)
 
     def dispatch(self, request: Mapping[str, Any]) -> dict[str, Any]:
         request_type = request.get("type", "")
@@ -186,6 +204,57 @@ class ServerStub:
             "filter_mask": filter_mask,
             "data": data,
         }
+
+    def handle_get_chunks(
+        self,
+        path: str,
+        varname: str,
+        chunks: list[dict[str, Any]],
+        thread_count: int = 4,
+    ) -> None:
+        """Parallel-fetch a batch of chunks and stream them back as CHUNK_DATA messages."""
+        dataset = self._get_dataset(path, varname)
+        dataset_id = getattr(dataset, "id", None)
+        index = getattr(dataset_id, "index", {})
+
+        # Resolve StoreInfo for each requested chunk.
+        storeinfos = []
+        for chunk_desc in chunks:
+            byte_offset = int(chunk_desc["byte_offset"])
+            chunk_coord_raw = chunk_desc.get("chunk_coord")
+            storeinfo = None
+            if chunk_coord_raw is not None:
+                storeinfo = index.get(tuple(chunk_coord_raw))
+            if storeinfo is None:
+                # Fall back to linear scan by byte_offset.
+                for si in index.values():
+                    if int(si.byte_offset) == byte_offset:
+                        storeinfo = si
+                        break
+            if storeinfo is None:
+                raise ValueError(f"cannot resolve chunk for offset={byte_offset}")
+            storeinfos.append(storeinfo)
+
+        # Read chunks in parallel using os.pread (no seek contention).
+        def _read_one(storeinfo: Any) -> bytes:
+            with open(path, "rb") as fh:
+                return os.pread(fh.fileno(), storeinfo.size, storeinfo.byte_offset)
+
+        with ThreadPoolExecutor(max_workers=max(1, int(thread_count))) as pool:
+            raw_chunks = list(pool.map(_read_one, storeinfos))
+
+        for storeinfo, data in zip(storeinfos, raw_chunks):
+            write_message(self.output_stream, {
+                "type": CHUNK_DATA,
+                "path": path,
+                "varname": varname,
+                "byte_offset": int(storeinfo.byte_offset),
+                "size": int(storeinfo.size),
+                "filter_mask": int(getattr(storeinfo, "filter_mask", 0)),
+                "data": data,
+            })
+
+        write_message(self.output_stream, {"type": CHUNKS_DONE})
 
     def handle_reduce(self, path: str, varname: str, byte_offset: int, size: int, operation: str, **fields: Any) -> dict[str, Any]:
         raise NotImplementedError("REDUCE handling is not implemented yet")

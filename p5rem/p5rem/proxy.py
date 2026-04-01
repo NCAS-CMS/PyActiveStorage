@@ -96,6 +96,32 @@ class _RemoteDatasetID(DatasetID):
 
 		raise RuntimeError("remote dataset index is supplied by server metadata")
 
+	def _select_chunks(self, indexer: Any, out: Any, dtype: Any) -> None:
+		"""Batch-fetch all required chunks in one GET_CHUNKS request."""
+
+		chunks = self._get_required_chunks(indexer)
+		if not chunks:
+			return
+
+		chunk_descs = [
+			{
+				"byte_offset": int(storeinfo.byte_offset),
+				"size": int(storeinfo.size),
+				"chunk_coord": list(storeinfo.chunk_offset),
+			}
+			for _coords, _chunk_sel, _out_sel, storeinfo in chunks
+		]
+
+		results = self._session.get_chunks(self._path, self._varname, chunk_descs)
+
+		for _coords, chunk_sel, out_sel, storeinfo in chunks:
+			chunk_response = results.get(int(storeinfo.byte_offset))
+			if chunk_response is None:
+				raise RuntimeError(f"missing chunk response for offset={storeinfo.byte_offset}")
+			raw = chunk_response["data"]
+			filter_mask = int(chunk_response.get("filter_mask", 0))
+			out[out_sel] = self._decode_chunk(raw, filter_mask, dtype)[chunk_sel]
+
 	def _get_raw_chunk(self, storeinfo: StoreInfo) -> bytes:
 		"""Fetch one raw chunk payload from the remote server."""
 

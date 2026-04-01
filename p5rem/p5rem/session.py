@@ -21,7 +21,7 @@ except ImportError:
 	P5RemCache = None  # type: ignore
 	get_default_cache = None  # type: ignore
 
-from .protocol import CHUNK_DATA, ERROR, FILE_INFO, FILE_CLOSE, FILE_OPEN, GET_CHUNK, HEARTBEAT, LIST, LIST_RESULT, REDUCE, REDUCTION_RESULT, STAT, STAT_RESULT, VAR_INFO, VAR_OPEN, read_message, write_message
+from .protocol import CHUNK_DATA, CHUNKS_DONE, ERROR, FILE_INFO, FILE_CLOSE, FILE_OPEN, GET_CHUNK, GET_CHUNKS, HEARTBEAT, LIST, LIST_RESULT, REDUCE, REDUCTION_RESULT, STAT, STAT_RESULT, VAR_INFO, VAR_OPEN, read_message, write_message
 
 REQUEST_RESPONSE_TYPES = {
 	LIST: LIST_RESULT,
@@ -236,6 +236,29 @@ class p5remSession:
 			with self._cache.transact():
 				self._cache.set_chunk(host_key, path, byte_offset, size, mtime, result)
 		return result
+
+	def get_chunks(
+		self,
+		path: str,
+		varname: str,
+		chunks: list[dict[str, Any]],
+		thread_count: int = 4,
+	) -> dict[int, dict[str, Any]]:
+		"""Request a batch of chunks; returns mapping of byte_offset -> CHUNK_DATA response."""
+
+		log.debug("Fetching %d chunks in batch for %r in %s", len(chunks), varname, path)
+		with self._lock:
+			write_message(self._stdin, GET_CHUNKS, path=path, varname=varname, chunks=chunks, thread_count=thread_count)
+			results: dict[int, dict[str, Any]] = {}
+			while True:
+				msg = read_message(self._stdout)
+				if msg["type"] == CHUNKS_DONE:
+					break
+				if msg["type"] == ERROR:
+					raise ResponseError(msg.get("message", "remote server returned an error"), response=msg)
+				if msg["type"] == CHUNK_DATA:
+					results[int(msg["byte_offset"])] = dict(msg)
+		return results
 
 	def reduce(self, path: str, varname: str, byte_offset: int, size: int, operation: str, **fields: Any) -> dict[str, Any]:
 		"""Request a remote reduction result."""
