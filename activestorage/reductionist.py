@@ -198,6 +198,7 @@ def build_request_data(url: str,
         'offset': int(offset),
         'size': int(size),
         'order': order,
+        'option_count_as_bytes': True,
     }
     if shape:
         request_data["shape"] = shape
@@ -234,15 +235,25 @@ def decode_result(response):
     """Decode a successful response, return as a 2-tuple of (numpy array or scalar, count)."""
     reduction_result = cbor.loads(response.content)
     dtype = reduction_result['dtype']
-    shape = reduction_result['shape'] if "shape" in reduction_result else None
+    shape = reduction_result['shape']
 
     # Result
     result = np.frombuffer(reduction_result['bytes'], dtype=dtype)
     result = result.reshape(shape)
 
     # Counts
-    count = reduction_result['count']
     # TODO: When reductionist is ready, we need to fix 'count'
+    count = reduction_result['count']
+    # When we enable 'option_count_as_bytes' in the request the count is returned as bytes
+    # i.e.
+    # We ignore the 'count' response which is always an empty array
+    # response['count'] = []
+    # Instead we look for 'count_as_bytes' which is a byte string we need to convert back to an array.
+    # response['count_as_bytes'] = b'\x00\x00\x00\x00\x00\x00\x00\x01'
+    if "count_as_bytes" in reduction_result and len(reduction_result['count_as_bytes']) > 0:
+        count = reduction_result['count_as_bytes']
+        # TODO: if this is a memory/performance hit then do we want to defer this?
+        count = list(np.frombuffer(count, dtype=np.int64))
 
     # Mask the result
     result = np.ma.masked_where(count == 0, result)
