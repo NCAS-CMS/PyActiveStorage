@@ -85,3 +85,89 @@ chunk readers that each worker calls independently, sidestepping the
   assumption at its root for POSIX, fsspec, and p5rem alike. The opener
   protocol is small and can default to current behaviour for backward
   compatibility.
+
+---
+
+## One-page architecture note: pyfive/fsspec separation of concerns
+
+### Problem statement
+
+The real complexity is lifecycle management for network-backed IO (for example
+fsspec), not HDF5 parsing itself. We want to keep pyfive clean while allowing
+remote/cached/distributed deployments to remain efficient and correct.
+
+### Architectural boundary
+
+Define pyfive core as a byte-addressable HDF5 parser.
+
+- **Core (pyfive)** owns:
+  - Metadata parsing and object graph.
+  - Chunk addressing and filter/decode pipeline.
+  - Minimal byte-read contract.
+- **IO adapters** own:
+  - URL/auth/retry/session details.
+  - fsspec filesystem and open/close policy.
+  - Transport cache configuration.
+- **Orchestration layer** owns:
+  - Distributed execution integration (Dask or otherwise).
+  - Chunk memoisation and eviction strategy.
+  - Worker/session lifecycle and shutdown hooks.
+
+### Minimal core contract
+
+Keep the core interface tiny and serialisation-friendly:
+
+```python
+class ByteReader(Protocol):
+    def read_at(self, offset: int, nbytes: int) -> bytes: ...
+```
+
+Optional, only if required by existing internals:
+
+```python
+class ReaderInfo(Protocol):
+    @property
+    def size(self) -> int: ...
+```
+
+No fsspec classes, URLs, credentials, cache objects, or file handles should
+appear in pyfive core public APIs.
+
+### Lifecycle policy
+
+1. Reuse filesystem clients where safe (typically process-local).
+2. Keep file handles short-lived and scoped to a read operation (or small
+   contiguous read burst).
+3. Cache bytes/chunks/decoded arrays, not live handles.
+4. Use version tokens (etag/mtime/generation) in cache keys when data can
+   change.
+
+### Why this works
+
+- Preserves pyfive separation of concerns.
+- Avoids stale or cross-worker handle bugs.
+- Keeps distributed execution deterministic (pure input -> output reads).
+- Lets performance tuning happen in adapters without polluting core.
+
+### Implementation shape
+
+1. Add a small adapter package or module (for example, pyfive-io-fsspec).
+2. Instantiate pyfive core with a ByteReader implementation.
+3. Map adapter exceptions to stable pyfive-level error types at the boundary.
+4. Keep core tests entirely in-memory/fake-reader based.
+5. Add adapter integration tests for lifecycle, cache reuse, and teardown.
+
+### Acceptance criteria
+
+- Core test suite has no fsspec dependency.
+- Removing fsspec affects adapter tests only.
+- Core APIs do not expose transport-specific types.
+- Lifecycle regressions are caught by adapter tests (open/close, cache reuse,
+  worker restart, credentials refresh).
+
+### Rollout plan
+
+1. Land ByteReader boundary with no behaviour change for local files.
+2. Migrate one remote path (fsspec) behind adapter boundary.
+3. Add optional performance mode (pooled handles) in adapter only.
+4. Document default safe mode: short-lived handles + data caching.
