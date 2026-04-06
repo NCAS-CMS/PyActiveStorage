@@ -8,6 +8,7 @@ import logging
 from typing import Any
 
 import numpy as np
+import pyfive
 from pyfive.h5d import DatasetID, StoreInfo
 from time import perf_counter
 
@@ -168,10 +169,11 @@ class _RemoteDatasetID(DatasetID):
 class rDataset:
 	"""Lazy proxy for a remote dataset."""
 
-	def __init__(self, session: Any, path: str, varname: str) -> None:
+	def __init__(self, session: Any, path: str, varname: str, file: Any = None) -> None:
 		self._session = session
 		self._path = path
 		self._varname = varname
+		self._file = file
 		self._meta: dict[str, Any] | None = None
 		self._id: _RemoteDatasetID | None = None
 		self._astype: np.dtype[Any] | None = None
@@ -193,9 +195,10 @@ class rDataset:
 
 	@property
 	def name(self) -> str:
-		"""Return the dataset name within the file."""
+		"""Return the dataset name within the file, matching pyfive semantics."""
 
-		return self._varname
+		# pyfive returns names with leading slash, e.g., "/tas"
+		return f"/{self._varname}"
 
 	@property
 	def path(self) -> str:
@@ -206,7 +209,6 @@ class rDataset:
 	@property
 	def attrs(self) -> dict[str, Any]:
 		"""Return dataset attributes if the server provided them."""
-
 		return dict(self.id._meta.attributes)
 
 	@property
@@ -235,6 +237,12 @@ class rDataset:
 		if chunks is None:
 			return None
 		return tuple(chunks)
+
+	@property
+	def maxshape(self) -> tuple[Any, ...]:
+		"""Return the maximum shape of the dataset, matching pyfive API."""
+
+		return tuple(self.id._meta.maxshape)
 
 	@property
 	def index(self) -> Any:
@@ -268,6 +276,52 @@ class rDataset:
 			self._id = _RemoteDatasetID(self._session, self._path, self._varname, self._ensure_meta())
 		return self._id
 
+	@property
+	def ndim(self) -> int:
+		"""Return the number of dimensions in the dataset."""
+
+		return len(self.shape)
+
+	@property
+	def size(self) -> int:
+		"""Return the total number of elements in the dataset."""
+
+		import functools
+		import operator
+		if not self.shape:
+			return 1
+		return functools.reduce(operator.mul, self.shape, 1)
+
+	@property
+	def dims(self) -> tuple[str, ...]:
+		"""Return dimension names, matching pyfive semantics (currently all generic)."""
+
+		# pyfive uses dimension names from HDF5; for now return generic dimension labels
+		# This matches pyfive behavior where dims are the parent Dataset's dimension tuples
+		return tuple(f"phony_dim_{i}" for i in range(self.ndim))
+
+	@property
+	def parent(self) -> Any:
+		"""Return reference to the parent file object."""
+
+		# For remote files, we don't have direct access to the file object
+		# Return None to indicate no parent; cfdm may handle this gracefully
+		return None
+
+	@property
+	def file(self) -> Any:
+		"""Return the parent rFile, matching pyfive.Dataset semantics."""
+
+		return self._file
+
+	@property
+	def value(self) -> np.ndarray:
+		"""Return the full dataset as a NumPy array."""
+
+		# This tries to read all data at once - potentially large!
+		# For efficiency, cfdm should prefer using [] slicing
+		return self[()]
+
 	def _ensure_meta(self) -> dict[str, Any]:
 		if self._meta is None:
 			self._meta = self._load_meta()
@@ -287,6 +341,10 @@ class rFile:
 		self._closed = False
 
 	def __repr__(self) -> str:
+		host = getattr(self._session, "host", None)
+		if isinstance(host, str) and host:
+			short_host = host.split(".", 1)[0]
+			return f"rFile(host={short_host!r}, path={self._path!r})"
 		return f"rFile(path={self._path!r})"
 
 	def __enter__(self) -> rFile:
@@ -303,7 +361,7 @@ class rFile:
 		if varname not in self:
 			raise KeyError(varname)
 		if varname not in self._datasets:
-			self._datasets[varname] = rDataset(self._session, self._path, varname)
+			self._datasets[varname] = rDataset(self._session, self._path, varname, file=self)
 		return self._datasets[varname]
 
 	def __iter__(self) -> Iterator[str]:
@@ -311,6 +369,18 @@ class rFile:
 
 	def __len__(self) -> int:
 		return len(self._keys)
+
+	@property
+	def name(self) -> str:
+		"""Return the file-level group name, matching pyfive root semantics."""
+
+		return "/"
+
+	@property
+	def file(self) -> "rFile":
+		"""Return self, matching pyfive.File semantics."""
+
+		return self
 
 	@property
 	def attrs(self) -> dict[str, Any]:
@@ -338,11 +408,13 @@ class rFile:
 
 		return self._closed
 
-	def keys(self) -> list[str]:
-		"""Return dataset names in the remote file."""
+	def keys(self) -> Any:
+		"""Return dataset names in the remote file with KeysView, matching pyfive."""
 
 		self._ensure_open()
-		return list(self._keys)
+		# Return dict_keys which is a KeysView subclass
+		# This matches pyfive's behavior of returning a live view of available datasets
+		return dict({k: None for k in self._keys}).keys()
 
 	def items(self) -> list[tuple[str, rDataset]]:
 		"""Return dataset name and proxy pairs."""
@@ -353,6 +425,29 @@ class rFile:
 		"""Return dataset proxies in file order."""
 
 		return [self[name] for name in self._keys]
+
+	def get(self, key: str, default: Any = None) -> Any:
+		"""Get a dataset by name, returning default if not found (dict-like)."""
+
+		self._ensure_open()
+		try:
+			return self[key]
+		except KeyError:
+			return default
+
+	def visit(self, func: Any) -> None:
+		"""Call func on each dataset name, matching pyfive.File.visit() behavior."""
+
+		self._ensure_open()
+		for name in self._keys:
+			func(name)
+
+	def visititems(self, func: Any) -> None:
+		"""Call func(name, dataset) on each dataset, matching pyfive semantics."""
+
+		self._ensure_open()
+		for name in self._keys:
+			func(name, self[name])
 
 
 	def close(self) -> None:
@@ -371,5 +466,11 @@ class rFile:
 	@property
 	def _keys(self) -> tuple[str, ...]:
 		return tuple(self._meta.get("keys", ()))
+
+
+# Let external libraries (e.g. cfdm) recognize rFile via isinstance(..., pyfive.File)
+# without inheriting pyfive.File implementation internals.
+pyfive.File.register(rFile)
+pyfive.Dataset.register(rDataset)
 
 __all__ = ["rDataset", "rFile"]

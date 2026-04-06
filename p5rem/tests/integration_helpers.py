@@ -84,6 +84,7 @@ def bootstrap_integration_session(config: SSHIntegrationConfig):
 		remote_python=config.remote_python,
 		login_shell=config.login_shell,
 		timeout=20.0,
+		use_cache=False,
 	)
 
 

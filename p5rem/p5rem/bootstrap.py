@@ -75,6 +75,37 @@ class BootstrappedProcess:
 		except Exception:
 			pass
 
+	def read_stderr_snippet(self, *, max_bytes: int = 4096) -> str:
+		"""Best-effort stderr tail for diagnostics without blocking on live channels."""
+
+		chunks: list[bytes] = []
+		remaining = max(1, int(max_bytes))
+
+		recv_ready = getattr(self.channel, "recv_stderr_ready", None)
+		recv = getattr(self.channel, "recv_stderr", None)
+		if callable(recv_ready) and callable(recv):
+			while remaining > 0 and recv_ready():
+				data = recv(min(remaining, 1024))
+				if not data:
+					break
+				if isinstance(data, str):
+					data = data.encode("utf-8", errors="replace")
+				chunks.append(data)
+				remaining -= len(data)
+
+		if not chunks and self.channel.exit_status_ready():
+			with suppress(Exception):
+				data = self.stderr.read(max_bytes)
+				if isinstance(data, str):
+					data = data.encode("utf-8", errors="replace")
+				if data:
+					chunks.append(data)
+
+		if not chunks:
+			return ""
+
+		return b"".join(chunks).decode("utf-8", errors="replace").strip()
+
 
 def _ensure_remote_dir(sftp: Any, remote_dir: str) -> None:
 	parts = [part for part in PurePosixPath(remote_dir).parts if part and part != "/"]
@@ -214,7 +245,11 @@ def bootstrap_server(
 		sftp = client.open_sftp()
 		try:
 			_ensure_remote_dir(sftp, remote_dir)
-			remote_path = str(PurePosixPath(remote_dir) / remote_filename)
+			if hasattr(sftp, "normalize") and callable(getattr(sftp, "normalize")):
+				remote_dir_path = str(sftp.normalize(remote_dir))
+			else:
+				remote_dir_path = remote_dir
+			remote_path = str(PurePosixPath(remote_dir_path) / remote_filename)
 			sftp.put(local_script_path, remote_path)
 			log.info("Uploaded server script to %s (%.2f seconds)", remote_path, perf_counter() - t2)
 			try:
@@ -296,6 +331,32 @@ def bootstrap_session(
 		stdout=proc.stdout,
 		cache=None,
 	)
+
+	# Fail fast with actionable diagnostics if the remote server did not start.
+	if hasattr(session, "heartbeat"):
+		try:
+			session.heartbeat()
+		except Exception as exc:
+			exit_code = None
+			stderr_snippet = ""
+			if hasattr(proc, "poll") and callable(proc.poll):
+				with suppress(Exception):
+					exit_code = proc.poll()
+			if hasattr(proc, "read_stderr_snippet") and callable(proc.read_stderr_snippet):
+				with suppress(Exception):
+					stderr_snippet = proc.read_stderr_snippet()
+			with suppress(Exception):
+				session.close()
+			message = ["remote p5rem server failed startup"]
+			if exit_code is not None:
+				message.append(f"exit_code={exit_code}")
+			if stderr_snippet:
+				message.append(f"stderr={stderr_snippet}")
+			message.append(
+				"hint: verify remote_python points to an environment with pyfive and cbor2 (for conda run, keep --no-capture-output/live-stream)."
+			)
+			raise BootstrapError("; ".join(message)) from exc
+
 	p2 = perf_counter()
 	log.info("Session bootstrapped (host=%s, cache=%s, time=%.2f seconds)", host, "enabled" if use_cache else "disabled", p2 - p1)
 	return session

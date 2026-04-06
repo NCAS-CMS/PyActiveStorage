@@ -90,6 +90,8 @@ class ServerStub:
         self.input_stream = input_stream if input_stream is not None else sys.stdin.buffer
         self.output_stream = output_stream if output_stream is not None else sys.stdout.buffer
         self._open_files: dict[str, Any] = {}
+        self._dim_id_to_name: dict[str, dict[int, str]] = {}
+        self._dim_id_reference_list: dict[str, dict[int, list[list[Any]]]] = {}
         self._handlers = {
             LIST: self.handle_list,
             STAT: self.handle_stat,
@@ -162,11 +164,13 @@ class ServerStub:
         import pyfive
         file_handle = pyfive.File(path)
         self._open_files[path] = file_handle
+        self._build_netcdf_maps(path, file_handle)
         return {
             "type": FILE_INFO,
             "path": path,
             "keys": list(file_handle.keys()),
-            "attrs": self._serialise(dict(getattr(file_handle, "attrs", {}))),
+            "attrs": self._serialise(dict(getattr(file_handle, "attrs", {})), file_handle=file_handle),
+            "dim_id_to_name": self._dim_id_to_name.get(path, {}),
             "mtime": os.path.getmtime(path),
         }
 
@@ -176,6 +180,9 @@ class ServerStub:
         chunks = getattr(dataset, "chunks", None)
         if chunks is not None:
             chunks = list(chunks)
+        attrs = self._serialise(dict(getattr(dataset, "attrs", {})), file_handle=file_handle)
+        if isinstance(attrs, dict):
+            attrs = self._resolve_netcdf_reference_attrs(path, varname, attrs)
         return {
             "type": VAR_INFO,
             "path": path,
@@ -184,10 +191,10 @@ class ServerStub:
             "dtype": str(getattr(dataset, "dtype", "unknown")),
             "chunks": chunks,
             "index": self._dataset_index(dataset),
-            "attrs": self._serialise(dict(getattr(dataset, "attrs", {}))),
-            "fillvalue": self._serialise(getattr(dataset, "fillvalue", None)),
-            "filter_pipeline": self._serialise(getattr(getattr(dataset, "id", None), "filter_pipeline", None)),
-            "order": self._serialise(getattr(getattr(dataset, "id", None), "_order", "C")),
+            "attrs": attrs,
+            "fillvalue": self._serialise(getattr(dataset, "fillvalue", None), file_handle=file_handle),
+            "filter_pipeline": self._serialise(getattr(getattr(dataset, "id", None), "filter_pipeline", None), file_handle=file_handle),
+            "order": self._serialise(getattr(getattr(dataset, "id", None), "_order", "C"), file_handle=file_handle),
             "layout": "chunked" if chunks else "contiguous",
             "fragmented": not bool(getattr(file_handle, "consolidated_metadata", True)),
         }
@@ -261,6 +268,8 @@ class ServerStub:
 
     def handle_file_close(self, path: str) -> dict[str, Any]:
         file_handle = self._open_files.pop(path, None)
+        self._dim_id_to_name.pop(path, None)
+        self._dim_id_reference_list.pop(path, None)
         if file_handle is not None:
             with suppress(Exception):
                 file_handle.close()
@@ -374,22 +383,122 @@ class ServerStub:
 
         return data, 0, absolute_offset, len(data)
 
-    def _serialise(self, value: Any) -> Any:
-        try:
-            from pyfive.core import Reference as _PyfiveRef
-            if isinstance(value, _PyfiveRef):
-                return None
-        except ImportError:
-            pass
-        if hasattr(value, "tolist") and callable(value.tolist):
-            return self._serialise(value.tolist())
+    def _build_netcdf_maps(self, path: str, file_handle: Any) -> None:
+        """Precompute deterministic netCDF dimension metadata maps for one file."""
+
+        dim_id_to_name: dict[int, str] = {}
+        dim_id_reference_list: dict[int, list[list[Any]]] = {}
+        keys = list(file_handle.keys())
+
+        var_dim_coords: dict[str, list[int]] = {}
+        for name in keys:
+            attrs = dict(getattr(file_handle[name], "attrs", {}))
+
+            raw_dim_id = attrs.get("_Netcdf4Dimid")
+            if raw_dim_id is not None:
+                try:
+                    dim_id_to_name[self._coerce_int(raw_dim_id)] = str(name)
+                except (TypeError, ValueError):
+                    pass
+
+            coords = attrs.get("_Netcdf4Coordinates")
+            if hasattr(coords, "tolist") and callable(coords.tolist):
+                coords = coords.tolist()
+            if isinstance(coords, (list, tuple)):
+                parsed: list[int] = []
+                for coord in coords:
+                    try:
+                        parsed.append(self._coerce_int(coord))
+                    except (TypeError, ValueError):
+                        parsed.append(-1)
+                var_dim_coords[str(name)] = parsed
+
+        for varname, coord_ids in var_dim_coords.items():
+            for axis, dim_id in enumerate(coord_ids):
+                if dim_id < 0:
+                    continue
+                dim_id_reference_list.setdefault(dim_id, []).append([varname, int(axis)])
+
+        self._dim_id_to_name[path] = dim_id_to_name
+        self._dim_id_reference_list[path] = dim_id_reference_list
+
+    def _coerce_int(self, value: Any) -> int:
+        """Convert numpy/list/tuple scalar-like values to int."""
+
         if hasattr(value, "item") and callable(value.item):
             with suppress(Exception):
-                return self._serialise(value.item())
+                value = value.item()
+        if hasattr(value, "tolist") and callable(value.tolist):
+            with suppress(Exception):
+                value = value.tolist()
+        if isinstance(value, (list, tuple)):
+            if len(value) != 1:
+                raise ValueError(f"cannot coerce non-scalar sequence to int: {value!r}")
+            value = value[0]
+        return int(value)
+
+    def _resolve_netcdf_reference_attrs(self, path: str, varname: str, attrs: dict[str, Any]) -> dict[str, Any]:
+        """Resolve netCDF reference-style attrs to concrete names before transport."""
+
+        resolved = dict(attrs)
+        dim_id_to_name = self._dim_id_to_name.get(path, {})
+        dim_id_reference_list = self._dim_id_reference_list.get(path, {})
+
+        dim_list = resolved.get("DIMENSION_LIST")
+        if isinstance(dim_list, list) and any(item == [None] for item in dim_list):
+            coords = resolved.get("_Netcdf4Coordinates")
+            if hasattr(coords, "tolist") and callable(coords.tolist):
+                coords = coords.tolist()
+            if isinstance(coords, (list, tuple)):
+                rebuilt: list[list[str | None]] = []
+                for coord in coords:
+                    try:
+                        rebuilt.append([dim_id_to_name.get(self._coerce_int(coord))])
+                    except (TypeError, ValueError):
+                        rebuilt.append([None])
+                resolved["DIMENSION_LIST"] = rebuilt
+
+        ref_list = resolved.get("REFERENCE_LIST")
+        if isinstance(ref_list, list) and any(isinstance(item, list) and item and item[0] is None for item in ref_list):
+            raw_dim_id = resolved.get("_Netcdf4Dimid")
+            try:
+                dim_id = self._coerce_int(raw_dim_id)
+            except (TypeError, ValueError):
+                dim_id = None
+
+            if dim_id is not None:
+                refs = dim_id_reference_list.get(dim_id, [])
+                refs = [entry for entry in refs if entry[0] != varname]
+                if refs:
+                    resolved["REFERENCE_LIST"] = refs
+
+        return resolved
+
+    def _serialise(self, value: Any, *, file_handle: Any | None = None) -> Any:
+        if file_handle is not None and value is not None:
+            if hasattr(value, "address_of_reference"):
+                with suppress(Exception):
+                    obj = file_handle._get_object_by_address(value.address_of_reference)
+                    if obj is not None:
+                        name = getattr(obj, "name", None)
+                        if isinstance(name, str):
+                            return name.lstrip("/")
+
+            with suppress(Exception):
+                target = file_handle[value]
+                name = getattr(target, "name", None)
+                if isinstance(name, str):
+                    return name.lstrip("/")
+
+        if hasattr(value, "tolist") and callable(value.tolist):
+            return self._serialise(value.tolist(), file_handle=file_handle)
+        if hasattr(value, "item") and callable(value.item):
+            with suppress(Exception):
+                return self._serialise(value.item(), file_handle=file_handle)
         if isinstance(value, Mapping):
-            return {key: self._serialise(item) for key, item in value.items()}
+            return {key: self._serialise(item, file_handle=file_handle) for key, item in value.items()}
         if isinstance(value, (tuple, list)):
-            return [self._serialise(item) for item in value]
+            return [self._serialise(item, file_handle=file_handle) for item in value]
         if not isinstance(value, (bool, int, float, str, bytes, type(None))):
             return None
         return value

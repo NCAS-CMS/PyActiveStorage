@@ -26,6 +26,16 @@ The integration marker exists so the normal test run can stay fast and self-cont
 make test
 ```
 
+### cfdm compatibility test in a separate environment
+
+If you want to run only the cfdm interoperability test in a dedicated env (for example `work26t`):
+
+```bash
+make test-cfdm
+```
+
+This target uses `PYTHON_CFDM` (default: `/Users/bnl28/miniforge3/envs/work26t/bin/python`) and leaves the main suite on `work26`.
+
 ### Real SSH integration run
 
 Create a local environment override file such as `tests/testenv.sh`:

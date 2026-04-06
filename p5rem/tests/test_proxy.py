@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pyfive
 import pytest
 
 from p5rem import Session, rDataset, rFile
@@ -109,10 +110,26 @@ def test_proxy_loads_file_metadata_immediately() -> None:
 
 		proxy = rFile(session, "/data/example.nc")
 
-		assert proxy.keys() == ["temperature", "pressure"]
+		assert isinstance(proxy, pyfive.File)
+		assert list(proxy.keys()) == ["temperature", "pressure"]
 		assert proxy.attrs == {"title": "example"}
 		assert proxy.mtime == 12345
 		assert session.file_open_calls == ["/data/example.nc"]
+
+
+def test_rfile_repr_includes_short_host_and_path() -> None:
+		session = MockSession()
+		session.host = "xfer1.a.b.c"
+		proxy = rFile(session, "/data/example.nc")
+
+		assert repr(proxy) == "rFile(host='xfer1', path='/data/example.nc')"
+
+
+def test_rfile_repr_without_host_includes_path() -> None:
+		session = MockSession()
+		proxy = rFile(session, "/data/example.nc")
+
+		assert repr(proxy) == "rFile(path='/data/example.nc')"
 
 
 def test_session_open_returns_proxy() -> None:
@@ -121,6 +138,7 @@ def test_session_open_returns_proxy() -> None:
 		proxy = Session.open(session, "/data/example.nc")
 
 		assert isinstance(proxy, rFile)
+		assert proxy.name == "/"
 		assert proxy.filename == "/data/example.nc"
 
 
@@ -186,7 +204,7 @@ def test_proxy_context_manager_closes_file_once() -> None:
 		session = MockSession()
 
 		with rFile(session, "/data/example.nc") as proxy:
-			assert proxy["temperature"].name == "temperature"
+			assert proxy["temperature"].name == "/temperature"
 
 		assert session.file_close_calls == ["/data/example.nc"]
 		assert proxy.closed is True
