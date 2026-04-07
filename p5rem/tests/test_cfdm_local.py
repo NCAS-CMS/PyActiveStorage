@@ -101,3 +101,20 @@ def test_cfdm_read_remote_rfile_over_loopback() -> None:
             assert len(fields) == 1
     finally:
         _stop_loopback_server(*connection)
+
+
+def test_remote_dataset_read_after_rfile_close_matches_pyfive() -> None:
+    """p5rem should allow dataset reads after parent file close, like pyfive."""
+
+    connection = _start_loopback_server(ServerStub)
+    session = connection[0]
+    data_path = str(Path(__file__).parent / "data" / "test1.nc")
+    try:
+        remote_file = session.open(data_path)
+        dataset = remote_file["tas"]
+        remote_file.close()
+
+        array = dataset[:]
+        assert array.size > 0
+    finally:
+        _stop_loopback_server(*connection)

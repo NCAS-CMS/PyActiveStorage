@@ -6,6 +6,9 @@ from pathlib import Path
 from typing import Any
 
 from diskcache import Cache
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class P5RemCache:
@@ -14,6 +17,7 @@ class P5RemCache:
 	def __init__(self, directory: str | None = None, *, size_limit: int = 10 * 2**30) -> None:
 		cache_dir = Path(directory).expanduser() if directory is not None else Path.home() / ".cache" / "p5rem"
 		self._cache = Cache(str(cache_dir), size_limit=size_limit)
+		log.info(f"Initialized p54rem cache at {cache_dir} with size limit {size_limit} bytes")
 		self._hits = 0
 		self._misses = 0
 

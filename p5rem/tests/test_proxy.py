@@ -142,14 +142,14 @@ def test_session_open_returns_proxy() -> None:
 		assert proxy.filename == "/data/example.nc"
 
 
-def test_dataset_metadata_is_loaded_lazily_and_cached() -> None:
+def test_dataset_metadata_is_loaded_eagerly_and_cached() -> None:
 		session = MockSession()
 		proxy = rFile(session, "/data/example.nc")
 
 		dataset = proxy["temperature"]
 
 		assert isinstance(dataset, rDataset)
-		assert session.var_open_calls == []
+		assert session.var_open_calls == [("/data/example.nc", "temperature")]
 		assert dataset.shape == (2, 3)
 		assert dataset.dtype == np.dtype("float32")
 		assert dataset.chunks == (2, 3)

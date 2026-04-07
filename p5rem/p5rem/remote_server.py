@@ -90,6 +90,7 @@ class ServerStub:
         self.input_stream = input_stream if input_stream is not None else sys.stdin.buffer
         self.output_stream = output_stream if output_stream is not None else sys.stdout.buffer
         self._open_files: dict[str, Any] = {}
+        self._datasets: dict[str, dict[str, Any]] = {}
         self._dim_id_to_name: dict[str, dict[int, str]] = {}
         self._dim_id_reference_list: dict[str, dict[int, list[list[Any]]]] = {}
         self._handlers = {
@@ -164,6 +165,7 @@ class ServerStub:
         import pyfive
         file_handle = pyfive.File(path)
         self._open_files[path] = file_handle
+        self._datasets.setdefault(path, {})
         self._build_netcdf_maps(path, file_handle)
         return {
             "type": FILE_INFO,
@@ -268,8 +270,6 @@ class ServerStub:
 
     def handle_file_close(self, path: str) -> dict[str, Any]:
         file_handle = self._open_files.pop(path, None)
-        self._dim_id_to_name.pop(path, None)
-        self._dim_id_reference_list.pop(path, None)
         if file_handle is not None:
             with suppress(Exception):
                 file_handle.close()
@@ -279,9 +279,16 @@ class ServerStub:
         return {"type": HEARTBEAT}
 
     def _get_dataset(self, path: str, varname: str) -> Any:
+        cached = self._datasets.get(path, {}).get(varname)
+        if cached is not None:
+            return cached
+
         if path not in self._open_files:
             raise FileNotFoundError(f"file is not open: {path}")
-        return self._open_files[path][varname]
+
+        dataset = self._open_files[path][varname]
+        self._datasets.setdefault(path, {})[varname] = dataset
+        return dataset
 
     def _dataset_nbytes(self, dataset: Any) -> int:
         shape = tuple(getattr(dataset, "shape", ()))

@@ -361,7 +361,11 @@ class rFile:
 		if varname not in self:
 			raise KeyError(varname)
 		if varname not in self._datasets:
-			self._datasets[varname] = rDataset(self._session, self._path, varname, file=self)
+			dataset = rDataset(self._session, self._path, varname, file=self)
+			# Match pyfive's normal __getitem__ behavior: metadata and chunk index
+			# are loaded when the dataset proxy is obtained, not deferred to first read.
+			_ = dataset.id
+			self._datasets[varname] = dataset
 		return self._datasets[varname]
 
 	def __iter__(self) -> Iterator[str]:
