@@ -87,9 +87,10 @@ def list_remote_files(session, remote_dir):
 		files = session.list(remote_dir)
 		print(f"    ✓ Found {len(files)} item(s):")
 		nc_files = list_remote_netcdf_files(session, remote_dir)
-		for f in sorted(files):
-			marker = "  (NetCDF)" if f.endswith('.nc') else ""
-			print(f"      - {f}{marker}")
+		for entry in files:
+			name = entry.get("name") if isinstance(entry, dict) else str(entry)
+			marker = "  (NetCDF)" if isinstance(name, str) and name.endswith('.nc') else ""
+			print(f"      - {name}{marker}")
 		return nc_files
 	except Exception as e:
 		import traceback

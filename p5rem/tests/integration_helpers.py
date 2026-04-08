@@ -90,7 +90,15 @@ def bootstrap_integration_session(config: SSHIntegrationConfig):
 
 def list_remote_netcdf_files(session, remote_dir: str) -> list[str]:
 	entries = session.list(remote_dir)
-	return sorted(name for name in entries if name.endswith(".nc"))
+	paths = [
+		entry.get("name")
+		for entry in entries
+		if isinstance(entry, dict)
+		and entry.get("type") == "file"
+		and isinstance(entry.get("name"), str)
+		and entry["name"].endswith(".nc")
+	]
+	return sorted(paths)
 
 
 def local_test_data_dir() -> Path:

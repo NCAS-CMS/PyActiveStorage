@@ -84,7 +84,13 @@ def test_loopback_list_and_stat(loopback_session) -> None:
 	entries = session.list(str(tmp_path))
 	stat_result = session.stat(str(data_file))
 
-	assert entries == ["sample.nc"]
+	assert len(entries) == 1
+	entry = entries[0]
+	assert entry["name"] == str(data_file)
+	assert entry["type"] == "file"
+	assert entry["size"] == len("placeholder")
+	assert isinstance(entry["mtime"], float)
+	assert entry["is_link"] is False
 	assert stat_result["type"] == "STAT_RESULT"
 	assert stat_result["path"] == str(data_file)
 	assert stat_result["is_file"] is True

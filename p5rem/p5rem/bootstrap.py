@@ -237,7 +237,24 @@ def bootstrap_server(
 		connect_params["port"],
 		connect_params["username"],
 	)
-	client.connect(**connect_kwargs)
+	try:
+		client.connect(**connect_kwargs)
+	except paramiko.AuthenticationException:
+		# Password auth failed; the server may require keyboard-interactive
+		# (challenge-response / OTP).  The transport is still open — retry
+		# using auth_interactive, responding to every prompt with the password.
+		if password is None:
+			raise
+		transport = client.get_transport()
+		if transport is None:
+			raise
+		log.info("Password auth failed; retrying with keyboard-interactive")
+
+		def _ki_handler(title: str, instructions: str, prompt_list: list) -> list[str]:
+			return [password for _ in prompt_list]
+
+		transport.auth_interactive(connect_params["username"], _ki_handler)
+
 	t2 = perf_counter()
 	log.info("SSH connection established (%.2f seconds)", t2 - t1)
 

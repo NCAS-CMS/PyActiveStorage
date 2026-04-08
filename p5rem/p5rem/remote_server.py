@@ -146,7 +146,33 @@ class ServerStub:
             }
 
     def handle_list(self, path: str) -> dict[str, Any]:
-        entries = sorted(os.listdir(path))
+        entries: list[dict[str, Any]] = []
+        with os.scandir(path) as iterator:
+            for entry in iterator:
+                full_path = os.path.join(path, entry.name)
+                is_link = entry.is_symlink()
+                # Prefer directory classification when available, otherwise file.
+                entry_type = "directory" if entry.is_dir(follow_symlinks=True) else "file"
+
+                size: int | None = None
+                mtime: float | None = None
+                with suppress(OSError):
+                    stat_result = entry.stat(follow_symlinks=False)
+                    mtime = float(stat_result.st_mtime)
+                    if entry_type == "file":
+                        size = int(stat_result.st_size)
+
+                entries.append(
+                    {
+                        "name": full_path,
+                        "type": entry_type,
+                        "size": size,
+                        "mtime": mtime,
+                        "is_link": is_link,
+                    }
+                )
+
+        entries.sort(key=lambda item: str(item.get("name", "")))
         return {"type": LIST_RESULT, "path": path, "entries": entries}
 
     def handle_stat(self, path: str) -> dict[str, Any]:
