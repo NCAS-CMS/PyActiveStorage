@@ -17,9 +17,8 @@ from netCDF4 import Dataset
 
 from activestorage.active import Active, load_from_s3
 from activestorage.config import *
-from activestorage import dummy_data as dd
-
-import utils
+from . import dummy_data as dd
+from . import utils
 
 
 def load_dataset(testfile):

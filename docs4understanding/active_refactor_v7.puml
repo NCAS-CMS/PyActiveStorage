@@ -1,0 +1,299 @@
+@startuml active_refactor_v7_core
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam packageStyle rectangle
+
+' ------------------------------------------------------------------
+' Diagram 1: core only
+' ------------------------------------------------------------------
+
+package "activestorage.core" {
+
+    class SelectionRequest <<dataclass>> {
+        --
+        + uri : str
+        + variable : str
+        + selection : tuple
+        + method : str
+        + axis : tuple
+        + missing : MissingAttributes
+        + compressor : object
+        + filters : list
+    }
+
+    class ChunkRequest <<dataclass>> {
+        --
+        + uri : str
+        + offset : int
+        + size : int
+        + dtype : str
+        + chunks : tuple
+        + order : str
+        + compressor : object
+        + filters : list
+        + chunk_selection : tuple
+        + missing : MissingAttributes
+        + method : str
+        + axis : tuple
+    }
+
+    class MissingAttributes <<dataclass>> {
+        --
+        + fill_value
+        + missing_value
+        + valid_min
+        + valid_max
+    }
+
+    class ChunkMetadata <<dataclass>> {
+        --
+        + dtype
+        + shape : tuple
+        + chunks : tuple
+        + compressor
+        + filters : list
+        + order : str
+        + filename : str
+    }
+
+    class ChunkResult <<dataclass>> {
+        --
+        + data : np.ma.array
+        + count : int
+        + out_selection : tuple
+    }
+
+    class SelectionResult <<dataclass>> {
+        --
+        + data : np.ma.array | dict
+        + n : int
+    }
+
+    abstract class StorageFormat {
+        --
+        + {abstract} open(uri, storage_options)
+        + {abstract} get_variable(ncvar) : dataset
+        + {abstract} get_missing_attributes() : MissingAttributes
+        + {abstract} get_indexer(selection) : indexer
+        + {abstract} get_chunk_metadata() : ChunkMetadata
+        + {abstract} close()
+    }
+
+    abstract class StorageBackend {
+        + supported_methods : set
+        + execution_strategy : ExecutionStrategy
+        --
+        + get_session()
+        + close_session(session)
+        + {abstract} reduce_chunk(request: ChunkRequest) : ChunkResult
+        + reduce_selection(request: SelectionRequest) : SelectionResult
+    }
+
+    abstract class ExecutionStrategy {
+        + {abstract} execute(backend, session,\n  chunk_metadata, indexer,\n  missing, method,\n  need_counts, axis) : array | dict
+    }
+
+    class "_select_backend(interface_type, version)" as SelectBackend <<function>> {
+        Returns StorageBackend subclass
+        from _BACKENDS dict.
+    }
+
+    class "_select_format(dataset)" as SelectFormat <<function>> {
+        Returns StorageFormat subclass
+        from _FORMATS dict.
+    }
+
+    enum "_BACKENDS" as BackendRegistry {
+        (None, 1/2)  => LocalBackend
+        ("s3", 1/2)  => S3Backend
+        ("https", 2) => HttpsBackend
+        ("p5rem", *) => P5RemBackend
+    }
+
+    enum "_FORMATS" as FormatRegistry {
+        pyfive.Dataset => PyfiveFormat
+        zarr.Array     => ZarrFormat
+        p5rem.File     => P5RemFormat
+        ".nc"/".he5"   => PyfiveFormat
+        ".zarr"        => ZarrFormat
+        ".kerchunk"    => KerchunkFormat
+    }
+
+    class Active {
+        - _methods : dict
+        - _method : str
+        - _axis : tuple
+        - _components : bool
+        - _backend : StorageBackend
+        - _format : StorageFormat
+        --
+        + register_method(name, func)
+        + method : property
+        + components : property
+        + min(axis) : self
+        + max(axis) : self
+        + mean(axis) : self
+        --
+        + __getitem__(index)
+        - _get_vanilla(index)
+        - _from_storage(...)
+        - _mask_data(data)
+    }
+
+    BackendRegistry .. SelectBackend
+    FormatRegistry  .. SelectFormat
+
+    Active o-- StorageBackend : _backend
+    Active o-- StorageFormat  : _format
+    Active ..> SelectBackend  : __init__
+    Active ..> SelectFormat   : __init__
+    Active ..> ExecutionStrategy : delegates via backend.execution_strategy
+
+    StorageBackend o-- ExecutionStrategy : execution_strategy
+
+    StorageBackend ..> ChunkRequest     : consumes
+    StorageBackend ..> ChunkResult      : produces
+    StorageBackend ..> SelectionRequest : consumes
+    StorageBackend ..> SelectionResult  : produces
+
+    StorageFormat ..> ChunkMetadata     : produces
+    StorageFormat ..> MissingAttributes : produces
+
+    ChunkRequest *-- MissingAttributes
+    SelectionRequest *-- MissingAttributes
+}
+
+@enduml
+
+@startuml active_refactor_v7_impls
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam packageStyle rectangle
+
+' ------------------------------------------------------------------
+' Diagram 2: formats/backends/strategies
+' Core base classes are shown via stereotypes.
+' ------------------------------------------------------------------
+
+package "activestorage.formats" {
+
+    class PyfiveFormat <<core.StorageFormat>> {
+        + open(uri, storage_options)
+        + get_variable(ncvar)
+        + get_missing_attributes() : MissingAttributes
+        + get_indexer(selection)
+        + get_chunk_metadata() : ChunkMetadata
+        + close()
+    }
+
+    class ZarrFormat <<core.StorageFormat>> {
+        + open(uri, storage_options)
+        + get_variable(ncvar)
+        + get_missing_attributes() : MissingAttributes
+        + get_indexer(selection)
+        + get_chunk_metadata() : ChunkMetadata
+        + close()
+    }
+
+    class P5RemFormat <<core.StorageFormat>> {
+        + open(uri, storage_options)
+        + get_variable(ncvar)
+        + get_missing_attributes() : MissingAttributes
+        + get_indexer(selection)
+        + get_chunk_metadata() : ChunkMetadata
+        + close()
+    }
+
+    class KerchunkFormat <<core.StorageFormat>> {
+        + open(uri, storage_options)
+        + get_variable(ncvar)
+        + get_missing_attributes() : MissingAttributes
+        + get_indexer(selection)
+        + get_chunk_metadata() : ChunkMetadata
+        + close()
+    }
+}
+
+package "activestorage.backends" {
+
+    abstract class CacheAwareBackend <<core.StorageBackend>> {
+        + is_range_cached(fh, offset, size) : bool
+        - _get_block_size(fh) : int
+        - _get_cache_dict(fh) : dict
+    }
+
+    abstract class ReductionistBackend <<core.StorageBackend>> {
+        + execution_strategy : ChunkedRemoteStrategy
+        --
+        + {abstract} build_url(filename, storage_options) : str
+        + {abstract} get_session() : session
+        + reduce_chunk(request: ChunkRequest) : ChunkResult
+        + reduce_selection(request: SelectionRequest) : SelectionResult
+    }
+
+    class LocalBackend <<core.StorageBackend>> {
+        + execution_strategy : ChunkedLocalStrategy
+        --
+        + reduce_chunk(request: ChunkRequest) : ChunkResult
+    }
+
+    class S3Backend <<core.StorageBackend>> {
+        + execution_strategy : ChunkedRemoteStrategy
+        --
+        + build_url(filename, storage_options) : str
+        + get_session() : session
+        - _resolve_bucket_object(filename, opts)
+    }
+
+    class HttpsBackend <<core.StorageBackend>> {
+        + execution_strategy : ChunkedRemoteStrategy
+        --
+        + build_url(filename, storage_options) : str
+        + get_session() : session
+    }
+
+    class P5RemBackend <<core.StorageBackend>> {
+        + execution_strategy : WholeArrayStrategy
+        --
+        + get_session() : p5rem.Client
+        + reduce_chunk(request: ChunkRequest) : ChunkResult
+        + reduce_selection(request: SelectionRequest) : SelectionResult
+    }
+
+    CacheAwareBackend <|-- ReductionistBackend
+    ReductionistBackend <|-- S3Backend
+    ReductionistBackend <|-- HttpsBackend
+}
+
+package "activestorage.strategies" {
+
+    class ChunkedLocalStrategy <<core.ExecutionStrategy>> {
+        + execute(...)
+        - _process_chunk(...)
+    }
+
+    class ChunkedRemoteStrategy <<core.ExecutionStrategy>> {
+        + execute(...)
+        - _process_chunk(...)
+        - _is_range_cached(fh, offset, size) : bool
+    }
+
+    class WholeArrayStrategy <<core.ExecutionStrategy>> {
+        + execute(...)
+    }
+
+    ChunkedRemoteStrategy ..> CacheAwareBackend : inspects cache via
+    WholeArrayStrategy ..> CacheAwareBackend : inspects cache via
+    ChunkedLocalStrategy ..> ChunkRequest : builds
+    ChunkedRemoteStrategy ..> ChunkRequest : builds
+    WholeArrayStrategy ..> SelectionRequest : builds
+
+}
+
+ChunkRequest -[hidden]- CacheAwareBackend 
+
+
+
+@enduml

@@ -7,9 +7,11 @@ from pathlib import Path
 
 from activestorage.active import Active, load_from_s3
 from activestorage.config import *
-from activestorage.dummy_data import make_compressed_ncdata
+from . import dummy_data
+from .dummy_data import make_compressed_ncdata
 
-import utils
+from . import utils
+import h5py, pyfive
 
 
 def check_dataset_filters(temp_file: str, ncvar: str, compression: str, shuffle: bool):
@@ -74,6 +76,23 @@ def test_compression_and_filters(tmp_path: str, compression: str, shuffle: bool)
     active._method = "min"
     result = active[0:2,4:6,7:9]
     assert result == 740.0
+
+@pytest.mark.parametrize('compression', ['zlib'])
+@pytest.mark.parametrize('shuffle', [False, True])
+def test_filter_pipeline(tmp_path: str, compression: str, shuffle: bool):
+    """
+    Test the filter pipeline looks the way we expect it to. 
+    """
+    test_file = create_compressed_dataset(tmp_path, compression, shuffle)
+    with pyfive.File(test_file) as pfile:
+        ds = pfile['data']
+        pipeline = ds.compression_opts
+
+    with h5py.File(test_file) as hfile:
+        ds1 = hfile['data']
+        hpipeline = ds1.compression_opts
+        assert pipeline == hpipeline
+
 
 
 @pytest.mark.parametrize("storage_options, active_storage_url", storage_options_paramlist)

@@ -80,13 +80,29 @@ def remove_missing(data, missing):
     """
     fill_value, missing_value, valid_min, valid_max = missing
 
-    if fill_value:
+    def _as_scalar(value):
+        if value is None:
+            return None
+        if not np.isscalar(value):
+            try:
+                if len(value) == 1:
+                    return value[0]
+            except TypeError:
+                pass
+        return value
+
+    fill_value = _as_scalar(fill_value)
+    missing_value = _as_scalar(missing_value)
+    valid_min = _as_scalar(valid_min)
+    valid_max = _as_scalar(valid_max)
+
+    if fill_value is not None:
         data = np.ma.masked_equal(data, fill_value)
-    if missing_value:
+    if missing_value is not None:
         data = np.ma.masked_equal(data, missing_value)
-    if valid_max:
+    if valid_max is not None:
         data = np.ma.masked_greater(data, valid_max)
-    if valid_min:
+    if valid_min is not None:
         data = np.ma.masked_less(data, valid_min)
 
     data = np.ma.compressed(data)

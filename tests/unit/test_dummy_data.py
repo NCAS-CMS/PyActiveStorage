@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pytest
 
-from activestorage import dummy_data as dd
+from .. import dummy_data as dd
 from netCDF4 import Dataset
 
 

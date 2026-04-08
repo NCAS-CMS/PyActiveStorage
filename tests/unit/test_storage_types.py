@@ -14,7 +14,8 @@ from unittest import mock
 import activestorage.active
 from activestorage.active import Active
 from activestorage.config import *
-from activestorage.dummy_data import make_vanilla_ncdata
+from .. import dummy_data
+from ..dummy_data import make_vanilla_ncdata
 import activestorage.reductionist
 import activestorage.storage
 

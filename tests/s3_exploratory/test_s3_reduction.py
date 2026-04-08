@@ -5,7 +5,8 @@ import s3fs
 import tempfile
 
 from activestorage.active import Active
-from activestorage.dummy_data import make_vanilla_ncdata
+from .. import dummy_data
+from ..dummy_data import make_vanilla_ncdata
 import activestorage.storage as st
 from activestorage.reductionist import reduce_chunk as reductionist_reduce_chunk
 from activestorage.reductionist import get_session

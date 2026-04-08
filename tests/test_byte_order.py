@@ -5,9 +5,10 @@ from netCDF4 import Dataset
 
 from activestorage.active import Active
 from activestorage.config import *
-from activestorage.dummy_data import make_byte_order_ncdata
+from . import dummy_data
+from .dummy_data import make_byte_order_ncdata
 
-import utils
+from . import utils
 
 
 def check_dataset_byte_order(temp_file: str, ncvar: str, byte_order: str):
@@ -36,6 +37,7 @@ def test_byte_order(tmp_path: str, byte_order: str):
     """
     Test use of datasets with different byte orders (endianness).
     """
+
     test_file = create_byte_order_dataset(tmp_path, byte_order)
 
     active = Active(test_file, 'data', utils.get_storage_type())

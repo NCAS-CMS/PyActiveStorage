@@ -6,7 +6,7 @@ import numpy as np
 from activestorage import reductionist
 from activestorage.active import load_from_s3
 from activestorage.config import *
-from test_bigger_data import save_cl_file_with_a
+from .test_bigger_data import save_cl_file_with_a
 
 import json
 

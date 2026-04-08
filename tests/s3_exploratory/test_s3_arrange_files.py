@@ -7,7 +7,8 @@ import s3fs
 import tempfile
 
 from activestorage.active import Active
-from activestorage.dummy_data import make_vanilla_ncdata
+from .. import dummy_data
+from ..dummy_data import make_vanilla_ncdata
 
 from numpy.testing import assert_allclose, assert_array_equal
 from pathlib import Path

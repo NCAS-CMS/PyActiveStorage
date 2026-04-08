@@ -1,0 +1,141 @@
+@startuml active_refactor_v8_formats_adapters
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam packageStyle rectangle
+
+' ------------------------------------------------------------------
+' StorageFormat adapters: thin wrappers around external library objects
+' ------------------------------------------------------------------
+
+package "activestorage.core" {
+
+    abstract class StorageFormat {
+        --
+        + {abstract} open(uri, storage_options)
+        + {abstract} get_variable(ncvar) : dataset
+        + {abstract} get_missing_attributes() : MissingAttributes
+        + {abstract} get_indexer(selection) : indexer
+        + {abstract} get_chunk_metadata() : ChunkMetadata
+        + {abstract} close()
+    }
+}
+
+package "activestorage.formats" {
+
+    ' Adapters implementing the StorageFormat contract
+    ' Each wraps an external library object and delegates to it
+
+    class PyfiveFormat <<core.StorageFormat>> {
+        - _dataset : pyfive.Dataset
+        --
+        + open(uri, storage_options)
+        + get_variable(ncvar) : dataset
+        + get_missing_attributes() : MissingAttributes
+        + get_indexer(selection)
+        + get_chunk_metadata() : ChunkMetadata
+        + close()
+    }
+
+    class ZarrFormat <<core.StorageFormat>> {
+        - _array : zarr.Array
+        --
+        + open(uri, storage_options)
+        + get_variable(ncvar) : dataset
+        + get_missing_attributes() : MissingAttributes
+        + get_indexer(selection)
+        + get_chunk_metadata() : ChunkMetadata
+        + close()
+    }
+
+    class P5RemFormat <<core.StorageFormat>> {
+        - _file : p5rem.File
+        --
+        + open(uri, storage_options)
+        + get_variable(ncvar) : dataset
+        + get_missing_attributes() : MissingAttributes
+        + get_indexer(selection)
+        + get_chunk_metadata() : ChunkMetadata
+        + close()
+    }
+
+    class KerchunkFormat <<core.StorageFormat>> {
+        - _zarr : zarr.Array
+        --
+        + open(uri, storage_options)
+        + get_variable(ncvar) : dataset
+        + get_missing_attributes() : MissingAttributes
+        + get_indexer(selection)
+        + get_chunk_metadata() : ChunkMetadata
+        + close()
+    }
+
+
+
+note top of PyfiveFormat
+  Simple wrapper around pyfive.Dataset.
+  Delegates chunk queries to Dataset's
+  built-in HDF5 machinery. No methods
+  to add — just translate the interface.
+end note
+
+note top of ZarrFormat
+  Wraps zarr.Array. get_chunk_metadata()
+  reads Zarr's array attributes.
+  get_indexer() uses Zarr's indexing.
+end note
+
+note top of P5RemFormat
+  Wraps p5rem.File. Delegates most queries
+  to the remote p5rem server via the client.
+  Thin wrapper around the network interface.
+end note
+
+note top of KerchunkFormat
+  Wraps zarr.Array created from Kerchunk
+  JSON metadata files. Identical to ZarrFormat
+  in delegation, but semantic distinction
+  in how the zarr object was created.
+end note
+}
+
+package "external libraries" {
+
+    class "pyfive.Dataset" as PyfiveDataset {
+        attrs : dict
+        dimensions : dict
+        variables : dict
+        --
+        + __getitem__(key)
+        + __getattr__(name)
+    }
+
+    class "zarr.Array" as ZarrArray {
+        attrs : dict
+        chunks : tuple
+        dtype : dtype
+        shape : tuple
+        --
+        + __getitem__(key)
+        + [other zarr methods]
+    }
+
+    class "p5rem.File" as P5RemFile {
+        variables : dict
+        dimensions : dict
+        attrs : dict
+        --
+        + __getitem__(key)
+        + connect()
+    }
+
+
+' Composition: adapters wrap and delegate to external objects
+PyfiveFormat *-- PyfiveDataset : wraps
+ZarrFormat *-- ZarrArray : wraps
+P5RemFormat *-- P5RemFile : wraps
+KerchunkFormat *-- ZarrArray : wraps (kerchunk metadata)
+
+
+}
+@enduml

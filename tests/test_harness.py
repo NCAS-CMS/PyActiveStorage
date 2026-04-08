@@ -7,9 +7,10 @@ import unittest
 
 from activestorage.active import Active
 from activestorage.config import *
-from activestorage.dummy_data import make_vanilla_ncdata
+from . import dummy_data
+from .dummy_data import make_vanilla_ncdata
 
-import utils
+from . import utils
 
 
 def create_test_dataset(tmp_path):

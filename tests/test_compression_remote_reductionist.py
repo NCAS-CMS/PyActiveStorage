@@ -7,10 +7,11 @@ from pathlib import Path
 
 from activestorage.active import Active, load_from_s3
 from activestorage.config import *
-from activestorage.dummy_data import make_compressed_ncdata
+from . import dummy_data
+from .dummy_data import make_compressed_ncdata
 from activestorage.reductionist import ReductionistError as RedErr
 
-import utils
+from . import utils
 
 
 # Bryan's S3 machine + Bryan's reductionist
