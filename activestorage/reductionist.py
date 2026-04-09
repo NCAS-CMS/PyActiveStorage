@@ -230,24 +230,43 @@ def request(session: requests.Session, url: str, request_data: dict):
     return response
 
 
-def decode_result(response):
-    """Decode a successful response, return as a 2-tuple of (numpy array or scalar, count)."""
-    reduction_result = cbor.loads(response.content)
+def encode_result(data, count):
+    """Encode a reduction result using the same CBOR payload shape as Reductionist."""
+    result = np.ma.getdata(np.asanyarray(data))
+    reduction_result = {
+        "bytes": result.tobytes(),
+        "dtype": result.dtype.name,
+        "shape": list(result.shape),
+        "count": count,
+    }
+    return cbor.dumps(reduction_result)
+
+
+def decode_result_buffer(buffer):
+    """Decode a CBOR-encoded Reductionist result buffer."""
+    return decode_result_payload(cbor.loads(buffer))
+
+
+def decode_result_payload(reduction_result):
+    """Decode a Reductionist result mapping into a 2-tuple of (array, count)."""
     dtype = reduction_result['dtype']
     shape = reduction_result['shape'] if "shape" in reduction_result else None
 
-    # Result
     result = np.frombuffer(reduction_result['bytes'], dtype=dtype)
     result = result.reshape(shape)
 
-    # Counts
-    count = reduction_result['count']
-    # TODO: When reductionist is ready, we need to fix 'count'
+    count = reduction_result.get('count')
+    if count is None:
+        return result, count
 
-    # Mask the result
     result = np.ma.masked_where(count == 0, result)
 
     return result, count
+
+
+def decode_result(response):
+    """Decode a successful response, return as a 2-tuple of (numpy array or scalar, count)."""
+    return decode_result_buffer(response.content)
 
 
 class ReductionistError(Exception):

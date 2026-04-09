@@ -42,6 +42,7 @@ class LocalBackend(StorageBackend):
         self.execution_strategy = ChunkedLocalStrategy()
 
     def reduce_chunk(self, request: ChunkRequest) -> ChunkResult:
+        simulate_cbor = bool((self._active.storage_options or {}).get("local_simulate_cbor"))
         method = self._active._methods.get(request.method) if request.method else None
         data, count = reduce_chunk(
             request.uri,
@@ -61,6 +62,9 @@ class LocalBackend(StorageBackend):
             request.chunk_selection,
             method=method,
         )
+        if simulate_cbor:
+            payload = reductionist.encode_result(data, count)
+            data, count = reductionist.decode_result_buffer(payload)
         return ChunkResult(data=data, count=count, out_selection=())
 
 

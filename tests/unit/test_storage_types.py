@@ -12,6 +12,7 @@ from unittest import mock
 
 
 import activestorage.active
+import activestorage.backends
 from activestorage.active import Active
 from activestorage.config import S3_ACTIVE_STORAGE_URL, S3_URL
 from .. import dummy_data
@@ -129,6 +130,32 @@ def test_reductionist_version_0(mock_load, tmp_path):
     result = active[::]
 
     assert np.max(result) == 999.0
+
+
+@mock.patch.object(
+    activestorage.backends.reductionist,
+    "decode_result_buffer",
+    wraps=activestorage.backends.reductionist.decode_result_buffer,
+)
+@mock.patch.object(
+    activestorage.backends.reductionist,
+    "encode_result",
+    wraps=activestorage.backends.reductionist.encode_result,
+)
+def test_local_simulate_cbor_response(mock_encode, mock_decode, tmp_path):
+    """Test local reduction with Reductionist-like CBOR response decoding enabled."""
+    test_file = str(tmp_path / "test.nc")
+    make_vanilla_ncdata(test_file)
+
+    active = Active(test_file, "data", storage_options={"local_simulate_cbor": True})
+    active._version = 2
+    active._method = "max"
+
+    result = active[::]
+
+    assert result == 999.0
+    assert mock_encode.called
+    assert mock_decode.called
 
 
 @pytest.mark.skip(reason="No more valid file load in Active")
