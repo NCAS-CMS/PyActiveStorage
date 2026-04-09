@@ -1,0 +1,84 @@
+@startuml axis_flow_v1
+
+title "Axis Parameter Flow Through Reduction Pipeline"
+
+actor User
+
+participant "Active\n.min/.max/.mean/.sum\n(axis=N)" as Active
+participant "Active\n._get_selection()" as GetSelection
+participant "Active\n._from_storage()" as FromStorage
+participant "ExecutionStrategy\n.execute()" as Strategy
+participant "ChunkedLocalStrategy\n.execute()" as LocalStrat
+participant "StorageBackend\n.reduce_chunk()" as Backend
+participant "Reductionist\nv2 API" as Reductionist
+
+User ->> Active: active.mean(axis=0)[:]
+
+note over Active
+  axis parameter stored in
+  Active._axis = (axis,) if int
+           or = axis if tuple/None
+end note
+
+Active ->> GetSelection: _get_selection(selection)
+note over GetSelection
+  Sets axis from Internal state
+  axis = self._axis
+  if axis is None:
+      axis = tuple(range(ndim))
+end note
+
+GetSelection ->> FromStorage: _from_storage(..., axis=axis)
+
+FromStorage ->> Strategy: strategy.execute(\n  ..., axis=axis)
+
+note over Strategy
+  For ChunkedLocalStrategy:
+  - iterate chunks
+  - create ChunkRequest(axis=axis)
+  - for S3/HTTPS: pass axis to backend
+end note
+
+Strategy ->> LocalStrat: ChunkedLocalStrategy\n.execute(..., axis=axis)
+
+LocalStrat ->> LocalStrat: for chunk in chunks:\n  ChunkRequest(axis=axis)
+
+LocalStrat ->> Backend: reduce_chunk(request)
+
+note over Backend
+  S3Backend / HttpsBackend:
+  - Extract axis from request
+  - Pass axis=request.axis
+    to reductionist API
+end note
+
+Backend ->> Reductionist: reduce_chunk(\n  ...\n  axis=request.axis,\n  operation='mean')
+
+note over Reductionist
+  Reductionist v2 API:
+  - Receives axis tuple
+  - Performs axis-aware reduction
+  - Returns reduced chunk
+  - Example:
+    axis=(0,1) → shape[2] result
+    axis=(2,) → shape[0,1] result
+    axis=None → scalar result
+end note
+
+Reductionist ->> Backend: ChunkResult(\n  data=reduced_chunk)
+
+Backend ->> LocalStrat: ChunkResult
+
+LocalStrat ->> LocalStrat: Accumulate results by axis
+
+LocalStrat ->> LocalStrat: Apply final reduction\n if needed
+
+LocalStrat ->> FromStorage: final_result
+
+FromStorage ->> GetSelection: final_result
+
+GetSelection ->> Active: final_result
+
+Active ->> User: results[axis_reduced_shape]
+
+@enduml

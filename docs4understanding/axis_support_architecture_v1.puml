@@ -1,0 +1,154 @@
+@startuml axis_support_v1
+
+title "Axis Parameter Support Architecture"
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam packageStyle rectangle
+
+package "activestorage.core" {
+
+    class Active {
+        - _axis: tuple | None
+        --
+        + min(axis: int | tuple | None) : self
+        + max(axis: int | tuple | None) : self
+        + mean(axis: int | tuple | None) : self
+        + sum(axis: int | tuple | None) : self
+        - _get_selection(selection) : array
+        - _from_storage(..., axis: tuple) : array
+        --
+        **Axis Flow:**
+        User calls method(axis=N) →
+        stores in _axis →
+        uses in _get_selection() →
+        passes to _from_storage()
+    }
+
+    class ChunkRequest {
+        --
+        + axis: tuple | None
+        --
+        **Axis contains:**
+        - Tuple of dimensions to reduce
+        - Example: (0, 1) to reduce first 2 dims
+        - None means reduce all (scalar result)
+    }
+
+    class SelectionRequest {
+        --
+        + axis: tuple | None
+        --
+        **When used:**
+        - Whole-array reduction paths
+        - Less common than chunked paths
+    }
+
+    class ChunkResult {
+        --
+        + data: np.ndarray | dict
+        + count: int | None
+        --
+        **Return values depend on axis:**
+        - axis=(0,1): shape reduced by 2 dims
+        - axis=None: scalar or dict of scalars
+        - components=True: returns dict with 'sum' or 'mean' and 'n'
+    }
+
+    Active --> ChunkRequest : creates via\nstrategy
+    Active --> SelectionRequest : creates via\nstrategy
+    ChunkRequest --> ChunkResult : received from\nbackend
+}
+
+package "activestorage.backends" {
+
+    abstract class StorageBackend {
+        --
+        + reduce_chunk(request: ChunkRequest) : ChunkResult
+        + reduce_selection(request: SelectionRequest) : SelectionResult
+        --
+        **Axis Handling:**
+        LocalBackend: ignores axis
+                      (uses storage.reduce_chunk)
+        S3Backend: passes axis=request.axis
+                   to reductionist.reduce_chunk()
+        HttpsBackend: passes axis=request.axis
+                      to reductionist.reduce_chunk()
+    }
+
+    class LocalBackend {
+        + reduce_chunk(request: ChunkRequest)
+        --
+        Does NOT use axis parameter
+        (local numpy operations on full chunks)
+    }
+
+    class S3Backend {
+        + reduce_chunk(request: ChunkRequest)
+        --
+        Passes axis=request.axis
+        to reductionist.reduce_chunk()
+    }
+
+    class HttpsBackend {
+        + reduce_chunk(request: ChunkRequest)
+        --
+        Passes axis=request.axis
+        to reductionist.reduce_chunk()
+    }
+
+    LocalBackend --|> StorageBackend
+    S3Backend --|> StorageBackend
+    HttpsBackend --|> StorageBackend
+}
+
+package "activestorage.reductionist (v2 API)" {
+
+    class ReductionistAPI {
+        + reduce_chunk(
+            session,
+            server,
+            source,
+            offset, size,
+            ...,
+            axis: tuple | None,
+            operation: str,
+            ...)
+        --
+        **Axis Handling:**
+        - Performs reduction on remote server
+        - Axis=(0,1): reduces first 2 dims
+        - Axis=None: returns scalar
+        - Returns shaped result for chunked reductions
+    }
+
+    note on right of ReductionistAPI
+      **V2 Protocol Features:**
+      - Added axis parameter support
+      - Axis-aware server-side reduction
+      - Enables efficient dimensionality reduction
+      - Works with all compression/filter types
+    end note
+}
+
+S3Backend --> ReductionistAPI : calls with\naxis=request.axis
+HttpsBackend --> ReductionistAPI : calls with\naxis=request.axis
+
+note bottom of Active
+  **Example Usage:**
+  // Reduce along first axis only
+  active = Active("file.nc", "temperature")
+  result = active.mean(axis=0)[:]
+  
+  // Result shape: (10,10) if original (100,10,10)
+  
+  // Reduce all axes to scalar
+  result = active.mean(axis=None)[:]
+  // Result: scalar value
+  
+  // Multiple axes
+  result = active.sum(axis=(0,2))[:] 
+  // Reduces axes 0 and 2, keeps axis 1
+end note
+
+@enduml

@@ -134,6 +134,7 @@ package "activestorage.core" {
         + min(axis) : self
         + max(axis) : self
         + mean(axis) : self
+        + sum(axis) : self
         --
         + __getitem__(index)
         - _get_vanilla(index)
