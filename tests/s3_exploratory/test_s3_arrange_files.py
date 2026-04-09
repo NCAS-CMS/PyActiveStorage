@@ -13,7 +13,7 @@ from ..dummy_data import make_vanilla_ncdata
 from numpy.testing import assert_allclose, assert_array_equal
 from pathlib import Path
 
-from config_minio import *
+from .config_minio import *
 
 # HDF5 chunking is paramount for performance
 # many small chunks slow down the process by factors of hundreds

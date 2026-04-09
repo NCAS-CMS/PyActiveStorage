@@ -6,7 +6,7 @@ import ujson
 from pathlib import Path
 
 from activestorage.active import Active
-from config_minio import *
+from .config_minio import *
 
 
 @pytest.fixture

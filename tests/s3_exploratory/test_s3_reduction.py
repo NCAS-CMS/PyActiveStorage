@@ -13,7 +13,7 @@ from activestorage.reductionist import get_session
 from numpy.testing import assert_allclose, assert_array_equal
 from pathlib import Path
 
-from config_minio import *
+from .config_minio import *
 
 
 def make_tempfile():
