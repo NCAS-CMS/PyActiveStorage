@@ -19,10 +19,15 @@ class PyfiveFormat(StorageFormat):
         scheme = ""
         if "://" in self._uri:
             scheme = self._uri.split("://", 1)[0]
-        if scheme == "s3":
+        storage_type = getattr(self, '_storage_type', None) or scheme
+        if storage_type == "s3":
             from activestorage import active as active_module
 
             self._dataset_file = active_module.load_from_s3(self._uri, storage_options)
+        elif storage_type in ("http", "https"):
+            from activestorage import active as active_module
+
+            self._dataset_file = active_module.load_from_https(self._uri, storage_options)
         else:
             self._dataset_file = pyfive.File(self._uri)
 

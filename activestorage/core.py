@@ -144,6 +144,7 @@ def _select_backend(interface_type, version):
         ("s3", 1): S3Backend,
         ("s3", 2): S3Backend,
         ("https", 0): HttpsBackend,
+        ("https", 1): LocalBackend,
         ("https", 2): HttpsBackend,
         ("p5rem", 0): P5RemBackend,
         ("p5rem", 1): P5RemBackend,
@@ -183,28 +184,58 @@ class Active:
     def __init__(
         self,
         uri,
-        ncvar,
+        ncvar=None,
         storage_type=None,
+        interface_type=None,
         max_threads=100,
         storage_options=None,
         active_storage_url=None,
         axis=None,
+        option_disable_chunk_cache=False,
     ):
         self.uri = uri
         if self.uri is None:
             raise ValueError(f"Must use a valid file for uri. Got {uri}")
 
-        self.storage_type = storage_type or return_interface_type(uri)
-        self.storage_options = storage_options
+        # Keep source URI when a dataset/variable object is provided.
+        is_pathlike = isinstance(uri, (str, bytes, os.PathLike))
+        source_uri = uri
+        if not is_pathlike:
+            file_obj = getattr(uri, "file", None)
+            fh = getattr(file_obj, "_fh", None)
+            source_uri = (
+                getattr(fh, "path", None)
+                or getattr(fh, "url", None)
+                or str(uri)
+            )
+
+        # interface_type is an alias for storage_type
+        if interface_type is not None:
+            storage_type = interface_type
+
+        self.storage_type = storage_type or return_interface_type(source_uri)
+        self.storage_options = storage_options or {}
+        if self.storage_type is None:
+            # Backward-compatible inference for bare S3 object paths like
+            # "bucket/key.nc" when only storage_options indicate S3 access.
+            # Only infer when the URI is not an existing local file.
+            s3_hints = {"key", "secret", "anon", "client_kwargs", "endpoint_url"}
+            if any(k in self.storage_options for k in s3_hints):
+                if not (is_pathlike and os.path.isfile(str(uri))):
+                    self.storage_type = "s3"
+        self._option_disable_chunk_cache = bool(option_disable_chunk_cache)
         self.active_storage_url = active_storage_url
 
-        if not os.path.isfile(self.uri) and not self.storage_type:
+        # Allow passing dataset/variable objects directly (ncvar optional).
+        is_file_object = not is_pathlike
+        if is_pathlike and not os.path.isfile(self.uri) and not self.storage_type:
             raise ValueError(f"Must use existing file for uri. {self.uri} not found")
 
-        self.ncvar = ncvar
-        if self.ncvar is None:
+        # When uri is a dataset object, ncvar can be None (user will select variable via indexing)
+        if ncvar is None and not is_file_object:
             raise ValueError("Must set a netCDF variable name to slice")
 
+        self._ncvar = ncvar
         self._version = 1
         self._components = False
         self._method = None
@@ -213,9 +244,19 @@ class Active:
         self.metric_data = {}
         self.data_read = 0
 
-        self._format = _select_format(uri)()
-        self._format.open(uri, storage_options)
-        self.ds = self._format.get_variable(ncvar)
+        self._format = _select_format(source_uri)()
+        self._format._storage_type = self.storage_type
+        if is_file_object:
+            # uri is already a pyfive.Group or similar
+            self._format._dataset = uri
+            self._format._uri = str(source_uri)
+            self.ds = uri
+        else:
+            self._format.open(uri, self.storage_options)
+            if ncvar is not None:
+                self.ds = self._format.get_variable(ncvar)
+            else:
+                self.ds = None
         self.missing = None
 
         self._refresh_backend()
@@ -227,6 +268,10 @@ class Active:
     @ncvar.setter
     def ncvar(self, value):
         self._ncvar = value
+
+    @property
+    def interface_type(self):
+        return self.storage_type
 
     def _refresh_backend(self):
         backend_cls = _select_backend(self.storage_type, self._version)

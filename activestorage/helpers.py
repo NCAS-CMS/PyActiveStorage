@@ -15,18 +15,26 @@ def load_from_https(uri, storage_options=None):
     Load a pyfive.high_level.Dataset from a netCDF4 file on an https server.
     Works for both http and https endpoints.
     """
-    if storage_options is None:
-        client_kwargs = {'auth': None}
-        fs = fsspec.filesystem('http', **client_kwargs)
-        http_file = fs.open(uri, 'rb')
-    else:
-        username = storage_options.get("username", None)
-        password = storage_options.get("password", None)
-        client_kwargs = {
-            'auth': aiohttp.BasicAuth(username, password) if username and password else None
-        }
-        fs = fsspec.filesystem('http', **client_kwargs)
-        http_file = fs.open(uri, 'rb')
+    try:
+        if storage_options is None:
+            client_kwargs = {'auth': None}
+            fs = fsspec.filesystem('http', **client_kwargs)
+            http_file = fs.open(uri, 'rb')
+        else:
+            username = storage_options.get("username", None)
+            password = storage_options.get("password", None)
+            client_kwargs = {
+                'auth': aiohttp.BasicAuth(username, password) if username and password else None
+            }
+            fs = fsspec.filesystem('http', **client_kwargs)
+            http_file = fs.open(uri, 'rb')
+    except FileNotFoundError as exc:
+        # fsspec wraps all failures as FileNotFoundError.
+        # Distinguish by cause: connection-level errors (bad hostname, refused)
+        # have an OSError cause; HTTP-level errors (404) do not.
+        if isinstance(exc.__cause__, OSError):
+            raise ValueError(f"Failed to access HTTPS dataset: {uri}") from exc
+        raise
 
     ds = pyfive.File(http_file)
     print(f"Dataset loaded from https with Pyfive: {uri}")

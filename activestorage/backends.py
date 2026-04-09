@@ -44,25 +44,47 @@ class LocalBackend(StorageBackend):
     def reduce_chunk(self, request: ChunkRequest) -> ChunkResult:
         simulate_cbor = bool((self._active.storage_options or {}).get("local_simulate_cbor"))
         method = self._active._methods.get(request.method) if request.method else None
-        data, count = reduce_chunk(
-            request.uri,
-            request.offset,
-            request.size,
-            request.compressor,
-            request.filters,
-            (
-                request.missing.fill_value,
-                request.missing.missing_value,
-                request.missing.valid_min,
-                request.missing.valid_max,
-            ),
-            request.dtype,
-            request.chunks,
-            request.order,
-            request.chunk_selection,
-            method=method,
-            axis=request.axis,
+        missing = (
+            request.missing.fill_value,
+            request.missing.missing_value,
+            request.missing.valid_min,
+            request.missing.valid_max,
         )
+
+        # Remote datasets loaded through fsspec/pyfive need fh-based reads,
+        # not open(uri, "rb") on the URL string.
+        parsed = urllib.parse.urlparse(str(request.uri))
+        if parsed.scheme in ("http", "https", "s3"):
+            fh = self._active._format.file_handle
+            data, count = reduce_opens3_chunk(
+                fh,
+                request.offset,
+                request.size,
+                request.compressor,
+                request.filters,
+                missing,
+                request.dtype,
+                request.chunks,
+                request.order,
+                request.chunk_selection,
+                method=method,
+                axis=request.axis,
+            )
+        else:
+            data, count = reduce_chunk(
+                request.uri,
+                request.offset,
+                request.size,
+                request.compressor,
+                request.filters,
+                missing,
+                request.dtype,
+                request.chunks,
+                request.order,
+                request.chunk_selection,
+                method=method,
+                axis=request.axis,
+            )
         if simulate_cbor:
             payload = reductionist.encode_result(data, count)
             data, count = reductionist.decode_result_buffer(payload)
@@ -118,11 +140,19 @@ class S3Backend(ReductionistBackend):
 
         bucket, obj = self._resolve_bucket_object(request.uri, self._active.storage_options)
         if self._active.storage_options is None:
-            source = S3_URL
+            endpoint = S3_URL
             server = S3_ACTIVE_STORAGE_URL
         else:
-            source = get_endpoint_url(self._active.storage_options, request.uri)
+            endpoint = get_endpoint_url(self._active.storage_options, request.uri)
             server = self._active.active_storage_url or S3_ACTIVE_STORAGE_URL
+
+        endpoint = str(endpoint).rstrip("/")
+        bucket = str(bucket).strip("/")
+        obj = str(obj).lstrip("/")
+        if bucket:
+            source = f"{endpoint}/{bucket}/{obj}"
+        else:
+            source = f"{endpoint}/{obj}"
 
         session = self.get_session()
         data, count = reductionist.reduce_chunk(
@@ -146,6 +176,7 @@ class S3Backend(ReductionistBackend):
             axis=request.axis,
             operation=request.method,
             interface_type='s3',
+            option_disable_chunk_cache=self._active._option_disable_chunk_cache,
         )
         self.close_session(session)
         return ChunkResult(data=data, count=count, out_selection=())
@@ -184,6 +215,7 @@ class HttpsBackend(ReductionistBackend):
             axis=request.axis,
             operation=request.method,
             interface_type='https',
+            option_disable_chunk_cache=self._active._option_disable_chunk_cache,
         )
         self.close_session(session)
         return ChunkResult(data=data, count=count, out_selection=())

@@ -1,3 +1,79 @@
 [build-system]
 requires = ["setuptools >= 40.6.0", "wheel", "setuptools_scm>=6.2"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "ActiveStorage"
+dynamic = ["version"]
+description = ""
+readme = {file = "README.md", content-type = "text/markdown"}
+classifiers = [
+    "Development Status :: 0 - Prototype",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Scientific/Engineering :: Hydrology",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "dask!=2024.8.0",  # github.com/dask/dask/issues/11296
+    "fsspec",
+    "h5netcdf",
+    "h5py",
+    "kerchunk>=0.2.4",
+    "netcdf4",
+    "numcodecs>=0.12",  # github/issues/162
+    "numpy!=1.24.3",   # severe masking bug
+    "requests",
+    "s3fs>=2024.2.0",
+    "zarr>=2.13.3",    # github.com/zarr-developers/zarr-python/issues/1362
+]
+
+[project.optional-dependencies]
+test = [
+    "moto",
+    "pytest",
+    "pytest-cov>=2.10.1",
+    "pytest-html!=2.1.0",
+    "pytest-metadata>=1.5.1",
+    "pytest-xdist",
+]
+
+[tool.setuptools]
+packages = ["activestorage"]
+include-package-data = true
+
+[tool.setuptools_scm]
+
+[tool.pytest.ini_options]
+addopts = """
+    -m 'not slow'
+    --ignore=old_code/
+    --ignore=tests/s3_exploratory
+    --ignore=bnl
+    --cov=activestorage
+    --cov-report=xml:test-reports/coverage.xml
+    --cov-report=html:test-reports/coverage_html
+    --html=test-reports/report.html
+"""
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+
+[tool.coverage.run]
+parallel = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "if __name__ == .__main__.:",
+]
