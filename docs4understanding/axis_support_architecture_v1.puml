@@ -10,6 +10,7 @@ package "activestorage.core" {
 
     class Active {
         - _axis: tuple | None
+        - _max_threads: int
         --
         + min(axis: int | tuple | None) : self
         + max(axis: int | tuple | None) : self
@@ -22,7 +23,8 @@ package "activestorage.core" {
         User calls method(axis=N) →
         stores in _axis →
         uses in _get_selection() →
-        passes to _from_storage()
+        passes to _from_storage()\n
+        chunk dispatch policy from _max_threads
     }
 
     class ChunkRequest {
@@ -101,6 +103,20 @@ package "activestorage.backends" {
                       to reductionist.reduce_chunk()
     }
 
+    class ChunkedLocalStrategy {
+        + execute(...)
+        --
+        if max_threads > 1:\nThreadPoolExecutor dispatch
+        else:\nserial chunk loop
+    }
+
+    class ChunkedRemoteStrategy {
+        + execute(...)
+        --
+        if max_threads > 1:\nThreadPoolExecutor dispatch
+        else:\nserial chunk loop
+    }
+
     class LocalBackend {
         + reduce_chunk(request: ChunkRequest)
         --
@@ -126,6 +142,9 @@ package "activestorage.backends" {
     StorageBackend <|-- LocalBackend
     StorageBackend <|-- S3Backend
     StorageBackend <|-- HttpsBackend
+    LocalBackend --> ChunkedLocalStrategy : execution_strategy
+    S3Backend --> ChunkedRemoteStrategy : execution_strategy
+    HttpsBackend --> ChunkedRemoteStrategy : execution_strategy
 
 }
 

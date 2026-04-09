@@ -21,6 +21,8 @@ note over Active
   axis parameter stored in
   Active._axis = (axis,) if int
            or = axis if tuple/None
+  chunk parallelism via
+  Active._max_threads
 end note
 
 Active ->> GetSelection: _get_selection(selection)
@@ -37,15 +39,26 @@ FromStorage ->> Strategy: strategy.execute(\n  ..., axis=axis)
 
 alt Local chunked path (LocalBackend + ChunkedLocalStrategy)
   Strategy ->> LocalStrat: execute(..., axis=axis)
-  LocalStrat ->> LocalStrat: for chunk in indexer:\nChunkRequest(axis=axis)
-  LocalStrat ->> ChunkBackend: reduce_chunk(request)
-  ChunkBackend -->> LocalStrat: ChunkResult(data, count)
+  alt max_threads > 1
+    LocalStrat ->> LocalStrat: submit per-chunk tasks via\nThreadPoolExecutor(max_workers=max_threads)
+    LocalStrat ->> ChunkBackend: reduce_chunk(request) [parallel tasks]
+    ChunkBackend -->> LocalStrat: ChunkResult(data, count) [as futures complete]
+  else max_threads == 1
+    LocalStrat ->> LocalStrat: for chunk in indexer:\nChunkRequest(axis=axis)
+    LocalStrat ->> ChunkBackend: reduce_chunk(request)
+    ChunkBackend -->> LocalStrat: ChunkResult(data, count)
+  end
   LocalStrat ->> LocalStrat: accumulate chunk outputs\nand finalize reduction
   LocalStrat -->> FromStorage: final_result
 else Remote chunked path (S3/Https + ChunkedRemoteStrategy)
   Strategy ->> RemoteStrat: execute(..., axis=axis)
-  RemoteStrat ->> RemoteStrat: for chunk in indexer:\nChunkRequest(axis=axis)
-  RemoteStrat ->> ChunkBackend: reduce_chunk(request)
+  alt max_threads > 1
+    RemoteStrat ->> RemoteStrat: submit per-chunk tasks via\nThreadPoolExecutor(max_workers=max_threads)
+    RemoteStrat ->> ChunkBackend: reduce_chunk(request) [parallel tasks]
+  else max_threads == 1
+    RemoteStrat ->> RemoteStrat: for chunk in indexer:\nChunkRequest(axis=axis)
+    RemoteStrat ->> ChunkBackend: reduce_chunk(request)
+  end
 
   note over ChunkBackend
     S3Backend / HttpsBackend:
@@ -66,7 +79,7 @@ else Remote chunked path (S3/Https + ChunkedRemoteStrategy)
   end note
 
   Reductionist -->> ChunkBackend: ChunkResult(data, count)
-  ChunkBackend -->> RemoteStrat: ChunkResult(data, count)
+  ChunkBackend -->> RemoteStrat: ChunkResult(data, count) [as futures complete]
   RemoteStrat ->> RemoteStrat: accumulate chunk outputs\nand finalize reduction
   RemoteStrat -->> FromStorage: final_result
 else Whole-array path (P5Rem + WholeArrayStrategy)

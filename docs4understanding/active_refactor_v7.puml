@@ -124,10 +124,12 @@ package "activestorage.core" {
         - _methods : dict
         - _method : str
         - _axis : tuple
+        - _max_threads : int
         - _components : bool
         - _backend : StorageBackend
         - _format : StorageFormat
         --
+        + __init__(..., max_threads=100, ...)
         + register_method(name, func)
         + method : property
         + components : property
@@ -272,13 +274,16 @@ package "activestorage.strategies" {
 
     class ChunkedLocalStrategy <<core.ExecutionStrategy>> {
         + execute(...)
-        - _process_chunk(...)
+        - _iter_chunk_requests(...)
+        - _store_chunk_result(...)
+        --
+        Uses ThreadPoolExecutor when\nactive._max_threads > 1
     }
 
     class ChunkedRemoteStrategy <<core.ExecutionStrategy>> {
         + execute(...)
-        - _process_chunk(...)
-        - _is_range_cached(fh, offset, size) : bool
+        --
+        Inherits threaded execution from\nChunkedLocalStrategy
     }
 
     class WholeArrayStrategy <<core.ExecutionStrategy>> {
