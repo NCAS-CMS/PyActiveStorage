@@ -4,7 +4,6 @@ import numpy as np
 import pytest
 
 from activestorage.active import Active, load_from_s3
-from activestorage.reductionist import ReductionistError
 
 
 S3_BUCKET = "bnl"
@@ -32,8 +31,53 @@ def test_anon_s3():
                     active_storage_url=active_storage_url)
     active._version = 2
     result = active.min()[:]
-    print("Result is", result)
     assert result[0][0][0] == 197.69595
+
+
+def test_anon_s3_invalid_file():
+    """Test a very basic but real S3 ANON access."""
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft
+    bigger_file = "CMIP6-test3.nc"  # not a file
+
+    test_file_uri = os.path.join(
+        "esmvaltool-zarr",
+        bigger_file
+    )
+
+    active = Active(test_file_uri, 'tas',
+                    storage_options={
+                        "anon": True,
+                         'client_kwargs': {
+                             'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"
+                              }
+                          },
+                    active_storage_url=active_storage_url)
+    active._version = 2
+    with pytest.raises(FileNotFoundError) as red_err:
+        result = active.min()[:]
+
+
+def test_anon_s3_bucket_not_anon():
+    """Test a very basic but real S3 ANON access."""
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft
+    bigger_file = "CMIP6-test.nc"  # not a file
+
+    test_file_uri = os.path.join(
+        "repacking",
+        bigger_file
+    )
+
+    active = Active(test_file_uri, 'tas',
+                    storage_options={
+                        "anon": True,
+                         'client_kwargs': {
+                             'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"
+                              }
+                          },
+                    active_storage_url=active_storage_url)
+    active._version = 2
+    with pytest.raises(PermissionError) as red_err:
+        result = active.min()[:]
 
 
 def test_s3_small_file():
