@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
     name: Linux Python ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - uses: conda-incubator/setup-miniconda@v3
@@ -33,4 +33,4 @@ jobs:
       - run: conda list
       - run: flake8 --exclude tests,doc --max-line-length 120 --ignore F405,F401
       - run: pytest -n 2 -m "not slow" --junitxml=report-1.xml
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v6

@@ -36,7 +36,8 @@ def test_https():
     # v2: declared storage type
     active = Active(test_file_uri, "ta",
                     interface_type="https",
-                    active_storage_url=active_storage_url)
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
     active._version = 2
     result = active.min()[0:3, 4:6, 7:9]
     print("Result is", result)
@@ -44,7 +45,8 @@ def test_https():
 
     # v2: inferred storage type
     active = Active(test_file_uri, "ta",
-                    active_storage_url=active_storage_url)
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
     active._version = 2
     result = active.min()[0:3, 4:6, 7:9]
     print("Result is", result)
@@ -57,7 +59,8 @@ def test_https():
     # v2: inferred storage type, pop axis
     active = Active(test_file_uri, "ta",
                     interface_type="https",
-                    active_storage_url=active_storage_url)
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
     active._version = 2
     result = active.min(axis=(0, 1))[:]
     print("Result is", result)
@@ -84,7 +87,8 @@ def test_https():
     active = Active(test_file_uri, "ta",
                     interface_type="https",
                     storage_options={"username": None, "password": None},
-                    active_storage_url=active_storage_url)
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
     active._version = 2
     result = active.min(axis=(0, 1))[:]
     print("Result is", result)
@@ -137,7 +141,9 @@ def test_https_bigger_file():
     """Run a true test with a https FILE."""
     test_file_uri = "https://esgf.ceda.ac.uk/thredds/fileServer/esg_cmip6/CMIP6/AerChemMIP/MOHC/UKESM1-0-LL/ssp370SST-lowNTCF/r1i1p1f2/Amon/cl/gn/latest/cl_Amon_UKESM1-0-LL_ssp370SST-lowNTCF_r1i1p1f2_gn_205001-209912.nc"
     active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft new Reductionist
-    active = Active(test_file_uri, "cl", active_storage_url=active_storage_url)
+    active = Active(test_file_uri, "cl",
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
     active._version = 2
     result = active.min()[0:3, 4:6, 7:9]
     print("Result is", result)

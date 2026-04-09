@@ -190,7 +190,8 @@ class Active:
                  interface_type: str = None,
                  max_threads: int = 100,
                  storage_options: dict = None,
-                 active_storage_url: str = None) -> None:
+                 active_storage_url: str = None,
+                 option_disable_chunk_cache: bool = False) -> None:
         """
         Instantiate with a NetCDF4 dataset URI and the variable of interest within that file.
         (We need the variable, because we need variable specific metadata from within that
@@ -199,6 +200,7 @@ class Active:
 
         :param storage_options: s3fs.S3FileSystem options
         :param active_storage_url: Reductionist server URL
+        :param option_disable_chunk_cache: flag to disable chunk caching
         """
         self.ds = None
         input_variable = False
@@ -255,6 +257,9 @@ class Active:
         # get storage_options
         self.storage_options = storage_options
         self.active_storage_url = active_storage_url
+
+        # turn off chunk caching
+        self.option_disable_chunk_cache = option_disable_chunk_cache
 
         # basic check on file
         if not input_variable:
@@ -661,6 +666,9 @@ class Active:
         # Axes over which to apply a reduction
         axis = self._axis
 
+        # turn off chunk caching
+        chunk_caching = self.option_disable_chunk_cache
+
         if self.interface_type == 's3' and self._version == 1:
             tmp, count = reduce_opens3_chunk(ds._fh,
                                              offset,
@@ -703,7 +711,8 @@ class Active:
                                                        ds._order,
                                                        chunk_selection,
                                                        axis,
-                                                       operation=self._method)
+                                                       operation=self._method,
+                                                       option_disable_chunk_cache=chunk_caching,)
             else:
                 if self.storage_options.get("anon", None) is True:
                     bucket = os.path.dirname(parsed_url.path)
@@ -723,7 +732,8 @@ class Active:
                     ds._order,
                     chunk_selection,
                     axis,
-                    operation=self._method)
+                    operation=self._method,
+                    option_disable_chunk_cache=chunk_caching,)
         elif self.interface_type == "https" and self._version == 2:
             tmp, count = reductionist.reduce_chunk(session,
                                                    self.active_storage_url,
@@ -739,7 +749,8 @@ class Active:
                                                    chunk_selection,
                                                    axis,
                                                    operation=self._method,
-                                                   interface_type="https")
+                                                   interface_type="https",
+                                                   option_disable_chunk_cache=chunk_caching,)
 
         elif self.interface_type == 'ActivePosix' and self.version == 2:
             # This is where the DDN Fuse and Infinia wrappers go

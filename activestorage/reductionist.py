@@ -45,7 +45,8 @@ def reduce_chunk(session,
                  chunk_selection,
                  axis,
                  operation,
-                 interface_type=None):
+                 interface_type=None,
+                 option_disable_chunk_cache=False):
     """Perform a reduction on a chunk using Reductionist.
 
     :param server: Reductionist server URL
@@ -68,6 +69,7 @@ def reduce_chunk(session,
     :param axis: tuple of the axes to be reduced (non-negative integers)
     :param operation: name of operation to perform
     :param interface_type: optional testing flag to allow HTTPS reduction
+    :param option_disable_chunk_cache: optional turn off chunk cache
     :returns: the reduced data as a numpy array or scalar
     :raises ReductionistError: if the request to Reductionist fails
     """
@@ -83,7 +85,8 @@ def reduce_chunk(session,
                                       order,
                                       chunk_selection,
                                       axis,
-                                      interface_type=interface_type)
+                                      interface_type=interface_type,
+                                      option_disable_chunk_cache=option_disable_chunk_cache)
     if DEBUG:
         print(f"Reductionist request data dictionary: {request_data}")
     api_operation = "sum" if operation == "mean" else operation or "select"
@@ -181,7 +184,8 @@ def build_request_data(url: str,
                        order,
                        selection,
                        axis,
-                       interface_type=None) -> dict:
+                       interface_type=None,
+                       option_disable_chunk_cache=False) -> dict:
     """Build request data for Reductionist API."""
     request_data = {
         'interface_type': interface_type if interface_type else "s3",
@@ -205,6 +209,8 @@ def build_request_data(url: str,
         request_data["filters"] = encode_filters(filters)
     if any(missing):
         request_data["missing"] = encode_missing(missing)
+    if option_disable_chunk_cache:
+        request_data["option_disable_chunk_cache"] = True
 
     if axis is not None:
         request_data['axis'] = axis
