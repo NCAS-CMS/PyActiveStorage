@@ -4,7 +4,7 @@ import os
 
 import s3fs
 
-from activestorage.config import *
+from activestorage.config import USE_S3, S3_URL, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET
 
 def get_storage_type():
     if USE_S3:

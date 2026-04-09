@@ -8,7 +8,6 @@ import pyfive
 import numpy.ma as ma
 import numpy as np
 import os
-from activestorage.config import *
 from pathlib import Path
 import s3fs
 

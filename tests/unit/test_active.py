@@ -5,7 +5,7 @@ import threading
 
 from activestorage.active import Active
 from activestorage.active import load_from_s3
-from activestorage.config import *
+from activestorage.config import USE_S3
 from botocore.exceptions import EndpointConnectionError as botoExc
 from botocore.exceptions import NoCredentialsError as NoCredsExc
 

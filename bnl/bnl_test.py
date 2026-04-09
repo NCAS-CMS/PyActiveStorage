@@ -7,7 +7,6 @@ from pathlib import Path
 import s3fs
 
 from activestorage.active import Active
-from activestorage.config import *
 
 
 def mytest():

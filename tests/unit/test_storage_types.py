@@ -13,7 +13,7 @@ from unittest import mock
 
 import activestorage.active
 from activestorage.active import Active
-from activestorage.config import *
+from activestorage.config import S3_ACTIVE_STORAGE_URL, S3_URL
 from .. import dummy_data
 from ..dummy_data import make_vanilla_ncdata
 import activestorage.reductionist

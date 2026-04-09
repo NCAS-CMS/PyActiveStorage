@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 from activestorage.active import Active
-from activestorage.config import *
+from activestorage.config import USE_S3
 from . import dummy_data
 from .dummy_data import make_vanilla_ncdata
 

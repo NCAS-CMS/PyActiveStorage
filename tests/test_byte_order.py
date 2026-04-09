@@ -4,7 +4,7 @@ import pytest
 from netCDF4 import Dataset
 
 from activestorage.active import Active
-from activestorage.config import *
+from activestorage.config import USE_S3
 from . import dummy_data
 from .dummy_data import make_byte_order_ncdata
 

@@ -6,7 +6,7 @@ from .test_bigger_data import save_cl_file_with_a
 
 from activestorage import reductionist
 from activestorage.active import Active, get_missing_attributes, load_from_s3
-from activestorage.config import *
+from activestorage.config import USE_S3
 from activestorage.hdf2numcodec import decode_filters
 
 

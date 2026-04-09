@@ -16,7 +16,7 @@ import pyfive
 from netCDF4 import Dataset
 
 from activestorage.active import Active, load_from_s3
-from activestorage.config import *
+from activestorage.config import USE_S3
 from . import dummy_data as dd
 from . import utils
 

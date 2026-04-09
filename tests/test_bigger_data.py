@@ -8,7 +8,7 @@ from pathlib import Path
 import s3fs
 
 from activestorage.active import Active
-from activestorage.config import *
+from activestorage.config import USE_S3
 from pyfive.core import InvalidHDF5File as InvalidHDF5Err
 
 from . import utils
