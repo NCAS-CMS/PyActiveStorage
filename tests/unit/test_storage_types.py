@@ -104,7 +104,7 @@ def test_s3(mock_reduce, mock_load, tmp_path):
         mock.ANY,
         "C",
         mock.ANY,
-        axis=None,
+        axis=(0, 1, 2),
         operation="max",
         interface_type="s3",
     )

@@ -267,6 +267,11 @@ class Active:
         self._axis = (axis,) if isinstance(axis, int) else axis
         return self
 
+    def sum(self, axis=None):
+        self._method = "sum"
+        self._axis = (axis,) if isinstance(axis, int) else axis
+        return self
+
     def __getitem__(self, index):
         self.metric_data = {}
         if self._version not in (0, 1, 2):

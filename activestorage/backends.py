@@ -137,7 +137,7 @@ class S3Backend(ReductionistBackend):
             request.chunks,
             request.order,
             request.chunk_selection,
-            axis=None,
+            axis=request.axis,
             operation=request.method,
             interface_type='s3',
         )
@@ -175,7 +175,7 @@ class HttpsBackend(ReductionistBackend):
             request.chunks,
             request.order,
             request.chunk_selection,
-            axis=None,
+            axis=request.axis,
             operation=request.method,
             interface_type='https',
         )
