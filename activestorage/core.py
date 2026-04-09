@@ -188,6 +188,7 @@ class Active:
         max_threads=100,
         storage_options=None,
         active_storage_url=None,
+        axis=None,
     ):
         self.uri = uri
         if self.uri is None:
@@ -207,7 +208,7 @@ class Active:
         self._version = 1
         self._components = False
         self._method = None
-        self._axis = None
+        self._axis = (axis,) if isinstance(axis, int) else axis
         self._max_threads = max_threads
         self.metric_data = {}
         self.data_read = 0
@@ -295,9 +296,20 @@ class Active:
     def _get_selection(self, selection):
         chunk_metadata = self._format.get_chunk_metadata()
         indexer = self._format.get_indexer(selection)
+        ndim = len(chunk_metadata.shape)
         axis = self._axis
         if axis is None:
-            axis = tuple(range(len(chunk_metadata.shape)))
+            axis = tuple(range(ndim))
+        else:
+            # Validate axis values; normalise negative indices for internal use.
+            normalised = []
+            for i in axis:
+                if not (-ndim <= i < ndim):
+                    raise ValueError(
+                        f"axis {i} is out of bounds for array of dimension {ndim}"
+                    )
+                normalised.append(i % ndim)
+            axis = tuple(normalised)
 
         session = self._backend.get_session()
         try:

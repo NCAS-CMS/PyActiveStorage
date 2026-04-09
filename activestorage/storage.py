@@ -3,9 +3,41 @@ import numpy as np
 
 from numcodecs.compat import ensure_ndarray
 
-def reduce_chunk(rfile, 
-                 offset, size, compression, filters, missing, dtype, shape, 
-                 order, chunk_selection, method=None):
+def _apply_missing_mask(data, missing):
+    """Apply missing-value masks to *data* without compressing/flattening."""
+    fill_value, missing_value, valid_min, valid_max = missing
+
+    def _as_scalar(value):
+        if value is None:
+            return None
+        if not np.isscalar(value):
+            try:
+                if len(value) == 1:
+                    return value[0]
+            except TypeError:
+                pass
+        return value
+
+    fill_value = _as_scalar(fill_value)
+    missing_value = _as_scalar(missing_value)
+    valid_min = _as_scalar(valid_min)
+    valid_max = _as_scalar(valid_max)
+
+    data = np.ma.array(data)
+    if fill_value is not None:
+        data = np.ma.masked_equal(data, fill_value)
+    if missing_value is not None:
+        data = np.ma.masked_equal(data, missing_value)
+    if valid_max is not None:
+        data = np.ma.masked_greater(data, valid_max)
+    if valid_min is not None:
+        data = np.ma.masked_less(data, valid_min)
+    return data
+
+
+def reduce_chunk(rfile,
+                 offset, size, compression, filters, missing, dtype, shape,
+                 order, chunk_selection, method=None, axis=None):
     """ We do our own read of chunks and decoding etc 
     
     rfile - the actual file with the data 
@@ -43,11 +75,19 @@ def reduce_chunk(rfile,
     tmp = chunk[chunk_selection]
     if method:
         if missing != (None, None, None, None):
-            tmp = remove_missing(tmp, missing)
-        # Check on size of tmp; method(empty) fails or gives incorrect
-        # results
+            if axis is None:
+                # Flatten to valid elements (original behaviour for all-axes reduction).
+                tmp = remove_missing(tmp, missing)
+            else:
+                # Keep array structure so axis-specific reduction is possible.
+                tmp = _apply_missing_mask(tmp, missing)
         if tmp.size:
-            return method(tmp), tmp.size
+            if axis is None:
+                return method(tmp), tmp.size
+            else:
+                result = method(tmp, axis=axis, keepdims=True)
+                count = np.ma.count(tmp, axis=axis, keepdims=True)
+                return result, count
         else:
             return tmp, 0
     else:
@@ -121,7 +161,7 @@ def read_block(open_file, offset, size):
 
 def reduce_opens3_chunk(fh, 
         offset, size, compression, filters, missing, dtype, shape, 
-        order, chunk_selection, method=None):
+        order, chunk_selection, method=None, axis=None):
     """ 
     Same function as reduce_chunk, but this mimics what is done
     deep in the bowels of H5py/pyfive. The reason for doing this is
@@ -141,10 +181,18 @@ def reduce_opens3_chunk(fh,
     tmp = chunk[chunk_selection]
     if method:
         if missing != (None, None, None, None):
-            tmp = remove_missing(tmp, missing)
+            if axis is None:
+                tmp = remove_missing(tmp, missing)
+            else:
+                tmp = _apply_missing_mask(tmp, missing)
         # check on size of tmp; method(empty) returns nan
         if tmp.any():
-            return method(tmp), tmp.size
+            if axis is None:
+                return method(tmp), tmp.size
+            else:
+                result = method(tmp, axis=axis, keepdims=True)
+                count = np.ma.count(tmp, axis=axis, keepdims=True)
+                return result, count
         else:
             return tmp, None
     else:

@@ -61,6 +61,7 @@ class LocalBackend(StorageBackend):
             request.order,
             request.chunk_selection,
             method=method,
+            axis=request.axis,
         )
         if simulate_cbor:
             payload = reductionist.encode_result(data, count)
@@ -111,6 +112,7 @@ class S3Backend(ReductionistBackend):
                 request.order,
                 request.chunk_selection,
                 method=method,
+                axis=request.axis,
             )
             return ChunkResult(data=data, count=count, out_selection=())
 

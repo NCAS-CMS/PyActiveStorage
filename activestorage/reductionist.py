@@ -233,11 +233,18 @@ def request(session: requests.Session, url: str, request_data: dict):
 def encode_result(data, count):
     """Encode a reduction result using the same CBOR payload shape as Reductionist."""
     result = np.ma.getdata(np.asanyarray(data))
+    # Serialise count: numpy arrays/scalars must be converted to plain Python types.
+    if isinstance(count, np.ndarray):
+        serialised_count = count.tolist()
+    elif isinstance(count, (np.integer, np.floating)):
+        serialised_count = count.item()
+    else:
+        serialised_count = count
     reduction_result = {
         "bytes": result.tobytes(),
         "dtype": result.dtype.name,
         "shape": list(result.shape),
-        "count": count,
+        "count": serialised_count,
     }
     return cbor.dumps(reduction_result)
 

@@ -1,0 +1,156 @@
+import os
+
+import numpy as np
+import pytest
+
+from activestorage.active import Active, load_from_s3
+from activestorage.reductionist import ReductionistError
+
+
+S3_BUCKET = "bnl"
+
+
+def test_anon_s3():
+    """Test a very basic but real S3 ANON access."""
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft
+    bigger_file = "CMIP6-test.nc"  # tas; 15 (time) x 143 x 144 
+
+    test_file_uri = os.path.join(
+        "esmvaltool-zarr",
+        bigger_file
+    )
+    print("S3 Test file path:", test_file_uri)
+
+    # no secrets - just living life
+    active = Active(test_file_uri, 'tas',
+                    storage_options={
+                        "anon": True,
+                         'client_kwargs': {
+                             'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"
+                              }
+                          },
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
+    active._version = 2
+    with pytest.raises(ReductionistError):
+        result = active.min()[:]
+        assert result == 197.69595    
+
+
+def test_s3_small_file():
+    """Run an S3 test on a small file."""
+    storage_options = {
+        'key': "f2d55c6dcfc7618b2c34e00b58df3cef",
+        'secret':
+        "$/'#M{0{/4rVhp%n^(XeX$q@y#&(NM3W1->~N.Q6VP.5[@bLpi='nt]AfH)>78pT",
+        'client_kwargs': {
+            'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"
+        },
+    }
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft
+    bigger_file = "CMIP6-test.nc"  # tas; 15 (time) x 143 x 144
+
+    test_file_uri = os.path.join(S3_BUCKET, bigger_file)
+    print("S3 Test file path:", test_file_uri)
+    active = Active(test_file_uri,
+                    'tas',
+                    storage_options=storage_options,
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
+    active._version = 2
+    result = active.min()[0:3, 4:6, 7:9]
+    print("Result is", result)
+    assert result == 222.09129333496094
+
+
+def test_s3_small_dataset():
+    """Run an S3 test on a small file."""
+    storage_options = {
+        'key': "f2d55c6dcfc7618b2c34e00b58df3cef",
+        'secret':
+        "$/'#M{0{/4rVhp%n^(XeX$q@y#&(NM3W1->~N.Q6VP.5[@bLpi='nt]AfH)>78pT",
+        'client_kwargs': {
+            'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"
+        },
+    }
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft
+    bigger_file = "CMIP6-test.nc"  # tas; 15 (time) x 143 x 144
+
+    test_file_uri = os.path.join(S3_BUCKET, bigger_file)
+    # load and pass dataset
+    dataset = load_from_s3(test_file_uri, storage_options=storage_options)
+    av = dataset['tas']
+    active = Active(av,
+                    storage_options=storage_options,
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
+    active._version = 2
+    result = active.min()[0:3, 4:6, 7:9]
+    print("Result is", result)
+    assert result == 222.09129333496094
+
+
+@pytest.mark.slow
+def test_s3_dataset():
+    """Run somewhat as the 'gold' test."""
+    storage_options = {
+        'key': "f2d55c6dcfc7618b2c34e00b58df3cef",
+        'secret':
+        "$/'#M{0{/4rVhp%n^(XeX$q@y#&(NM3W1->~N.Q6VP.5[@bLpi='nt]AfH)>78pT",
+        'client_kwargs': {
+            'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"
+        },
+    }
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft
+    bigger_file = "ch330a.pc19790301-def.nc"  # 17GB 64 HDF5 chunks
+
+    test_file_uri = os.path.join(S3_BUCKET, bigger_file)
+    print("S3 Test file path:", test_file_uri)
+
+    # file: explicit interface_type
+    active = Active(test_file_uri,
+                    'UM_m01s16i202_vn1106',
+                    interface_type="s3",
+                    storage_options=storage_options,
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
+    active._version = 2
+    result = active.min()[0:3, 4:6, 7:9]  # standardized slice
+    print("Result is", result)
+    assert result == 5098.625
+
+    # file: implicit interface_type
+    active = Active(test_file_uri,
+                    'UM_m01s16i202_vn1106',
+                    storage_options=storage_options,
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
+    active._version = 2
+    result = active.min()[0:3, 4:6, 7:9]  # standardized slice
+    print("Result is", result)
+    assert result == 5098.625
+
+    # load dataset
+    dataset = load_from_s3(test_file_uri, storage_options=storage_options)
+    av = dataset['UM_m01s16i202_vn1106']
+
+    # dataset: explicit interface_type
+    active = Active(av,
+                    interface_type="s3",
+                    storage_options=storage_options,
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
+    active._version = 2
+    result = active.min()[0:3, 4:6, 7:9]  # standardized slice
+    print("Result is", result)
+    assert result == 5098.625
+
+    # dataset: implicit interface_type
+    active = Active(av,
+                    storage_options=storage_options,
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
+    active._version = 2
+    result = active.min()[0:3, 4:6, 7:9]  # standardized slice
+    print("Result is", result)
+    assert result == 5098.625
