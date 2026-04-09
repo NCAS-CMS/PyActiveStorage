@@ -58,6 +58,31 @@ package "activestorage.core" {
     Active --> ChunkRequest : creates via\nstrategy
     Active --> SelectionRequest : creates via\nstrategy
     ChunkRequest --> ChunkResult : received from\nbackend
+
+note left of Active
+  **Example Usage:**
+  // Reduce along first axis only
+  active = Active("file.nc", "temperature")
+  result = active.mean(axis=0)[:]
+  
+  // Result shape: (10,10) if original (100,10,10)
+  
+  // Reduce all axes to scalar
+  result = active.mean(axis=None)[:]
+  // Result: scalar value
+  
+  // Multiple axes
+  result = active.sum(axis=(0,2))[:] 
+  // Reduces axes 0 and 2, keeps axis 1
+end note
+
+note bottom of SelectionRequest
+This is not implemented
+at the moment, will likely
+be implemented first in p5rem
+backend.
+end note
+
 }
 
 package "activestorage.backends" {
@@ -97,9 +122,11 @@ package "activestorage.backends" {
         to reductionist.reduce_chunk()
     }
 
-    LocalBackend --|> StorageBackend
-    S3Backend --|> StorageBackend
-    HttpsBackend --|> StorageBackend
+
+    StorageBackend <|-- LocalBackend
+    StorageBackend <|-- S3Backend
+    StorageBackend <|-- HttpsBackend
+
 }
 
 package "activestorage.reductionist (v2 API)" {
@@ -122,7 +149,7 @@ package "activestorage.reductionist (v2 API)" {
         - Returns shaped result for chunked reductions
     }
 
-    note on right of ReductionistAPI
+    note right of ReductionistAPI
       **V2 Protocol Features:**
       - Added axis parameter support
       - Axis-aware server-side reduction
@@ -134,21 +161,7 @@ package "activestorage.reductionist (v2 API)" {
 S3Backend --> ReductionistAPI : calls with\naxis=request.axis
 HttpsBackend --> ReductionistAPI : calls with\naxis=request.axis
 
-note bottom of Active
-  **Example Usage:**
-  // Reduce along first axis only
-  active = Active("file.nc", "temperature")
-  result = active.mean(axis=0)[:]
-  
-  // Result shape: (10,10) if original (100,10,10)
-  
-  // Reduce all axes to scalar
-  result = active.mean(axis=None)[:]
-  // Result: scalar value
-  
-  // Multiple axes
-  result = active.sum(axis=(0,2))[:] 
-  // Reduces axes 0 and 2, keeps axis 1
-end note
+
+
 
 @enduml
