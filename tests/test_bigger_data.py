@@ -169,12 +169,8 @@ def test_native_emac_model_fails(test_data_path):
         with pytest.raises(InvalidHDF5Err):
             active[...]
     else:
-        active = Active(uri, "aps_ave")
-        active._version = 2
-        active.method = "mean"
-        active.components = True
         with pytest.raises(InvalidHDF5Err):
-            result2 = active[4:5, 1:2]
+            active = Active(uri, "aps_ave")
 
 
 def test_cesm2_native(test_data_path):
