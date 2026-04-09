@@ -1,6 +1,6 @@
 @startuml axis_flow_v1
 
-title "Axis Parameter Flow Through Reduction Pipeline"
+title "Axis Parameter Flow Through Reduction Pipeline (Path-Specific)"
 
 actor User
 
@@ -9,7 +9,10 @@ participant "Active\n._get_selection()" as GetSelection
 participant "Active\n._from_storage()" as FromStorage
 participant "ExecutionStrategy\n.execute()" as Strategy
 participant "ChunkedLocalStrategy\n.execute()" as LocalStrat
-participant "StorageBackend\n.reduce_chunk()" as Backend
+participant "ChunkedRemoteStrategy\n.execute()" as RemoteStrat
+participant "WholeArrayStrategy\n.execute()" as WholeStrat
+participant "StorageBackend\n.reduce_chunk()" as ChunkBackend
+participant "StorageBackend\n.reduce_selection()" as SelBackend
 participant "Reductionist\nv2 API" as Reductionist
 
 User ->> Active: active.mean(axis=0)[:]
@@ -32,48 +35,46 @@ GetSelection ->> FromStorage: _from_storage(..., axis=axis)
 
 FromStorage ->> Strategy: strategy.execute(\n  ..., axis=axis)
 
-note over Strategy
-  For ChunkedLocalStrategy:
-  - iterate chunks
-  - create ChunkRequest(axis=axis)
-  - for S3/HTTPS: pass axis to backend
-end note
+alt Local chunked path (LocalBackend + ChunkedLocalStrategy)
+  Strategy ->> LocalStrat: execute(..., axis=axis)
+  LocalStrat ->> LocalStrat: for chunk in indexer:\nChunkRequest(axis=axis)
+  LocalStrat ->> ChunkBackend: reduce_chunk(request)
+  ChunkBackend -->> LocalStrat: ChunkResult(data, count)
+  LocalStrat ->> LocalStrat: accumulate chunk outputs\nand finalize reduction
+  LocalStrat -->> FromStorage: final_result
+else Remote chunked path (S3/Https + ChunkedRemoteStrategy)
+  Strategy ->> RemoteStrat: execute(..., axis=axis)
+  RemoteStrat ->> RemoteStrat: for chunk in indexer:\nChunkRequest(axis=axis)
+  RemoteStrat ->> ChunkBackend: reduce_chunk(request)
 
-Strategy ->> LocalStrat: ChunkedLocalStrategy\n.execute(..., axis=axis)
+  note over ChunkBackend
+    S3Backend / HttpsBackend:
+    passes axis=request.axis
+    to Reductionist v2 API
+  end note
 
-LocalStrat ->> LocalStrat: for chunk in chunks:\n  ChunkRequest(axis=axis)
+  ChunkBackend ->> Reductionist: reduce_chunk(\n..., axis=request.axis, operation='mean')
 
-LocalStrat ->> Backend: reduce_chunk(request)
+  note over Reductionist
+    Reductionist v2 API:
+    - axis tuple is applied server-side
+    - returns per-chunk reduced result
+    - examples:
+      axis=(0,1) -> shape[2]
+      axis=(2,)  -> shape[0,1]
+      axis=None  -> scalar
+  end note
 
-note over Backend
-  S3Backend / HttpsBackend:
-  - Extract axis from request
-  - Pass axis=request.axis
-    to reductionist API
-end note
-
-Backend ->> Reductionist: reduce_chunk(\n  ...\n  axis=request.axis,\n  operation='mean')
-
-note over Reductionist
-  Reductionist v2 API:
-  - Receives axis tuple
-  - Performs axis-aware reduction
-  - Returns reduced chunk
-  - Example:
-    axis=(0,1) → shape[2] result
-    axis=(2,) → shape[0,1] result
-    axis=None → scalar result
-end note
-
-Reductionist ->> Backend: ChunkResult(\n  data=reduced_chunk)
-
-Backend ->> LocalStrat: ChunkResult
-
-LocalStrat ->> LocalStrat: Accumulate results by axis
-
-LocalStrat ->> LocalStrat: Apply final reduction\n if needed
-
-LocalStrat ->> FromStorage: final_result
+  Reductionist -->> ChunkBackend: ChunkResult(data, count)
+  ChunkBackend -->> RemoteStrat: ChunkResult(data, count)
+  RemoteStrat ->> RemoteStrat: accumulate chunk outputs\nand finalize reduction
+  RemoteStrat -->> FromStorage: final_result
+else Whole-array path (P5Rem + WholeArrayStrategy)
+  Strategy ->> WholeStrat: execute(..., axis=axis)
+  WholeStrat ->> SelBackend: reduce_selection(SelectionRequest(axis=axis))
+  SelBackend -->> WholeStrat: SelectionResult(data, n)
+  WholeStrat -->> FromStorage: final_result
+end
 
 FromStorage ->> GetSelection: final_result
 
