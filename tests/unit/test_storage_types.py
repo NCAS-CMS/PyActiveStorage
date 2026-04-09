@@ -37,9 +37,7 @@ def test_s3(mock_reduce, mock_load, tmp_path):
     def reduce_chunk(
         session,
         server,
-        source,
-        bucket,
-        object,
+        url,
         offset,
         size,
         compressor,
@@ -49,7 +47,10 @@ def test_s3(mock_reduce, mock_load, tmp_path):
         shape,
         order,
         chunk_selection,
+        axis,
         operation,
+        interface_type=None,
+        option_disable_chunk_cache=False,
     ):
         return activestorage.storage.reduce_chunk(
             test_file,
@@ -96,8 +97,6 @@ def test_s3(mock_reduce, mock_load, tmp_path):
         S3_URL,
         mock.ANY,
         mock.ANY,
-        mock.ANY,
-        mock.ANY,
         None,
         None,
         (None, None, None, None),
@@ -105,7 +104,9 @@ def test_s3(mock_reduce, mock_load, tmp_path):
         mock.ANY,
         "C",
         mock.ANY,
+        axis=None,
         operation="max",
+        interface_type="s3",
     )
 
 

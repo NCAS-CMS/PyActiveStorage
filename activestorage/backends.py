@@ -123,8 +123,6 @@ class S3Backend(ReductionistBackend):
             session,
             server,
             source,
-            bucket,
-            obj,
             request.offset,
             request.size,
             request.compressor,
@@ -139,7 +137,9 @@ class S3Backend(ReductionistBackend):
             request.chunks,
             request.order,
             request.chunk_selection,
+            axis=None,
             operation=request.method,
+            interface_type='s3',
         )
         self.close_session(session)
         return ChunkResult(data=data, count=count, out_selection=())
@@ -157,15 +157,10 @@ class HttpsBackend(ReductionistBackend):
 
     def reduce_chunk(self, request: ChunkRequest) -> ChunkResult:
         session = self.get_session()
-        parsed = urllib.parse.urlparse(request.uri)
-        bucket = parsed.netloc
-        obj = parsed.path
         data, count = reductionist.reduce_chunk(
             session,
             self._active.active_storage_url,
             request.uri,
-            bucket,
-            obj,
             request.offset,
             request.size,
             request.compressor,
@@ -180,7 +175,9 @@ class HttpsBackend(ReductionistBackend):
             request.chunks,
             request.order,
             request.chunk_selection,
+            axis=None,
             operation=request.method,
+            interface_type='https',
         )
         self.close_session(session)
         return ChunkResult(data=data, count=count, out_selection=())
