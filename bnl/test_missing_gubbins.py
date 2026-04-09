@@ -1,5 +1,8 @@
 
-from activestorage import dummy_data as dd
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent / 'tests'))
+import dummy_data as dd
 from activestorage import Active
 import pyfive
 import numpy.ma as ma
