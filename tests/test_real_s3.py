@@ -4,7 +4,6 @@ import numpy as np
 import pytest
 
 from activestorage.active import Active, load_from_s3
-from activestorage.reductionist import ReductionistError
 
 
 S3_BUCKET = "bnl"
@@ -29,11 +28,57 @@ def test_anon_s3():
                              'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"
                               }
                           },
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
+    active._version = 2
+    result = active.min()[:]
+    assert result[0][0][0] == 197.69595
+
+
+def test_anon_s3_invalid_file():
+    """Test a very basic but real S3 ANON access."""
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft
+    bigger_file = "CMIP6-test3.nc"  # not a file
+
+    test_file_uri = os.path.join(
+        "esmvaltool-zarr",
+        bigger_file
+    )
+
+    active = Active(test_file_uri, 'tas',
+                    storage_options={
+                        "anon": True,
+                         'client_kwargs': {
+                             'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"
+                              }
+                          },
                     active_storage_url=active_storage_url)
     active._version = 2
-    with pytest.raises(ReductionistError):
+    with pytest.raises(FileNotFoundError) as red_err:
         result = active.min()[:]
-        assert result == 197.69595    
+
+
+def test_anon_s3_bucket_not_anon():
+    """Test a very basic but real S3 ANON access."""
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft
+    bigger_file = "CMIP6-test.nc"  # not a file
+
+    test_file_uri = os.path.join(
+        "repacking",
+        bigger_file
+    )
+
+    active = Active(test_file_uri, 'tas',
+                    storage_options={
+                        "anon": True,
+                         'client_kwargs': {
+                             'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"
+                              }
+                          },
+                    active_storage_url=active_storage_url)
+    active._version = 2
+    with pytest.raises(PermissionError) as red_err:
+        result = active.min()[:]
 
 
 def test_s3_small_file():
@@ -54,7 +99,8 @@ def test_s3_small_file():
     active = Active(test_file_uri,
                     'tas',
                     storage_options=storage_options,
-                    active_storage_url=active_storage_url)
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
     active._version = 2
     result = active.min()[0:3, 4:6, 7:9]
     print("Result is", result)
@@ -80,7 +126,8 @@ def test_s3_small_dataset():
     av = dataset['tas']
     active = Active(av,
                     storage_options=storage_options,
-                    active_storage_url=active_storage_url)
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
     active._version = 2
     result = active.min()[0:3, 4:6, 7:9]
     print("Result is", result)
@@ -109,7 +156,8 @@ def test_s3_dataset():
                     'UM_m01s16i202_vn1106',
                     interface_type="s3",
                     storage_options=storage_options,
-                    active_storage_url=active_storage_url)
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
     active._version = 2
     result = active.min()[0:3, 4:6, 7:9]  # standardized slice
     print("Result is", result)
@@ -119,7 +167,8 @@ def test_s3_dataset():
     active = Active(test_file_uri,
                     'UM_m01s16i202_vn1106',
                     storage_options=storage_options,
-                    active_storage_url=active_storage_url)
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
     active._version = 2
     result = active.min()[0:3, 4:6, 7:9]  # standardized slice
     print("Result is", result)
@@ -133,7 +182,8 @@ def test_s3_dataset():
     active = Active(av,
                     interface_type="s3",
                     storage_options=storage_options,
-                    active_storage_url=active_storage_url)
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
     active._version = 2
     result = active.min()[0:3, 4:6, 7:9]  # standardized slice
     print("Result is", result)
@@ -142,7 +192,8 @@ def test_s3_dataset():
     # dataset: implicit interface_type
     active = Active(av,
                     storage_options=storage_options,
-                    active_storage_url=active_storage_url)
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
     active._version = 2
     result = active.min()[0:3, 4:6, 7:9]  # standardized slice
     print("Result is", result)

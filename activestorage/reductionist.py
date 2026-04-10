@@ -24,13 +24,10 @@ def get_session(username: str, password: str,
     :returns: a client session object.
     """
     session = requests.Session()
-    # TODO Stack-HPC
-    # we need to allow Anon buckets. though this
-    # will break connection to data server
-    # if username is None and password is None:
-    #     return session
-    session.auth = (username, password)
     session.verify = cacert or False
+    if username is None and password is None:
+        return session
+    session.auth = (username, password)
     return session
 
 
@@ -48,7 +45,8 @@ def reduce_chunk(session,
                  chunk_selection,
                  axis,
                  operation,
-                 interface_type=None):
+                 interface_type=None,
+                 option_disable_chunk_cache=False):
     """Perform a reduction on a chunk using Reductionist.
 
     :param server: Reductionist server URL
@@ -71,6 +69,7 @@ def reduce_chunk(session,
     :param axis: tuple of the axes to be reduced (non-negative integers)
     :param operation: name of operation to perform
     :param interface_type: optional testing flag to allow HTTPS reduction
+    :param option_disable_chunk_cache: optional turn off chunk cache
     :returns: the reduced data as a numpy array or scalar
     :raises ReductionistError: if the request to Reductionist fails
     """
@@ -86,7 +85,8 @@ def reduce_chunk(session,
                                       order,
                                       chunk_selection,
                                       axis,
-                                      interface_type=interface_type)
+                                      interface_type=interface_type,
+                                      option_disable_chunk_cache=option_disable_chunk_cache)
     if DEBUG:
         print(f"Reductionist request data dictionary: {request_data}")
     api_operation = "sum" if operation == "mean" else operation or "select"
@@ -184,7 +184,8 @@ def build_request_data(url: str,
                        order,
                        selection,
                        axis,
-                       interface_type=None) -> dict:
+                       interface_type=None,
+                       option_disable_chunk_cache=False) -> dict:
     """Build request data for Reductionist API."""
     request_data = {
         'interface_type': interface_type if interface_type else "s3",
@@ -208,6 +209,8 @@ def build_request_data(url: str,
         request_data["filters"] = encode_filters(filters)
     if any(missing):
         request_data["missing"] = encode_missing(missing)
+    if option_disable_chunk_cache:
+        request_data["option_disable_chunk_cache"] = True
 
     if axis is not None:
         request_data['axis'] = axis
@@ -255,8 +258,13 @@ class ReductionistError(Exception):
 
 def decode_and_raise_error(response):
     """Decode an error response and raise ReductionistError."""
-    try:
-        error = json.dumps(response.json())
+    if response.status_code == http.client.INTERNAL_SERVER_ERROR:
+        try:
+            error = json.dumps(response.json())
+        except requests.exceptions.JSONDecodeError as exc:
+            error = http.client.responses.get(response.status_code, "-")
+            raise ReductionistError(response.status_code, error) from exc
         raise ReductionistError(response.status_code, error)
-    except requests.exceptions.JSONDecodeError as exc:
-        raise ReductionistError(response.status_code, "-") from exc
+
+    error = http.client.responses.get(response.status_code, "-")
+    raise ReductionistError(response.status_code, error)
