@@ -13,11 +13,11 @@ jobs:
     runs-on: "ubuntu-latest"
     strategy:
       matrix:
-        python-version: ["3.13"]  # latest only
+        python-version: ["3.14"]  # latest only
       fail-fast: false
     name: Linux Python ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - uses: conda-incubator/setup-miniconda@v3
@@ -29,14 +29,8 @@ jobs:
           use-mamba: true
       - run: conda --version
       - run: python -V
-      - name: Install development version of NCAS-CMS/Pyfive:h5netcdf
-        run: |
-          cd ..
-          git clone https://github.com/NCAS-CMS/pyfive.git
-          cd pyfive
-          git checkout h5netcdf
-          pip install -e .
       - run: pip install -e .
       - run: conda list
-      - run: pytest -n 2 --junitxml=report-1.xml
-      - uses: codecov/codecov-action@v3
+      - run: flake8 --exclude tests,doc --max-line-length 120 --ignore F405,F401
+      - run: pytest -n 2 -m "not slow" --junitxml=report-1.xml
+      - uses: codecov/codecov-action@v6
