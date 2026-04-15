@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import socket
 import threading
 from contextlib import suppress
@@ -268,6 +269,59 @@ def test_real_server_var_open_includes_rich_metadata() -> None:
 		session.file_close(str(data_path))
 	finally:
 		_stop_loopback_server(*connection)
+
+
+def test_handle_file_open_resets_cached_datasets_for_reopen(monkeypatch: pytest.MonkeyPatch) -> None:
+	class FakeDataset:
+		def __init__(self, label: str, dim_id: int) -> None:
+			self.label = label
+			self.attrs = {"_Netcdf4Dimid": dim_id}
+
+	class FakeFile:
+		def __init__(self, label: str, dataset: FakeDataset) -> None:
+			self.label = label
+			self.attrs: dict[str, Any] = {}
+			self.consolidated_metadata = True
+			self._dataset = dataset
+			self.closed = False
+
+		def keys(self):
+			return [self._dataset.label]
+
+		def __getitem__(self, key: str) -> FakeDataset:
+			assert key == self._dataset.label
+			return self._dataset
+
+		def close(self) -> None:
+			self.closed = True
+
+	data_path = Path(__file__).parent / "data" / "test1.nc"
+	first_file = FakeFile("old_var", FakeDataset("old_var", 1))
+	second_file = FakeFile("new_var", FakeDataset("new_var", 2))
+	opened_files = iter([first_file, second_file])
+
+	monkeypatch.setattr(pyfive, "File", lambda path: next(opened_files))
+
+	server = ServerStub(io.BytesIO(), io.BytesIO())
+	path = str(data_path)
+
+	server.handle_file_open(path)
+	first_dataset = server._get_dataset(path, "old_var")
+	assert first_dataset is first_file._dataset
+	assert server._dim_id_to_name[path] == {1: "old_var"}
+
+	close_response = server.handle_file_close(path)
+	assert close_response == {"type": "FILE_CLOSE", "path": path, "closed": True}
+	assert first_file.closed is True
+	assert path not in server._datasets
+	assert path not in server._dim_id_to_name
+	assert path not in server._dim_id_reference_list
+
+	server.handle_file_open(path)
+	second_dataset = server._get_dataset(path, "new_var")
+	assert second_dataset is second_file._dataset
+	assert second_dataset is not first_dataset
+	assert server._dim_id_to_name[path] == {2: "new_var"}
 
 
 def test_real_server_get_chunk_for_chunked_and_contiguous() -> None:

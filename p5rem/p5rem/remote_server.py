@@ -208,7 +208,7 @@ class ServerStub:
         import pyfive
         file_handle = pyfive.File(path)
         self._open_files[path] = file_handle
-        self._datasets.setdefault(path, {})
+        self._datasets[path] = {}
         self._build_netcdf_maps(path, file_handle)
         return {
             "type": FILE_INFO,
@@ -291,8 +291,15 @@ class ServerStub:
         def _read_one(storeinfo: Any) -> bytes:
             with open(path, "rb") as fh:
                 return os.pread(fh.fileno(), storeinfo.size, storeinfo.byte_offset)
+            
+        max_parallel_reads = 32
+        worker_count = min(
+            max(1, int(thread_count)),
+            max(1, len(storeinfos)),
+            max_parallel_reads,
+        )
 
-        with ThreadPoolExecutor(max_workers=max(1, int(thread_count))) as pool:
+        with ThreadPoolExecutor(max_workers=worker_count) as pool:
             raw_chunks = list(pool.map(_read_one, storeinfos))
 
         for storeinfo, data in zip(storeinfos, raw_chunks):
@@ -377,6 +384,9 @@ class ServerStub:
 
     def handle_file_close(self, path: str) -> dict[str, Any]:
         file_handle = self._open_files.pop(path, None)
+        self._datasets.pop(path, None)
+        self._dim_id_to_name.pop(path, None)
+        self._dim_id_reference_list.pop(path, None)
         if file_handle is not None:
             with suppress(Exception):
                 file_handle.close()
