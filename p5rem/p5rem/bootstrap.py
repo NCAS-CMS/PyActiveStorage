@@ -547,14 +547,13 @@ def discover_remote_conda_envs(
 			conda is initialized in the login shell context.
 
 	Returns:
-		Dict mapping environment name to its path. Examples:
-		```python
-		{
-			"base": "/path/to/miniforge3",
-			"work26": "/path/to/miniforge3/envs/work26",
-			"jas26": "/path/to/miniforge3/envs/jas26",
-		}
-		```
+		Dict mapping environment name to its path. Example::
+
+			{
+				"base": "/path/to/miniforge3",
+				"work26": "/path/to/miniforge3/envs/work26",
+				"jas26": "/path/to/miniforge3/envs/jas26",
+			}
 
 	Raises:
 		BootstrapError: If SSH connection or command execution fails.
