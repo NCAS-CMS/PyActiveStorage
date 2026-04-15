@@ -35,6 +35,9 @@ block exits.
    * ``"conda run -n myenv python"`` — activate a conda environment
    * ``"/home/user/venv/bin/python"`` — absolute path to a virtualenv
 
+   That remote Python environment must include the server-stub runtime
+   dependencies: ``pyfive``, ``numpy``, and ``cbor2``.
+
 ``login_shell``
    Set ``True`` if the remote Python command is only available after shell
    startup scripts have run (common with conda or module-load environments).

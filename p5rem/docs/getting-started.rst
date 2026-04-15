@@ -14,16 +14,17 @@ Or in development mode::
 
 The client-side dependencies (``paramiko``, ``pyfive``, ``cbor2``,
 ``diskcache``, ``numpy``) are pulled in automatically.  The remote server stub
-(``p5rem/remote_server.py``) only requires ``pyfive`` and ``numpy``, which
-keeps the per-environment HPC footprint small.
+(``p5rem/remote_server.py``) requires ``pyfive``, ``numpy``, and ``cbor2``,
+which keeps the per-environment HPC footprint small while still providing the
+CBOR message framing used over SSH stdio.
 
 Requirements
 ~~~~~~~~~~~~
 
 * Python ≥ 3.10 (client and server)
 * SSH access to the remote host (standard user login, no special privileges)
-* A Python environment on the remote host that contains ``pyfive ≥ 0.5.0``
-  and ``numpy``
+* A Python environment on the remote host that contains ``pyfive >= 0.5.0``,
+  ``numpy``, and ``cbor2``
 
 Quick start
 -----------

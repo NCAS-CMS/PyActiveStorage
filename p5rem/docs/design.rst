@@ -95,8 +95,8 @@ Self-contained server stub
 
 ``remote_server.py`` deliberately does not import any other p5rem module.
 All protocol constants and framing code are inlined so the file can be
-dropped onto any Python ≥ 3.10 installation that has ``pyfive`` and
-``numpy``.
+dropped onto any Python ≥ 3.10 installation that has ``pyfive``, ``numpy``,
+and ``cbor2``.
 
 Single persistent SSH connection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
