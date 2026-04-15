@@ -1,5 +1,5 @@
-PYTHON ?= /Users/bnl28/miniforge3/envs/work26/bin/python
-PYTHON_CFDM ?= /Users/bnl28/miniforge3/envs/work26t/bin/python
+PYTHON ?= python3
+PYTHON_CFDM ?= $(PYTHON)
 PYTEST ?= $(PYTHON) -m pytest
 TEST_ENV ?= tests/testenv.sh
 
@@ -15,6 +15,7 @@ help:
 		'make test-unit         Alias for make test' \
 		'make test-integration  Run pytest integration tests using $(TEST_ENV)' \
 		'make test-cfdm         Run cfdm compatibility tests with $(PYTHON_CFDM)' \
+		'                       Override PYTHON/PYTHON_CFDM locally if needed' \
 		'make acid-test         Run the standalone SSH acid test using $(TEST_ENV)'
 
 test: test-unit

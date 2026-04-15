@@ -21,7 +21,7 @@ The integration marker exists so the normal test run can stay fast and self-cont
 ### Default test run
 
 ```bash
-/Users/bnl28/miniforge3/envs/work26/bin/python -m pytest -m "not integration"
+python3 -m pytest -m "not integration"
 # or
 make test
 ```
@@ -32,9 +32,11 @@ If you want to run only the cfdm interoperability test in a dedicated env (for e
 
 ```bash
 make test-cfdm
+# or override the interpreter explicitly, eg:
+make test-cfdm PYTHON_CFDM=/path/to/work26t/bin/python
 ```
 
-This target uses `PYTHON_CFDM` (default: `/Users/bnl28/miniforge3/envs/work26t/bin/python`) and leaves the main suite on `work26`.
+This target uses `PYTHON_CFDM` (default: `$(PYTHON)`, which defaults to `python3`). If you need a separate environment for `cfdm`, override `PYTHON_CFDM` locally, for example via the command line or your shell environment.
 
 ### Real SSH integration run
 
@@ -53,7 +55,7 @@ Then run:
 
 ```bash
 source tests/testenv.sh
-/Users/bnl28/miniforge3/envs/work26/bin/python -m pytest -m integration
+python3 -m pytest -m integration
 # or
 make test-integration
 ```
@@ -70,7 +72,7 @@ There is also a CLI wrapper for the same shared SSH round-trip assertions:
 
 ```bash
 source tests/testenv.sh
-/Users/bnl28/miniforge3/envs/work26/bin/python tests/acid_test.py
+python3 tests/acid_test.py
 # or
 make acid-test
 ```
