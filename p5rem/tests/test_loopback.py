@@ -126,8 +126,16 @@ def test_loopback_proxy_round_trip() -> None:
 			assert bounds_data.shape == ref_bounds.shape
 			assert np.allclose(bounds_data, ref_bounds)
 
-			with pytest.raises(ResponseError, match="not implemented"):
-				session.reduce(data_path, "tas", 0, 100, "mean")
+			reduce_response = session.reduce_selection(
+				data_path,
+				"tas",
+				"mean",
+				selection=[{"type": "index", "value": 0}, None, None],
+			)
+			expected_mean = float(np.mean(ref_file["tas"][0, :, :]))
+			assert reduce_response["type"] == "REDUCTION_RESULT"
+			assert reduce_response["mode"] == "selection"
+			assert np.isclose(reduce_response["value"], expected_mean)
 
 		assert proxy.closed is True
 	finally:
@@ -301,13 +309,327 @@ def test_real_server_get_chunk_for_chunked_and_contiguous() -> None:
 		_stop_loopback_server(*connection)
 
 
-def test_real_server_reduce_is_not_implemented() -> None:
+def test_real_server_reduce_supports_selection_and_chunk_modes() -> None:
+	connection = _start_loopback_server(ServerStub)
+	session = connection[0]
+	data_path = Path(__file__).parent / "data" / "contiguous_eg.nc"
+	try:
+		session.file_open(str(data_path))
+
+		selection_response = session.reduce_selection(
+			str(data_path),
+			"q",
+			"mean",
+			selection=[{"type": "index", "value": 0}, None],
+		)
+		assert selection_response["type"] == "REDUCTION_RESULT"
+		assert selection_response["mode"] == "selection"
+		assert selection_response["thread_count"] == 1
+
+		q_meta = session.var_open(str(data_path), "q")
+		chunk_entry = q_meta["index"][0]
+		chunk_response = session.reduce_chunk(
+			str(data_path),
+			"q",
+			chunk_entry["byte_offset"],
+			chunk_entry["size"],
+			"count",
+		)
+		assert chunk_response["type"] == "REDUCTION_RESULT"
+		assert chunk_response["mode"] == "chunk"
+
+		ref_file = pyfive.File(str(data_path))
+		expected_count = int(ref_file["q"][()].size)
+		assert int(chunk_response["value"]) == expected_count
+
+		with pytest.raises(ResponseError, match="unsupported reduction operation"):
+			session.reduce_selection(str(data_path), "q", "does_not_exist")
+	finally:
+		_stop_loopback_server(*connection)
+
+
+def test_real_server_reduce_selection_parallel_full_dataset() -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
 	data_path = Path(__file__).parent / "data" / "test1.nc"
 	try:
 		session.file_open(str(data_path))
-		with pytest.raises(ResponseError, match="not implemented"):
-			session.reduce(str(data_path), "tas", 0, 0, "mean")
+		response = session.reduce_selection(
+			str(data_path),
+			"tas",
+			"mean",
+			selection=None,
+			thread_count=3,
+		)
+
+		ref_file = pyfive.File(str(data_path))
+		expected_mean = float(np.mean(ref_file["tas"][()]))
+
+		assert response["type"] == "REDUCTION_RESULT"
+		assert response["mode"] == "selection"
+		assert response["thread_count"] == 3
+		assert np.isclose(response["value"], expected_mean)
+	finally:
+		_stop_loopback_server(*connection)
+
+
+def test_real_server_reduce_selection_parallel_partial_selection() -> None:
+	connection = _start_loopback_server(ServerStub)
+	session = connection[0]
+	data_path = Path(__file__).parent / "data" / "test1.nc"
+	try:
+		session.file_open(str(data_path))
+		response = session.reduce_selection(
+			str(data_path),
+			"tas",
+			"sum",
+			selection=[
+				{"type": "slice", "start": 0, "stop": 7, "step": 1},
+				{"type": "slice", "start": 5, "stop": 55, "step": 1},
+				{"type": "slice", "start": 10, "stop": 110, "step": 1},
+			],
+			thread_count=4,
+		)
+
+		ref_file = pyfive.File(str(data_path))
+		expected_sum = float(np.sum(ref_file["tas"][0:7, 5:55, 10:110]))
+
+		assert response["type"] == "REDUCTION_RESULT"
+		assert response["mode"] == "selection"
+		assert response["thread_count"] == 4
+		assert np.isclose(response["value"], expected_sum)
+	finally:
+		_stop_loopback_server(*connection)
+
+
+def test_real_server_reduce_selection_chunk_planned_with_single_thread() -> None:
+	connection = _start_loopback_server(ServerStub)
+	session = connection[0]
+	data_path = Path(__file__).parent / "data" / "test1.nc"
+	try:
+		session.file_open(str(data_path))
+		response = session.reduce_selection(
+			str(data_path),
+			"tas",
+			"sum",
+			selection=[
+				{"type": "slice", "start": 1, "stop": 8, "step": 1},
+				{"type": "slice", "start": 4, "stop": 48, "step": 1},
+				{"type": "slice", "start": 7, "stop": 100, "step": 1},
+			],
+			thread_count=1,
+		)
+
+		ref_file = pyfive.File(str(data_path))
+		expected_sum = float(np.sum(ref_file["tas"][1:8, 4:48, 7:100]))
+
+		assert response["type"] == "REDUCTION_RESULT"
+		assert response["mode"] == "selection"
+		assert response["thread_count"] == 1
+		assert np.isclose(response["value"], expected_sum)
+	finally:
+		_stop_loopback_server(*connection)
+
+
+# ---------------------------------------------------------------------------
+# Operation coverage: min / max / range / argmin / argmax on chunked datasets
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("operation,ref_fn", [
+	("min",    lambda a: float(np.min(a))),
+	("max",    lambda a: float(np.max(a))),
+	("mean",   lambda a: float(np.mean(a))),
+	("count",  lambda a: int(a.size)),
+	("range",  lambda a: [float(np.min(a)), float(np.max(a))]),
+	("argmin", lambda a: int(np.argmin(a))),
+	("argmax", lambda a: int(np.argmax(a))),
+])
+def test_reduce_selection_chunked_all_operations_full_dataset(operation, ref_fn) -> None:
+	connection = _start_loopback_server(ServerStub)
+	session = connection[0]
+	data_path = Path(__file__).parent / "data" / "test1.nc"
+	try:
+		session.file_open(str(data_path))
+		response = session.reduce_selection(str(data_path), "tas", operation, selection=None, thread_count=4)
+		ref = ref_fn(pyfive.File(str(data_path))["tas"][()])
+		assert response["type"] == "REDUCTION_RESULT"
+		assert response["mode"] == "selection"
+		if isinstance(ref, list):
+			assert len(response["value"]) == 2
+			assert np.isclose(response["value"][0], ref[0])
+			assert np.isclose(response["value"][1], ref[1])
+		elif isinstance(ref, int):
+			assert int(response["value"]) == ref
+		else:
+			assert np.isclose(response["value"], ref)
+	finally:
+		_stop_loopback_server(*connection)
+
+
+@pytest.mark.parametrize("operation,ref_fn", [
+	("min",    lambda a: float(np.min(a))),
+	("max",    lambda a: float(np.max(a))),
+	("mean",   lambda a: float(np.mean(a))),
+	("sum",    lambda a: float(np.sum(a))),
+	("count",  lambda a: int(a.size)),
+	("argmin", lambda a: int(np.argmin(a))),
+	("argmax", lambda a: int(np.argmax(a))),
+])
+def test_reduce_selection_chunked_all_operations_partial_selection(operation, ref_fn) -> None:
+	connection = _start_loopback_server(ServerStub)
+	session = connection[0]
+	data_path = Path(__file__).parent / "data" / "test1.nc"
+	sel = [
+		{"type": "slice", "start": 2, "stop": 10, "step": 1},
+		{"type": "slice", "start": 10, "stop": 50, "step": 1},
+		{"type": "slice", "start": 20, "stop": 90, "step": 1},
+	]
+	try:
+		session.file_open(str(data_path))
+		response = session.reduce_selection(str(data_path), "tas", operation, selection=sel, thread_count=4)
+		ref_array = pyfive.File(str(data_path))["tas"][2:10, 10:50, 20:90]
+		ref = ref_fn(ref_array)
+		assert response["type"] == "REDUCTION_RESULT"
+		assert response["mode"] == "selection"
+		if isinstance(ref, int):
+			assert int(response["value"]) == ref
+		else:
+			assert np.isclose(response["value"], ref)
+	finally:
+		_stop_loopback_server(*connection)
+
+
+# ---------------------------------------------------------------------------
+# Operation coverage: contiguous dataset streaming path
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("operation,ref_fn", [
+	("min",    lambda a: float(np.min(a))),
+	("max",    lambda a: float(np.max(a))),
+	("mean",   lambda a: float(np.mean(a))),
+	("sum",    lambda a: float(np.sum(a))),
+	("count",  lambda a: int(a.size)),
+	("argmin", lambda a: int(np.argmin(a))),
+	("argmax", lambda a: int(np.argmax(a))),
+])
+def test_reduce_selection_contiguous_all_operations_full_dataset(operation, ref_fn) -> None:
+	connection = _start_loopback_server(ServerStub)
+	session = connection[0]
+	data_path = Path(__file__).parent / "data" / "contiguous_eg.nc"
+	try:
+		session.file_open(str(data_path))
+		response = session.reduce_selection(str(data_path), "q", operation, selection=None)
+		ref = ref_fn(pyfive.File(str(data_path))["q"][()])
+		assert response["type"] == "REDUCTION_RESULT"
+		assert response["mode"] == "selection"
+		if isinstance(ref, int):
+			assert int(response["value"]) == ref
+		else:
+			assert np.isclose(response["value"], ref)
+	finally:
+		_stop_loopback_server(*connection)
+
+
+# ---------------------------------------------------------------------------
+# reduce_chunk: chunked variable (raw compressed chunk, count of raw elements)
+# and contiguous variable (raw bytes, count of stored elements)
+# ---------------------------------------------------------------------------
+
+def test_reduce_chunk_on_chunked_variable() -> None:
+	connection = _start_loopback_server(ServerStub)
+	session = connection[0]
+	data_path = Path(__file__).parent / "data" / "test1.nc"
+	try:
+		session.file_open(str(data_path))
+		meta = session.var_open(str(data_path), "tas")
+		# Use the first chunk index entry.
+		entry = meta["index"][0]
+		for operation in ("min", "max", "sum", "count", "mean"):
+			response = session.reduce_chunk(
+				str(data_path), "tas",
+				entry["byte_offset"], entry["size"],
+				operation,
+			)
+			assert response["type"] == "REDUCTION_RESULT"
+			assert response["mode"] == "chunk"
+			assert response["byte_offset"] == entry["byte_offset"]
+			assert response["size"] == entry["size"]
+			assert response["value"] is not None
+	finally:
+		_stop_loopback_server(*connection)
+
+
+def test_reduce_chunk_on_contiguous_variable() -> None:
+	connection = _start_loopback_server(ServerStub)
+	session = connection[0]
+	data_path = Path(__file__).parent / "data" / "contiguous_eg.nc"
+	try:
+		session.file_open(str(data_path))
+		meta = session.var_open(str(data_path), "q")
+		entry = meta["index"][0]
+		ref_array = pyfive.File(str(data_path))["q"][()]
+
+		for operation, ref_fn in [
+			("min",   lambda a: float(np.min(a))),
+			("max",   lambda a: float(np.max(a))),
+			("sum",   lambda a: float(np.sum(a))),
+			("mean",  lambda a: float(np.mean(a))),
+			("count", lambda a: int(a.size)),
+		]:
+			response = session.reduce_chunk(
+				str(data_path), "q",
+				entry["byte_offset"], entry["size"],
+				operation,
+			)
+			assert response["type"] == "REDUCTION_RESULT"
+			assert response["mode"] == "chunk"
+			ref = ref_fn(ref_array)
+			if isinstance(ref, int):
+				assert int(response["value"]) == ref
+			else:
+				assert np.isclose(response["value"], ref)
+	finally:
+		_stop_loopback_server(*connection)
+
+
+# ---------------------------------------------------------------------------
+# Error path: unknown operation on chunked variable
+# ---------------------------------------------------------------------------
+
+def test_reduce_selection_unknown_operation_chunked_raises() -> None:
+	connection = _start_loopback_server(ServerStub)
+	session = connection[0]
+	data_path = Path(__file__).parent / "data" / "test1.nc"
+	try:
+		session.file_open(str(data_path))
+		with pytest.raises(ResponseError, match="unsupported reduction operation"):
+			session.reduce_selection(str(data_path), "tas", "variance")
+	finally:
+		_stop_loopback_server(*connection)
+
+
+# ---------------------------------------------------------------------------
+# Edge: thread_count larger than number of intersecting chunks clamps cleanly
+# ---------------------------------------------------------------------------
+
+def test_reduce_selection_thread_count_exceeds_chunk_count() -> None:
+	connection = _start_loopback_server(ServerStub)
+	session = connection[0]
+	data_path = Path(__file__).parent / "data" / "test1.nc"
+	try:
+		session.file_open(str(data_path))
+		# A 1-timestep selection hits at most a handful of chunks; use 1000 workers.
+		response = session.reduce_selection(
+			str(data_path), "tas", "sum",
+			selection=[
+				{"type": "index", "value": 0},
+				{"type": "slice", "start": 0, "stop": 64, "step": 1},
+				{"type": "slice", "start": 0, "stop": 128, "step": 1},
+			],
+			thread_count=1000,
+		)
+		ref = float(np.sum(pyfive.File(str(data_path))["tas"][0, :, :]))
+		assert response["type"] == "REDUCTION_RESULT"
+		assert np.isclose(response["value"], ref)
 	finally:
 		_stop_loopback_server(*connection)

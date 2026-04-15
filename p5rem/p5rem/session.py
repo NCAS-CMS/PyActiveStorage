@@ -9,19 +9,22 @@ import logging
 import subprocess
 import threading
 from time import perf_counter
-from typing import Any, Callable
+from typing import Any, Callable, TYPE_CHECKING
 from p5rem.proxy import rFile
+from .protocol import CHUNK_DATA, CHUNKS_DONE, ERROR, FILE_INFO, FILE_CLOSE, FILE_OPEN, GET_CHUNK, GET_CHUNKS, HEARTBEAT, LIST, LIST_RESULT, REDUCE, REDUCTION_RESULT, STAT, STAT_RESULT, VAR_INFO, VAR_OPEN, read_message, write_message
+
+if TYPE_CHECKING:
+	from .cache import P5RemCache
+else:
+	P5RemCache = Any
 
 log = logging.getLogger(__name__)
 
 # Import cache optionally - may not be available on remote servers
 try:
-	from .cache import P5RemCache, get_default_cache
+	from .cache import get_default_cache
 except ImportError:
-	P5RemCache = None  # type: ignore
 	get_default_cache = None  # type: ignore
-
-from .protocol import CHUNK_DATA, CHUNKS_DONE, ERROR, FILE_INFO, FILE_CLOSE, FILE_OPEN, GET_CHUNK, GET_CHUNKS, HEARTBEAT, LIST, LIST_RESULT, REDUCE, REDUCTION_RESULT, STAT, STAT_RESULT, VAR_INFO, VAR_OPEN, read_message, write_message
 
 REQUEST_RESPONSE_TYPES = {
 	LIST: LIST_RESULT,
@@ -308,16 +311,49 @@ class p5remSession:
 
 		return results
 
-	def reduce(self, path: str, varname: str, byte_offset: int, size: int, operation: str, **fields: Any) -> dict[str, Any]:
-		"""Request a remote reduction result."""
+	def reduce_chunk(
+		self,
+		path: str,
+		varname: str,
+		byte_offset: int,
+		size: int,
+		operation: str,
+		**fields: Any,
+	) -> dict[str, Any]:
+		"""Request a reduction over one raw chunk payload."""
 
+		self._ensure_var_server_ready(path, varname)
 		return self.request(
 			REDUCE,
 			path=path,
 			varname=varname,
-			byte_offset=byte_offset,
-			size=size,
+			mode="chunk",
+			byte_offset=int(byte_offset),
+			size=int(size),
 			operation=operation,
+			**fields,
+		)
+
+	def reduce_selection(
+		self,
+		path: str,
+		varname: str,
+		operation: str,
+		selection: Any | None = None,
+		thread_count: int = 1,
+		**fields: Any,
+	) -> dict[str, Any]:
+		"""Request a reduction over a selection (or full dataset when selection is None)."""
+
+		self._ensure_var_server_ready(path, varname)
+		return self.request(
+			REDUCE,
+			path=path,
+			varname=varname,
+			mode="selection",
+			operation=operation,
+			selection=selection,
+			thread_count=max(1, int(thread_count)),
 			**fields,
 		)
 

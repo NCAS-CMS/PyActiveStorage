@@ -466,8 +466,35 @@ class ReconnectingBootstrappedSession:
 	def get_chunk(self, path: str, varname: str, byte_offset: int, size: int, **fields: Any) -> dict[str, Any]:
 		return self._call("get_chunk", path, varname, byte_offset, size, **fields)
 
-	def reduce(self, path: str, varname: str, byte_offset: int, size: int, operation: str, **fields: Any) -> dict[str, Any]:
-		return self._call("reduce", path, varname, byte_offset, size, operation, **fields)
+	def reduce_chunk(
+		self,
+		path: str,
+		varname: str,
+		byte_offset: int,
+		size: int,
+		operation: str,
+		**fields: Any,
+	) -> dict[str, Any]:
+		return self._call("reduce_chunk", path, varname, byte_offset, size, operation, **fields)
+
+	def reduce_selection(
+		self,
+		path: str,
+		varname: str,
+		operation: str,
+		selection: Any | None = None,
+		thread_count: int = 1,
+		**fields: Any,
+	) -> dict[str, Any]:
+		return self._call(
+			"reduce_selection",
+			path,
+			varname,
+			operation,
+			selection=selection,
+			thread_count=thread_count,
+			**fields,
+		)
 
 	def file_close(self, path: str) -> dict[str, Any]:
 		return self._call("file_close", path)

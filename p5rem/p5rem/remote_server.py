@@ -17,6 +17,7 @@ import struct
 import sys
 import traceback
 from typing import Any
+import numpy as np
 
 import cbor2
 
@@ -42,11 +43,12 @@ FILE_INFO = "FILE_INFO"
 VAR_INFO = "VAR_INFO"
 CHUNK_DATA = "CHUNK_DATA"
 CHUNKS_DONE = "CHUNKS_DONE"
+REDUCTION_RESULT = "REDUCTION_RESULT"
 ERROR = "ERROR"
 
 ALL_TYPES = frozenset({
     LIST, STAT, FILE_OPEN, VAR_OPEN, GET_CHUNK, GET_CHUNKS, REDUCE, FILE_CLOSE, HEARTBEAT,
-    LIST_RESULT, STAT_RESULT, FILE_INFO, VAR_INFO, CHUNK_DATA, CHUNKS_DONE, ERROR,
+    LIST_RESULT, STAT_RESULT, FILE_INFO, VAR_INFO, CHUNK_DATA, CHUNKS_DONE, REDUCTION_RESULT, ERROR,
 })
 
 
@@ -73,6 +75,21 @@ def write_message(stream: BufferedIOBase, message: dict[str, Any]) -> None:
     payload = cbor2.dumps(message)
     stream.write(struct.pack(">I", len(payload)) + payload)
     stream.flush()
+
+# --------------------
+# Standard Reductions 
+# --------------------
+
+standard_reductions = {
+    "sum": lambda x: np.sum(x),
+    "mean": lambda x: np.mean(x),
+    "max": lambda x: np.max(x),
+    "min": lambda x: np.min(x),
+    "range": lambda x: (np.min(x), np.max(x)),
+    "count": lambda x: int(np.size(x)),
+    "argmin": lambda x: np.argmin(x) if np.size(x) else None,
+    "argmax": lambda x: np.argmax(x) if np.size(x) else None,
+}
 
 
 # ---------------------------------------------------------------------------
@@ -291,8 +308,72 @@ class ServerStub:
 
         write_message(self.output_stream, {"type": CHUNKS_DONE})
 
-    def handle_reduce(self, path: str, varname: str, byte_offset: int, size: int, operation: str, **fields: Any) -> dict[str, Any]:
-        raise NotImplementedError("REDUCE handling is not implemented yet")
+    def handle_reduce(
+        self,
+        path: str,
+        varname: str,
+        operation: str,
+        byte_offset: int | None = None,
+        size: int | None = None,
+        mode: str | None = None,
+        selection: Any | None = None,
+        thread_count: int = 1,
+        **fields: Any,
+    ) -> dict[str, Any]:
+        dataset = self._get_dataset(path, varname)
+        op = str(operation)
+        reducer = standard_reductions.get(op)
+        if reducer is None:
+            supported = ", ".join(sorted(standard_reductions))
+            raise ValueError(f"unsupported reduction operation: {op!r}; supported operations: {supported}")
+
+        resolved_mode = str(mode) if mode is not None else ("selection" if selection is not None else "chunk")
+        if resolved_mode not in {"chunk", "selection"}:
+            raise ValueError(f"invalid reduction mode: {resolved_mode!r}")
+
+        if resolved_mode == "selection":
+            workers = max(1, int(thread_count))
+            if getattr(dataset, "chunks", None) is not None:
+                value = self._parallel_reduce_selection(path, dataset, op, workers, selection)
+                if value is None:
+                    raise NotImplementedError(
+                        "selection reduction could not be planned chunk-wise; refusing array materialization"
+                    )
+            else:
+                value = self._reduce_contiguous_selection(path, dataset, op, selection)
+            value = self._serialise(value, file_handle=self._open_files.get(path))
+            return {
+                "type": REDUCTION_RESULT,
+                "path": path,
+                "varname": varname,
+                "operation": op,
+                "mode": "selection",
+                "thread_count": workers,
+                "value": value,
+            }
+
+        if byte_offset is None or size is None:
+            raise ValueError("chunk reduction requires byte_offset and size")
+
+        data, _filter_mask, resolved_offset, resolved_size = self._read_raw_data(
+            path,
+            dataset,
+            int(byte_offset),
+            int(size),
+            fields,
+        )
+        reduced_input = self._coerce_chunk_reduction_input(dataset, data)
+        value = self._serialise(reducer(reduced_input), file_handle=self._open_files.get(path))
+        return {
+            "type": REDUCTION_RESULT,
+            "path": path,
+            "varname": varname,
+            "operation": op,
+            "mode": "chunk",
+            "byte_offset": resolved_offset,
+            "size": resolved_size,
+            "value": value,
+        }
 
     def handle_file_close(self, path: str) -> dict[str, Any]:
         file_handle = self._open_files.pop(path, None)
@@ -415,6 +496,341 @@ class ServerStub:
             data = handle.read(read_size)
 
         return data, 0, absolute_offset, len(data)
+
+    def _read_selection_data(self, dataset: Any, selection: Any | None) -> np.ndarray[Any, Any]:
+        if selection is None:
+            return np.asarray(dataset[()])
+
+        indexer = self._decode_selection_spec(selection)
+        return np.asarray(dataset[indexer])
+
+    def _decode_selection_spec(self, spec: Any) -> Any:
+        if spec is None:
+            return slice(None)
+
+        if isinstance(spec, bool):
+            return int(spec)
+
+        if isinstance(spec, (int, np.integer)):
+            return int(spec)
+
+        if isinstance(spec, dict):
+            if spec.get("type") == "index":
+                return int(spec["value"])
+            if spec.get("type") in {None, "slice"} and any(key in spec for key in ("start", "stop", "step")):
+                return slice(spec.get("start"), spec.get("stop"), spec.get("step"))
+            raise ValueError(f"unsupported selection spec dict: {spec!r}")
+
+        if isinstance(spec, (list, tuple)):
+            if len(spec) == 3 and all(not isinstance(item, (list, tuple, dict)) for item in spec):
+                return slice(spec[0], spec[1], spec[2])
+            return tuple(self._decode_selection_spec(item) for item in spec)
+
+        raise TypeError(f"unsupported selection spec type: {type(spec).__name__}")
+
+    def _coerce_chunk_reduction_input(self, dataset: Any, data: bytes) -> np.ndarray[Any, Any]:
+        dtype = np.dtype(getattr(dataset, "dtype", np.uint8))
+        itemsize = int(getattr(dtype, "itemsize", 1))
+        if itemsize > 0 and len(data) % itemsize == 0:
+            return np.frombuffer(data, dtype=dtype)
+        return np.frombuffer(data, dtype=np.uint8)
+
+    def _parallel_reduce_selection(
+        self,
+        path: str,
+        dataset: Any,
+        operation: str,
+        thread_count: int,
+        selection: Any | None,
+    ) -> Any | None:
+        """Attempt chunk-parallel reduction for chunked datasets.
+
+        Falls back to serial mode by returning None when unsupported.
+        """
+
+        if operation not in {"sum", "mean", "min", "max", "range", "count", "argmin", "argmax"}:
+            return None
+
+        dataset_id = getattr(dataset, "id", None)
+        chunks = getattr(dataset, "chunks", None)
+        if dataset_id is None or chunks is None:
+            return None
+
+        shape = tuple(getattr(dataset, "shape", ()))
+        if not shape:
+            return None
+
+        try:
+            from pyfive.h5d import ZarrArrayStub
+            from pyfive.indexing import OrthogonalIndexer
+        except ImportError:
+            return None
+
+        try:
+            indexer_args = self._selection_to_indexer_args(selection, len(shape))
+            indexer = OrthogonalIndexer(indexer_args, ZarrArrayStub(shape, tuple(chunks)))
+            out_shape = tuple(int(x) for x in indexer.shape)
+            work_items = list(dataset_id._get_required_chunks(indexer))
+        except Exception:
+            return None
+
+        if not work_items:
+            if operation == "count":
+                return 0
+            return None
+
+        workers = min(max(1, int(thread_count)), len(work_items))
+
+        decode_chunk = getattr(dataset_id, "_decode_chunk", None)
+        dtype = np.dtype(getattr(dataset, "dtype", np.uint8))
+        chunk_shape = tuple(int(size) for size in chunks)
+
+        fh = open(path, "rb")
+        fd = fh.fileno()
+
+        def _reduce_one(item: tuple[Any, Any, Any, Any]) -> Any:
+            _chunk_coords, chunk_selection, out_selection, storeinfo = item
+            raw = os.pread(fd, int(storeinfo.size), int(storeinfo.byte_offset))
+            if callable(decode_chunk):
+                chunk_array = decode_chunk(raw, int(getattr(storeinfo, "filter_mask", 0)), dtype)
+            else:
+                chunk_array = np.frombuffer(raw, dtype=dtype).reshape(chunk_shape, order=getattr(dataset_id, "_order", "C"))
+            slab = np.asarray(chunk_array[chunk_selection])
+            if operation == "count":
+                return int(slab.size)
+            if slab.size == 0:
+                return None
+            if operation == "sum":
+                return np.sum(slab)
+            if operation == "mean":
+                return (np.sum(slab), int(slab.size))
+            if operation == "min":
+                return np.min(slab)
+            if operation == "max":
+                return np.max(slab)
+            if operation == "argmin":
+                local_idx = int(np.argmin(slab))
+                local_coords = np.unravel_index(local_idx, slab.shape, order="C")
+                global_idx = self._out_selection_local_to_flat_index(out_selection, local_coords, out_shape)
+                if global_idx is None:
+                    return None
+                return (slab.reshape(-1, order="C")[local_idx], int(global_idx))
+            if operation == "argmax":
+                local_idx = int(np.argmax(slab))
+                local_coords = np.unravel_index(local_idx, slab.shape, order="C")
+                global_idx = self._out_selection_local_to_flat_index(out_selection, local_coords, out_shape)
+                if global_idx is None:
+                    return None
+                return (slab.reshape(-1, order="C")[local_idx], int(global_idx))
+            # operation == "range"
+            return (np.min(slab), np.max(slab))
+
+        try:
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                partials = list(pool.map(_reduce_one, work_items))
+        except Exception:
+            return None
+        finally:
+            fh.close()
+
+        if operation == "count":
+            return int(sum(int(value) for value in partials))
+
+        filtered = [value for value in partials if value is not None]
+        if not filtered:
+            return None
+
+        if operation == "sum":
+            return np.sum(np.asarray(filtered))
+        if operation == "mean":
+            total = np.sum(np.asarray([value[0] for value in filtered]))
+            count = int(sum(int(value[1]) for value in filtered))
+            if count == 0:
+                return float("nan")
+            return total / count
+        if operation == "min":
+            return np.min(np.asarray(filtered))
+        if operation == "max":
+            return np.max(np.asarray(filtered))
+        if operation == "argmin":
+            best_value, best_index = filtered[0]
+            for value, index in filtered[1:]:
+                if value < best_value or (value == best_value and index < best_index):
+                    best_value, best_index = value, index
+            return int(best_index)
+        if operation == "argmax":
+            best_value, best_index = filtered[0]
+            for value, index in filtered[1:]:
+                if value > best_value or (value == best_value and index < best_index):
+                    best_value, best_index = value, index
+            return int(best_index)
+
+        mins = np.asarray([value[0] for value in filtered])
+        maxs = np.asarray([value[1] for value in filtered])
+        return (np.min(mins), np.max(maxs))
+
+    def _reduce_contiguous_selection(self, path: str, dataset: Any, operation: str, selection: Any | None) -> Any:
+        """Reduce contiguous datasets without full-array materialization."""
+
+        shape = tuple(getattr(dataset, "shape", ()))
+        if self._is_full_selection(selection, len(shape)):
+            return self._stream_reduce_contiguous_full(path, dataset, operation)
+
+        # For non-full selections on contiguous datasets, only the requested
+        # subset is materialised.
+        data = self._read_selection_data(dataset, selection)
+        reducer = standard_reductions[operation]
+        return reducer(data)
+
+    def _stream_reduce_contiguous_full(self, path: str, dataset: Any, operation: str) -> Any:
+        dataset_id = getattr(dataset, "id", None)
+        if dataset_id is None:
+            raise ValueError("dataset id is missing")
+
+        data_offset = getattr(dataset_id, "data_offset", None)
+        if data_offset is None:
+            raise ValueError("contiguous dataset does not expose data_offset")
+
+        total_nbytes = self._dataset_nbytes(dataset)
+        if total_nbytes <= 0:
+            if operation == "count":
+                return 0
+            if operation in {"sum", "mean"}:
+                return 0
+            return None
+
+        dtype = np.dtype(getattr(dataset, "dtype", np.uint8))
+        itemsize = max(1, int(getattr(dtype, "itemsize", 1)))
+        block_nbytes = max(itemsize, (4 * 1024 * 1024) // itemsize * itemsize)
+
+        count = 0
+        sum_value: Any = 0
+        min_value: Any | None = None
+        max_value: Any | None = None
+        argmin_value: Any | None = None
+        argmax_value: Any | None = None
+        argmin_index = 0
+        argmax_index = 0
+        seen = 0
+
+        with open(path, "rb") as handle:
+            remaining = int(total_nbytes)
+            offset = int(data_offset)
+            while remaining > 0:
+                read_size = min(remaining, block_nbytes)
+                handle.seek(offset)
+                raw = handle.read(read_size)
+                if not raw:
+                    break
+                arr = np.frombuffer(raw, dtype=dtype)
+                if arr.size == 0:
+                    break
+
+                if operation in {"count", "mean"}:
+                    count += int(arr.size)
+                if operation in {"sum", "mean"}:
+                    sum_value = sum_value + np.sum(arr)
+                if operation in {"min", "range"}:
+                    block_min = np.min(arr)
+                    if min_value is None or block_min < min_value:
+                        min_value = block_min
+                if operation in {"max", "range"}:
+                    block_max = np.max(arr)
+                    if max_value is None or block_max > max_value:
+                        max_value = block_max
+                if operation == "argmin":
+                    local_idx = int(np.argmin(arr))
+                    value = arr[local_idx]
+                    global_idx = seen + local_idx
+                    if argmin_value is None or value < argmin_value or (value == argmin_value and global_idx < argmin_index):
+                        argmin_value = value
+                        argmin_index = global_idx
+                if operation == "argmax":
+                    local_idx = int(np.argmax(arr))
+                    value = arr[local_idx]
+                    global_idx = seen + local_idx
+                    if argmax_value is None or value > argmax_value or (value == argmax_value and global_idx < argmax_index):
+                        argmax_value = value
+                        argmax_index = global_idx
+
+                consumed = len(raw)
+                offset += consumed
+                remaining -= consumed
+                seen += int(arr.size)
+
+        if operation == "count":
+            return int(count)
+        if operation == "sum":
+            return sum_value
+        if operation == "mean":
+            return float("nan") if count == 0 else (sum_value / count)
+        if operation == "min":
+            return min_value
+        if operation == "max":
+            return max_value
+        if operation == "range":
+            return (min_value, max_value)
+        if operation == "argmin":
+            return int(argmin_index)
+        if operation == "argmax":
+            return int(argmax_index)
+        raise ValueError(f"unsupported reduction operation: {operation!r}")
+
+    def _is_full_selection(self, selection: Any | None, ndim: int) -> bool:
+        if selection is None:
+            return True
+
+        decoded = self._decode_selection_spec(selection)
+        if isinstance(decoded, tuple):
+            parts = list(decoded)
+        else:
+            parts = [decoded]
+
+        if len(parts) > ndim:
+            return False
+        parts.extend([slice(None)] * (ndim - len(parts)))
+        return all(isinstance(part, slice) and part == slice(None) for part in parts)
+
+    def _out_selection_local_to_flat_index(
+        self,
+        out_selection: Any,
+        local_coords: tuple[int, ...],
+        out_shape: tuple[int, ...],
+    ) -> int | None:
+        if not isinstance(out_selection, tuple):
+            out_selection = (out_selection,)
+
+        if len(out_selection) != len(local_coords) or len(out_selection) != len(out_shape):
+            return None
+
+        global_coords: list[int] = []
+        for dim, (sel, local_coord) in enumerate(zip(out_selection, local_coords)):
+            if not isinstance(sel, slice):
+                return None
+            start, _stop, step = sel.indices(out_shape[dim])
+            global_coords.append(start + int(local_coord) * step)
+
+        return int(np.ravel_multi_index(tuple(global_coords), out_shape, order="C"))
+
+    def _selection_to_indexer_args(self, selection: Any | None, ndim: int) -> tuple[Any, ...]:
+        """Normalise decoded selection for pyfive OrthogonalIndexer."""
+
+        if selection is None:
+            return tuple(slice(None) for _ in range(ndim))
+
+        decoded = self._decode_selection_spec(selection)
+        if isinstance(decoded, tuple):
+            parts = list(decoded)
+        else:
+            parts = [decoded]
+
+        if len(parts) > ndim:
+            raise ValueError("selection rank exceeds dataset rank")
+
+        if len(parts) < ndim:
+            parts.extend([slice(None)] * (ndim - len(parts)))
+
+        return tuple(parts)
 
     def _build_netcdf_maps(self, path: str, file_handle: Any) -> None:
         """Precompute deterministic netCDF dimension metadata maps for one file."""
