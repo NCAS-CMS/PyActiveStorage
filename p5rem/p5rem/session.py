@@ -359,8 +359,9 @@ class p5remSession:
 
 	def file_close(self, path: str) -> dict[str, Any]:
 		"""Release a remote file handle."""
-
-		return self.request(FILE_CLOSE, path=path)
+		response = self.request(FILE_CLOSE, path=path)
+		self._server_ready_vars.pop(path, None)
+		return response
 
 	def heartbeat(self) -> dict[str, Any]:
 		"""Round-trip a keepalive message."""
