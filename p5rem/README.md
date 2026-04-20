@@ -43,6 +43,41 @@ Then point p5rem at that interpreter, for example:
 export P5REM_SSH_PYTHON="conda run -n my-remote-env python"
 ```
 
+If your site requires shell setup, pick one activation model and keep it consistent for that host:
+
+- Module-based environments: load a module, then use `python`.
+- Conda/mamba environments: activate an env, then use `python`.
+
+Example (module-based):
+
+```python
+from p5rem import bootstrap_session
+
+with bootstrap_session(
+	host="xfer1",
+	remote_setup="module load jaspy",
+	remote_python="python",
+	login_shell=True,
+) as session:
+	...
+```
+
+Example (conda/mamba activation):
+
+```python
+from p5rem import bootstrap_session
+
+# this example uses conda, but you could replace
+# conda with mamba or even $MAMBA_EXE if appropriate
+with bootstrap_session(
+	host="xfer1",
+	remote_setup="conda activate my-remote-env",
+	remote_python="python",
+	login_shell=True,
+) as session:
+	...
+```
+
 ## Testing
 
 The test suite is split into two groups:
@@ -99,6 +134,23 @@ Notes:
 - `P5REM_SSH_PYTHON` may be set to `conda run -n <env> python`; p5rem automatically adds `--no-capture-output` when bootstrapping the remote server so the SSH stdio protocol remains binary-clean.
 - `P5REM_SSH_LOGIN_SHELL=1` wraps the remote command with `bash -lc`, which is useful on HPC systems where conda is only initialized in login-shell startup files.
 - The remote round-trip test reuses the same file-comparison assertions as the loopback tests.
+
+### Bootstrap failure cases
+
+Bootstrap runs a remote Python preflight before launching the p5rem server. If
+startup fails, the common cases are:
+
+- Case (a): No setup command was provided, and `remote_python` is not directly available on the remote host.
+- Case (b): No conda/mamba tooling is available on the remote host, so commands such as `conda run ...` cannot execute.
+- Case (c): A setup command was provided (`remote_setup`), but it fails (for example `module load` fails).
+
+Tips:
+
+- Do not mix activation models in one command chain; pick module-load or conda/mamba-activate for a given host.
+- For module-based hosts, use `remote_setup="module load ..."` with `remote_python="python"`.
+- For conda/mamba activation hosts, use `remote_setup="... && conda activate <env>"` (or mamba equivalent) with `remote_python="python"`.
+- Use `remote_python="conda run -n <env> python"` as an alternative when your shell already has conda/mamba commands available without activation.
+- Set `P5REM_BOOTSTRAP_VERBOSE_ERRORS=1` to include remote `stderr` details in raised bootstrap errors.
 
 ### Standalone acid test
 

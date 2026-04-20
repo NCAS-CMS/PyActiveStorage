@@ -60,5 +60,20 @@ Adjust the constants at the top of the script for your host, environment, file, 
 ## Notes
 
 - If the remote Python environment is only available in shell startup files, set `login_shell=True`.
+- If your environment requires setup commands first, choose one model per host.
+- Module model example: `remote_setup="module load python/3.11"`, `remote_python="python"`.
+- Conda/mamba activate model example: `remote_setup="source ~/miniforge3/etc/profile.d/conda.sh && conda activate jas26"`, `remote_python="python"`.
 - If you use `conda run -n <env> python`, p5rem automatically adds `--no-capture-output` during bootstrap so the SSH stdio transport remains usable.
 - The session and remote file both support context-manager usage and should normally be used with `with`.
+
+### Bootstrap Troubleshooting
+
+Bootstrap validates remote Python first, then launches the server. Distinguish
+these startup failures:
+
+- Case (a): no setup command was provided, and `remote_python` is not available.
+- Case (b): no conda/mamba tooling is available, so `conda run`/`mamba run` commands fail immediately.
+- Case (c): setup command exists (`remote_setup`) but fails (for example `module load ...`).
+
+Set `P5REM_BOOTSTRAP_VERBOSE_ERRORS=1` when you need full remote stderr in the
+exception text.

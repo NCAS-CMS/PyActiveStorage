@@ -254,6 +254,43 @@ def test_bootstrap_supports_shell_fragment_remote_python(tmp_path: Path, monkeyp
 		proc.close()
 
 
+def test_bootstrap_supports_remote_setup_prelude(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+	remote_root = tmp_path / "remote"
+	remote_root.mkdir()
+	local_script = tmp_path / "server.py"
+	local_script.write_text("print('ok')\n", encoding="utf-8")
+	client = _FakeSSHClient(remote_root)
+	monkeypatch.setattr(bootstrap_module, "_probe_remote_python", lambda *args, **kwargs: None)
+
+	proc = bootstrap_server(
+		host="fake-host",
+		username="fake-user",
+		password="fake-pass",
+		local_script_path=str(local_script),
+		remote_dir=".p5rem",
+		remote_filename="boot.py",
+		remote_python="python3",
+		remote_setup="module load py/3.12",
+		login_shell=True,
+		ssh_client_factory=lambda: client,
+	)
+	try:
+		inner_command = shlex.split(proc.command)[2]
+		assert inner_command.startswith("module load py/3.12 && python3 -u")
+	finally:
+		proc.close()
+
+
+def test_build_python_probe_command_supports_remote_setup() -> None:
+	command = bootstrap_module._build_python_probe_command(
+		"python3",
+		remote_setup="module load py/3.12",
+		login_shell=True,
+	)
+	inner = shlex.split(command)[2]
+	assert inner.startswith("module load py/3.12 && python3 -c")
+
+
 def test_bootstrap_prompts_hidden_password_for_keyboard_interactive(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 	class _AuthFailThenSucceedSSHClient(_FakeSSHClient):
 		def __init__(self, remote_root: Path, *, should_fail: bool) -> None:
@@ -552,6 +589,49 @@ def test_bootstrap_session_verbose_errors_include_stderr(monkeypatch: pytest.Mon
 
 	message = str(excinfo.value)
 	assert "stderr=bash: line 1: conda: command not found" in message
+
+
+def test_probe_remote_python_reports_setup_stage_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+	monkeypatch.setattr(
+		bootstrap_module,
+		"_run_probe_command",
+		lambda *args, **kwargs: (41, "__P5REM_PREFLIGHT_STAGE__:setup"),
+	)
+
+	with pytest.raises(bootstrap_module.BootstrapError) as excinfo:
+		bootstrap_module._probe_remote_python(
+			client=object(),
+			remote_python="python3",
+			remote_setup="module load python/3.11",
+			login_shell=True,
+			timeout=10.0,
+		)
+
+	message = str(excinfo.value)
+	assert "remote setup preflight failed" in message
+	assert "module load python/3.11" in message
+
+
+def test_probe_remote_python_reports_dependency_stage_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+	stderr = "ModuleNotFoundError: No module named 'cbor2'\n__P5REM_PREFLIGHT_STAGE__:dependencies"
+	monkeypatch.setattr(
+		bootstrap_module,
+		"_run_probe_command",
+		lambda *args, **kwargs: (43, stderr),
+	)
+
+	with pytest.raises(bootstrap_module.BootstrapError) as excinfo:
+		bootstrap_module._probe_remote_python(
+			client=object(),
+			remote_python="python3",
+			remote_setup=None,
+			login_shell=False,
+			timeout=10.0,
+		)
+
+	message = str(excinfo.value)
+	assert "remote dependency preflight failed" in message
+	assert "pyfive and cbor2" in message
 
 
 def test_reconnecting_bootstrap_session_retries_after_session_error(monkeypatch) -> None:

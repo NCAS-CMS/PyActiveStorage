@@ -18,8 +18,7 @@ logging.getLogger().setLevel(logging.WARNING)
 logging.getLogger("p5rem").setLevel(logging.DEBUG)
 
 REMOTE_HOST = "arc-ssh"
-REMOTE_PYTHON = "conda run -n p5server python"
-REMOTE_FILE = "data/tas_day_eng.nc"
+REMOTE_FILE = "data/cmip6/tas_day_eg.nc"
 VARIABLE = "tas"
 SELECTION = (slice(None), slice(None), slice(None))
 
@@ -27,7 +26,8 @@ def main() -> None:
 	try:
 		with bootstrap_session(
 			host=REMOTE_HOST,
-			remote_python=REMOTE_PYTHON,
+			remote_setup="micromamba activate p5server",
+			remote_python="python",
 			login_shell=True,
 			use_cache=False,
 		) as session:

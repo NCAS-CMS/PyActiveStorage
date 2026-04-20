@@ -148,6 +148,7 @@ def _build_command(
 	remote_path: str,
 	args: tuple[str, ...],
 	*,
+	remote_setup: str | None,
 	login_shell: bool,
 ) -> str:
 	if _is_shell_fragment(remote_python):
@@ -158,35 +159,114 @@ def _build_command(
 	else:
 		argv = [*_normalise_remote_python(remote_python), "-u", remote_path, *args]
 		command = shlex.join(argv)
+	if remote_setup is not None and str(remote_setup).strip():
+		command = f"{remote_setup} && {command}"
 	if login_shell:
 		return f"bash -lc {shlex.quote(command)}"
 	return command
 
 
-def _build_python_probe_command(remote_python: str, *, login_shell: bool) -> str:
+def _build_python_probe_command(
+	remote_python: str,
+	*,
+	remote_setup: str | None,
+	login_shell: bool,
+) -> str:
 	"""Build a lightweight remote-python probe command."""
 
 	probe_snippet = "import sys; print(sys.executable)"
-	if _is_shell_fragment(remote_python):
-		command = f"{remote_python} -c {shlex.quote(probe_snippet)}"
-	else:
-		argv = [*_normalise_remote_python(remote_python), "-c", probe_snippet]
-		command = shlex.join(argv)
+	return _build_python_snippet_command(
+		remote_python,
+		probe_snippet,
+		remote_setup=remote_setup,
+		login_shell=login_shell,
+	)
+
+
+def _build_full_preflight_command(
+	remote_python: str,
+	*,
+	remote_setup: str | None,
+	login_shell: bool,
+) -> str:
+	"""Build a single preflight command with staged setup/python/dependency checks."""
+
+	python_probe = _build_python_snippet_command(
+		remote_python,
+		"import sys; print(sys.executable)",
+		remote_setup=None,
+		login_shell=False,
+	)
+	dependency_probe = _build_python_snippet_command(
+		remote_python,
+		"import pyfive, cbor2",
+		remote_setup=None,
+		login_shell=False,
+	)
+
+	parts: list[str] = []
+	if remote_setup is not None and str(remote_setup).strip():
+		parts.append(str(remote_setup))
+		parts.append(
+			"setup_rc=$?; "
+			"if [ $setup_rc -ne 0 ]; then "
+			"echo '__P5REM_PREFLIGHT_STAGE__:setup' 1>&2; "
+			"exit 41; "
+			"fi"
+		)
+
+	parts.append(python_probe)
+	parts.append(
+		"python_rc=$?; "
+		"if [ $python_rc -ne 0 ]; then "
+		"echo '__P5REM_PREFLIGHT_STAGE__:python' 1>&2; "
+		"exit 42; "
+		"fi"
+	)
+
+	parts.append(dependency_probe)
+	parts.append(
+		"dependency_rc=$?; "
+		"if [ $dependency_rc -ne 0 ]; then "
+		"echo '__P5REM_PREFLIGHT_STAGE__:dependencies' 1>&2; "
+		"exit 43; "
+		"fi"
+	)
+
+	command = "; ".join(parts)
 	if login_shell:
 		return f"bash -lc {shlex.quote(command)}"
 	return command
 
 
-def _probe_remote_python(client: Any, remote_python: str, *, login_shell: bool, timeout: float) -> None:
-	"""Validate that remote_python can launch Python before uploading server code."""
+def _build_python_snippet_command(
+	remote_python: str,
+	python_snippet: str,
+	*,
+	remote_setup: str | None,
+	login_shell: bool,
+) -> str:
+	"""Build a remote command that runs a Python snippet."""
+
+	if _is_shell_fragment(remote_python):
+		command = f"{remote_python} -c {shlex.quote(python_snippet)}"
+	else:
+		argv = [*_normalise_remote_python(remote_python), "-c", python_snippet]
+		command = shlex.join(argv)
+	if remote_setup is not None and str(remote_setup).strip():
+		command = f"{remote_setup} && {command}"
+	if login_shell:
+		return f"bash -lc {shlex.quote(command)}"
+	return command
+def _run_probe_command(client: Any, command: str, *, timeout: float, stage: str) -> tuple[int, str]:
+	"""Execute a preflight command over SSH and return exit code and stderr text."""
 
 	transport = client.get_transport()
 	if transport is None:
-		raise BootstrapError("ssh transport not available for remote_python probe")
+		raise BootstrapError(f"ssh transport not available for {stage}")
 
 	channel = transport.open_session()
-	probe_command = _build_python_probe_command(remote_python, login_shell=login_shell)
-	channel.exec_command(probe_command)
+	channel.exec_command(command)
 	stdout = channel.makefile("rb")
 	stderr = channel.makefile_stderr("rb")
 	try:
@@ -196,19 +276,7 @@ def _probe_remote_python(client: Any, remote_python: str, *, login_shell: bool, 
 		stderr_text = stderr.read(4096)
 		if isinstance(stderr_text, bytes):
 			stderr_text = stderr_text.decode("utf-8", errors="replace")
-		stderr_text = (stderr_text or "").strip()
-		if exit_code != 0:
-			detail = _classify_startup_stderr(stderr_text, remote_python)
-			if detail:
-				message = f"remote python preflight failed: {detail}"
-			else:
-				message = (
-					"remote python preflight failed; verify remote_python launches python on the "
-					f"remote host (remote_python={remote_python!r})"
-				)
-			if _verbose_bootstrap_errors_enabled() and stderr_text:
-				message = f"{message}; stderr={stderr_text}"
-			raise BootstrapError(message)
+		return exit_code, (stderr_text or "").strip()
 	finally:
 		with suppress(Exception):
 			stdout.close()
@@ -216,6 +284,56 @@ def _probe_remote_python(client: Any, remote_python: str, *, login_shell: bool, 
 			stderr.close()
 		with suppress(Exception):
 			channel.close()
+def _probe_remote_python(
+	client: Any,
+	remote_python: str,
+	*,
+	remote_setup: str | None,
+	login_shell: bool,
+	timeout: float,
+) -> None:
+	"""Validate setup, runtime, and dependencies in one remote preflight command."""
+
+	probe_command = _build_full_preflight_command(
+		remote_python,
+		remote_setup=remote_setup,
+		login_shell=login_shell,
+	)
+	exit_code, stderr_text = _run_probe_command(
+		client,
+		probe_command,
+		timeout=timeout,
+		stage="remote python probe",
+	)
+	if exit_code == 0:
+		return
+
+	detail = _classify_startup_stderr(stderr_text, remote_python)
+	stage_text = (stderr_text or "").lower()
+	if exit_code == 41 or "__p5rem_preflight_stage__:setup" in stage_text:
+		message = (
+			"remote setup preflight failed; verify remote_setup succeeds on the "
+			f"remote host (remote_setup={remote_setup!r})"
+		)
+	elif exit_code == 43 or "__p5rem_preflight_stage__:dependencies" in stage_text:
+		if detail:
+			message = f"remote dependency preflight failed: {detail}"
+		else:
+			message = (
+				"remote dependency preflight failed; verify remote_python environment has "
+				"pyfive and cbor2 installed"
+			)
+	else:
+		if detail:
+			message = f"remote python preflight failed: {detail}"
+		else:
+			message = (
+				"remote python preflight failed; verify remote_python launches python on the "
+				f"remote host (remote_python={remote_python!r})"
+			)
+	if _verbose_bootstrap_errors_enabled() and stderr_text:
+		message = f"{message}; stderr={stderr_text}"
+	raise BootstrapError(message)
 
 
 def _classify_startup_stderr(stderr_snippet: str, remote_python: str) -> str | None:
@@ -310,6 +428,7 @@ def bootstrap_server(
 	remote_dir: str = ".p5rem",
 	remote_filename: str = "p5rem_server.py",
 	remote_python: str = "python3",
+	remote_setup: str | None = None,
 	port: int | None = None,
 	timeout: float = 10.0,
 	password: str | None = None,
@@ -422,7 +541,13 @@ def bootstrap_server(
 	t2 = perf_counter()
 	log.info("SSH connection established (%.2f seconds)", t2 - t1)
 
-	_probe_remote_python(client, remote_python, login_shell=login_shell, timeout=timeout)
+	_probe_remote_python(
+		client,
+		remote_python,
+		remote_setup=remote_setup,
+		login_shell=login_shell,
+		timeout=timeout,
+	)
 
 	try:
 		sftp = client.open_sftp()
@@ -447,7 +572,13 @@ def bootstrap_server(
 		if transport is None:
 			raise BootstrapError("ssh transport not available")
 		channel = transport.open_session()
-		command = _build_command(remote_python, remote_path, args, login_shell=login_shell)
+		command = _build_command(
+			remote_python,
+			remote_path,
+			args,
+			remote_setup=remote_setup,
+			login_shell=login_shell,
+		)
 		log.info("Starting remote server: %s", command)
 		channel.exec_command(command)
 
@@ -476,6 +607,7 @@ def bootstrap_session(
 	remote_dir: str = ".p5rem",
 	remote_filename: str = "p5rem_server.py",
 	remote_python: str = "python3",
+	remote_setup: str | None = None,
 	port: int | None = None,
 	timeout: float = 10.0,
 	password: str | None = None,
@@ -497,6 +629,7 @@ def bootstrap_session(
 		remote_dir=remote_dir,
 		remote_filename=remote_filename,
 		remote_python=remote_python,
+		remote_setup=remote_setup,
 		port=port,
 		timeout=timeout,
 		password=password,
