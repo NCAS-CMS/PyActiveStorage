@@ -120,14 +120,11 @@ By default p5rem uses a persistent disk cache (backed by
 metadata and chunk data across sessions.  The cache lives in
 ``~/.cache/p5rem/`` and has a 10 GB size limit by default.
 
+The high-level :func:`~p5rem.bootstrap.bootstrap_session` helper uses p5rem's
+default persistent cache automatically.  If you want to avoid any local cache
+usage for a session, disable it explicitly:
+
 .. code-block:: python
-
-   # Explicit cache (custom location and size limit)
-   from p5rem import bootstrap_session, cache
-
-   my_cache = cache.P5RemCache(directory="~/.p5rem_cache", size_limit=5 * 2**30)
-   with bootstrap_session(host="hpc", remote_python="…", p5rem_cache=my_cache) as session:
-       ...
 
    # Disable caching entirely
    with bootstrap_session(host="hpc", remote_python="…", use_cache=False) as session:
@@ -215,5 +212,6 @@ To list the conda environments available on the remote host:
    from p5rem import discover_remote_conda_envs
 
    envs = discover_remote_conda_envs(host="hpc")
-   for env in envs:
-       print(env["name"], env["python"])
+   for name, python in envs.items():
+       print(name, python)
+   

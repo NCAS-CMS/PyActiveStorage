@@ -175,12 +175,13 @@ def test_bootstrap_command_quotes_arguments(tmp_path: Path) -> None:
 		proc.close()
 
 
-def test_bootstrap_adds_no_capture_output_for_conda_run(tmp_path: Path) -> None:
+def test_bootstrap_adds_no_capture_output_for_conda_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 	remote_root = tmp_path / "remote"
 	remote_root.mkdir()
 	local_script = tmp_path / "server.py"
 	local_script.write_text("print('ok')\n", encoding="utf-8")
 	client = _FakeSSHClient(remote_root)
+	monkeypatch.setattr(bootstrap_module, "_probe_remote_python", lambda *args, **kwargs: None)
 
 	proc = bootstrap_server(
 		host="fake-host",
@@ -198,6 +199,150 @@ def test_bootstrap_adds_no_capture_output_for_conda_run(tmp_path: Path) -> None:
 		parts = shlex.split(inner_command)
 		assert parts[:4] == ["conda", "run", "--no-capture-output", "-n"]
 		assert parts[4:6] == ["jas26", "python"]
+	finally:
+		proc.close()
+
+
+def test_bootstrap_reports_remote_python_preflight_failure(tmp_path: Path) -> None:
+	remote_root = tmp_path / "remote"
+	remote_root.mkdir()
+	local_script = tmp_path / "server.py"
+	local_script.write_text("print('ok')\n", encoding="utf-8")
+	client = _FakeSSHClient(remote_root)
+
+	with pytest.raises(bootstrap_module.BootstrapError, match="remote python preflight failed") as excinfo:
+		bootstrap_server(
+			host="fake-host",
+			username="fake-user",
+			password="fake-pass",
+			local_script_path=str(local_script),
+			remote_dir=".p5rem",
+			remote_filename="boot.py",
+			remote_python="conda run -n missingenv python",
+			login_shell=True,
+			ssh_client_factory=lambda: client,
+		)
+
+	message = str(excinfo.value)
+	assert "remote conda environment appears unavailable" in message
+	assert "conda run -n missingenv python" in message
+
+
+def test_bootstrap_supports_shell_fragment_remote_python(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+	remote_root = tmp_path / "remote"
+	remote_root.mkdir()
+	local_script = tmp_path / "server.py"
+	local_script.write_text("print('ok')\n", encoding="utf-8")
+	client = _FakeSSHClient(remote_root)
+	monkeypatch.setattr(bootstrap_module, "_probe_remote_python", lambda *args, **kwargs: None)
+
+	proc = bootstrap_server(
+		host="fake-host",
+		username="fake-user",
+		password="fake-pass",
+		local_script_path=str(local_script),
+		remote_dir=".p5rem",
+		remote_filename="boot.py",
+		remote_python="module load py/3.12 && python",
+		login_shell=True,
+		ssh_client_factory=lambda: client,
+	)
+	try:
+		inner_command = shlex.split(proc.command)[2]
+		assert "module load py/3.12 && python -u" in inner_command
+	finally:
+		proc.close()
+
+
+def test_bootstrap_prompts_hidden_password_for_keyboard_interactive(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+	class _AuthFailThenSucceedSSHClient(_FakeSSHClient):
+		def __init__(self, remote_root: Path, *, should_fail: bool) -> None:
+			super().__init__(remote_root)
+			self.should_fail = should_fail
+
+		def connect(self, **kwargs: Any) -> None:
+			self.connect_args = dict(kwargs)
+			if self.should_fail:
+				raise bootstrap_module.paramiko.AuthenticationException("challenge required")
+
+	remote_root = tmp_path / "remote"
+	remote_root.mkdir()
+	local_script = tmp_path / "server.py"
+	local_script.write_text("print('ok')\n", encoding="utf-8")
+
+	first_client = _AuthFailThenSucceedSSHClient(remote_root, should_fail=True)
+	second_client = _AuthFailThenSucceedSSHClient(remote_root, should_fail=False)
+	clients = iter([first_client, second_client])
+
+	class _DummyStdin:
+		@staticmethod
+		def isatty() -> bool:
+			return True
+
+	monkeypatch.setattr(bootstrap_module.sys, "stdin", _DummyStdin())
+	monkeypatch.setattr(bootstrap_module.getpass, "getpass", lambda prompt: "secret-pass")
+
+	proc = bootstrap_server(
+		host="fake-host",
+		username="fake-user",
+		password=None,
+		local_script_path=str(local_script),
+		remote_dir=".p5rem",
+		remote_filename="boot.py",
+		remote_python="python3",
+		ssh_client_factory=lambda: next(clients),
+	)
+	try:
+		assert first_client.connect_args is not None
+		assert first_client.connect_args["password"] == "secret-pass"
+		assert second_client.connect_args is not None
+		assert second_client.connect_args["password"] == "secret-pass"
+		assert second_client.connect_args["allow_agent"] is False
+		assert second_client.connect_args["look_for_keys"] is False
+	finally:
+		proc.close()
+
+
+def test_bootstrap_masks_paramiko_input_prompt(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+	class _PromptSSHClient(_FakeSSHClient):
+		def __init__(self, remote_root: Path) -> None:
+			super().__init__(remote_root)
+			self.password_value: str | None = None
+
+		def connect(self, **kwargs: Any) -> None:
+			self.connect_args = dict(kwargs)
+			self.password_value = kwargs.get("password")
+
+	remote_root = tmp_path / "remote"
+	remote_root.mkdir()
+	local_script = tmp_path / "server.py"
+	local_script.write_text("print('ok')\n", encoding="utf-8")
+
+	client = _PromptSSHClient(remote_root)
+
+	class _DummyStdin:
+		@staticmethod
+		def isatty() -> bool:
+			return True
+
+	monkeypatch.setattr(bootstrap_module.sys, "stdin", _DummyStdin())
+	monkeypatch.setattr(bootstrap_module.getpass, "getpass", lambda prompt: "hidden-secret")
+
+	proc = bootstrap_server(
+		host="fake-host",
+		username="fake-user",
+		password=None,
+		local_script_path=str(local_script),
+		remote_dir=".p5rem",
+		remote_filename="boot.py",
+		remote_python="python3",
+		ssh_client_factory=lambda: client,
+	)
+	try:
+		assert client.password_value == "hidden-secret"
+		assert client.connect_args is not None
+		assert client.connect_args["allow_agent"] is False
+		assert client.connect_args["look_for_keys"] is False
 	finally:
 		proc.close()
 
@@ -299,6 +444,114 @@ def test_bootstrap_session_can_disable_default_cache(monkeypatch) -> None:
 	assert result is not None
 	assert recorded["host"] is None
 	assert recorded["cache"] is None
+
+
+def test_bootstrap_session_reports_missing_remote_runtime(monkeypatch) -> None:
+	class FakeProc:
+		def poll(self) -> int:
+			return 127
+
+		def read_stderr_snippet(self) -> str:
+			return "bash: mamba: command not found"
+
+		stdin = object()
+		stdout = object()
+
+	class FailingSession:
+		def __init__(self, **kwargs):
+			_ = kwargs
+
+		def heartbeat(self):
+			raise RuntimeError("startup failure")
+
+		def close(self):
+			return None
+
+	monkeypatch.setattr(bootstrap_module, "bootstrap_server", lambda **kwargs: FakeProc())
+	monkeypatch.setattr(bootstrap_module, "p5remSession", FailingSession)
+
+	with pytest.raises(bootstrap_module.BootstrapError) as excinfo:
+		bootstrap_module.bootstrap_session(
+			host="fake-host",
+			remote_python="mamba run -n p5rem-remote python",
+			use_cache=False,
+		)
+
+	message = str(excinfo.value)
+	assert "remote_python command appears unavailable" in message
+	assert "mamba run -n p5rem-remote python" in message
+
+
+def test_bootstrap_session_reports_missing_remote_runtime_without_exit_code(monkeypatch) -> None:
+	class FakeProc:
+		def poll(self):
+			return None
+
+		def read_stderr_snippet(self) -> str:
+			return "bash: line 1: conda: command not found"
+
+		stdin = object()
+		stdout = object()
+
+	class FailingSession:
+		def __init__(self, **kwargs):
+			_ = kwargs
+
+		def heartbeat(self):
+			raise RuntimeError("startup failure")
+
+		def close(self):
+			return None
+
+	monkeypatch.setattr(bootstrap_module, "bootstrap_server", lambda **kwargs: FakeProc())
+	monkeypatch.setattr(bootstrap_module, "p5remSession", FailingSession)
+
+	with pytest.raises(bootstrap_module.BootstrapError) as excinfo:
+		bootstrap_module.bootstrap_session(
+			host="fake-host",
+			remote_python="conda run -n p5server python",
+			use_cache=False,
+		)
+
+	message = str(excinfo.value)
+	assert "remote_python command appears unavailable" in message
+	assert "conda run -n p5server python" in message
+
+
+def test_bootstrap_session_verbose_errors_include_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
+	class FakeProc:
+		def poll(self):
+			return 127
+
+		def read_stderr_snippet(self) -> str:
+			return "bash: line 1: conda: command not found"
+
+		stdin = object()
+		stdout = object()
+
+	class FailingSession:
+		def __init__(self, **kwargs):
+			_ = kwargs
+
+		def heartbeat(self):
+			raise RuntimeError("startup failure")
+
+		def close(self):
+			return None
+
+	monkeypatch.setattr(bootstrap_module, "bootstrap_server", lambda **kwargs: FakeProc())
+	monkeypatch.setattr(bootstrap_module, "p5remSession", FailingSession)
+	monkeypatch.setenv("P5REM_BOOTSTRAP_VERBOSE_ERRORS", "1")
+
+	with pytest.raises(bootstrap_module.BootstrapError) as excinfo:
+		bootstrap_module.bootstrap_session(
+			host="fake-host",
+			remote_python="conda run -n p5server python",
+			use_cache=False,
+		)
+
+	message = str(excinfo.value)
+	assert "stderr=bash: line 1: conda: command not found" in message
 
 
 def test_reconnecting_bootstrap_session_retries_after_session_error(monkeypatch) -> None:

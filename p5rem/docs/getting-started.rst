@@ -26,6 +26,39 @@ Requirements
 * A Python environment on the remote host that contains ``pyfive >= 0.5.0``,
   ``numpy``, and ``cbor2``
 
+Minimal remote env setup script
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This repository includes a helper script to create the minimal remote
+environment using mamba:
+
+.. code-block:: bash
+
+   ./examples/setup_remote_mamba_env.sh
+
+By default this creates an environment named ``p5rem-remote`` with:
+
+* ``python >= 3.10``
+* ``pyfive >= 0.5.0``
+* ``cbor2``
+
+You can choose a different environment name:
+
+.. code-block:: bash
+
+   ./examples/setup_remote_mamba_env.sh my-remote-env
+
+If your server uses micromamba, override the executable:
+
+.. code-block:: bash
+
+   MAMBA_EXE=micromamba ./examples/setup_remote_mamba_env.sh my-remote-env
+
+The script also accepts ``MAMBA_BIN`` for compatibility.
+
+Then set your remote Python command accordingly, for example
+``conda run -n my-remote-env python``.
+
 Quick start
 -----------
 

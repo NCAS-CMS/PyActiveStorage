@@ -9,6 +9,40 @@ For a minimal non-GUI example that defines the remote host and Python command di
 - [examples/read_remote_slice.py](examples/read_remote_slice.py)
 - [doc/user-guide.md](doc/user-guide.md)
 
+### Remote environment bootstrap (mamba)
+
+If you need to create the minimal remote Python environment for the p5rem
+server stub, run:
+
+```bash
+./examples/setup_remote_mamba_env.sh
+```
+
+This creates an environment (default name: `p5rem-remote`) with:
+
+- `python>=3.10`
+- `pyfive>=0.5.0`
+- `cbor2`
+
+You can choose a custom environment name:
+
+```bash
+./examples/setup_remote_mamba_env.sh my-remote-env
+```
+
+If your site uses `micromamba`, set `MAMBA_EXE` (the script also accepts
+`MAMBA_BIN` for compatibility):
+
+```bash
+MAMBA_EXE=micromamba ./examples/setup_remote_mamba_env.sh my-remote-env
+```
+
+Then point p5rem at that interpreter, for example:
+
+```bash
+export P5REM_SSH_PYTHON="conda run -n my-remote-env python"
+```
+
 ## Testing
 
 The test suite is split into two groups:
