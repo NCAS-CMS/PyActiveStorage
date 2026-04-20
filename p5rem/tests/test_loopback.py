@@ -98,6 +98,31 @@ def test_loopback_list_and_stat(loopback_session) -> None:
 	assert stat_result["size"] == len("placeholder")
 
 
+def test_server_detect_file_format_from_extension() -> None:
+	server = ServerStub(io.BytesIO(), io.BytesIO())
+	assert server._detect_file_format("demo.nc") == "hdf5"
+	assert server._detect_file_format("demo.h5") == "hdf5"
+	assert server._detect_file_format("demo.pp") == "pp"
+	assert server._detect_file_format("demo.pp.gz") == "pp"
+
+
+def test_server_detect_file_format_from_magic(tmp_path: Path) -> None:
+	server = ServerStub(io.BytesIO(), io.BytesIO())
+
+	hdf_path = tmp_path / "mystery_hdf"
+	hdf_path.write_bytes(b"\x89HDF\r\n\x1a\nEXTRA")
+	assert server._detect_file_format(str(hdf_path)) == "hdf5"
+
+	pp_path = tmp_path / "mystery_pp"
+	pp_path.write_bytes(b"\x00\x01\x02\x03EXTRA")
+	assert server._detect_file_format(str(pp_path)) == "pp"
+
+	unknown_path = tmp_path / "mystery_unknown"
+	unknown_path.write_bytes(b"ABCDEFGH")
+	with pytest.raises(ValueError):
+		server._detect_file_format(str(unknown_path))
+
+
 def test_loopback_proxy_round_trip() -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]

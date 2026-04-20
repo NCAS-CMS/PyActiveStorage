@@ -631,7 +631,7 @@ def test_probe_remote_python_reports_dependency_stage_failure(monkeypatch: pytes
 
 	message = str(excinfo.value)
 	assert "remote dependency preflight failed" in message
-	assert "pyfive and cbor2" in message
+	assert "required backend installed (pyfive for HDF5, ppfive for PP)" in message
 
 
 def test_reconnecting_bootstrap_session_retries_after_session_error(monkeypatch) -> None:

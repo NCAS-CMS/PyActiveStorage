@@ -199,7 +199,9 @@ def _build_full_preflight_command(
 	)
 	dependency_probe = _build_python_snippet_command(
 		remote_python,
-		"import pyfive, cbor2",
+		"import cbor2; import importlib.util as _iu; "
+		"_have_backend = (_iu.find_spec('pyfive') is not None) or (_iu.find_spec('ppfive') is not None); "
+		"assert _have_backend, 'missing pyfive/ppfive'",
 		remote_setup=None,
 		login_shell=False,
 	)
@@ -321,7 +323,7 @@ def _probe_remote_python(
 		else:
 			message = (
 				"remote dependency preflight failed; verify remote_python environment has "
-				"pyfive and cbor2 installed"
+				"cbor2 and the required backend installed (pyfive for HDF5, ppfive for PP)"
 			)
 	else:
 		if detail:
@@ -362,10 +364,10 @@ def _classify_startup_stderr(stderr_snippet: str, remote_python: str) -> str | N
 			"create the environment on the remote host or update remote_python to a valid env"
 		)
 
-	if "module not found" in text and ("pyfive" in text or "cbor2" in text):
+	if "module not found" in text and ("pyfive" in text or "ppfive" in text or "cbor2" in text):
 		return (
 			"remote server dependencies are missing; ensure the remote environment "
-			"has pyfive and cbor2 installed"
+			"has cbor2 and the required backend installed (pyfive for HDF5, ppfive for PP)"
 		)
 
 	return None
@@ -669,7 +671,7 @@ def bootstrap_session(
 			else:
 				message = (
 					"remote p5rem server failed startup; verify remote_python points to a working "
-					"environment with pyfive and cbor2"
+					"environment with cbor2 and the required backend (pyfive for HDF5, ppfive for PP)"
 				)
 			if _verbose_bootstrap_errors_enabled():
 				extra: list[str] = []

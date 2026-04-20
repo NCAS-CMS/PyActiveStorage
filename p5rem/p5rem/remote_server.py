@@ -2,7 +2,7 @@
 Self-contained p5rem remote server.
 
 This file is designed to be uploaded to a remote system and executed standalone.
-It has NO imports from the p5rem package — only pyfive, cbor2, and stdlib.
+It has NO imports from the p5rem package — only pyfive/ppfive, cbor2, and stdlib.
 """
 
 from __future__ import annotations
@@ -107,6 +107,7 @@ class ServerStub:
         self.input_stream = input_stream if input_stream is not None else sys.stdin.buffer
         self.output_stream = output_stream if output_stream is not None else sys.stdout.buffer
         self._open_files: dict[str, Any] = {}
+        self._file_formats: dict[str, str] = {}
         self._datasets: dict[str, dict[str, Any]] = {}
         self._dim_id_to_name: dict[str, dict[int, str]] = {}
         self._dim_id_reference_list: dict[str, dict[int, list[list[Any]]]] = {}
@@ -204,10 +205,49 @@ class ServerStub:
             "is_file": os.path.isfile(path),
         }
 
+    def _detect_file_format(self, path: str) -> str:
+        path_lower = str(path).lower()
+        if path_lower.endswith((".h5", ".hdf5", ".nc", ".netcdf")):
+            return "hdf5"
+        if path_lower.endswith((".pp", ".pp.gz", ".fields")):
+            return "pp"
+
+        with open(path, "rb") as handle:
+            magic = handle.read(8)
+
+        if magic.startswith(b"\x89HDF"):
+            return "hdf5"
+        if len(magic) >= 2 and magic[:2] in (b"\x00\x00", b"\x00\x01"):
+            return "pp"
+
+        raise ValueError(f"unable to detect file format for: {path}")
+
+    def _open_format_file(self, path: str, file_format: str) -> tuple[Any, str]:
+        if file_format == "hdf5":
+            try:
+                pyfive = __import__("pyfive")
+                return pyfive.File(path), "pyfive"
+            except ImportError as exc:
+                raise RuntimeError(
+                    f"pyfive is required to open HDF5 file {path}; install pyfive"
+                ) from exc
+
+        if file_format == "pp":
+            try:
+                ppfive = __import__("ppfive")
+                return ppfive.File(path), "ppfive"
+            except ImportError as exc:
+                raise RuntimeError(
+                    f"ppfive is required to open PP file {path}; install ppfive"
+                ) from exc
+
+        raise ValueError(f"unsupported file format: {file_format}")
+
     def handle_file_open(self, path: str) -> dict[str, Any]:
-        import pyfive
-        file_handle = pyfive.File(path)
+        file_format = self._detect_file_format(path)
+        file_handle, _backend = self._open_format_file(path, file_format)
         self._open_files[path] = file_handle
+        self._file_formats[path] = file_format
         self._datasets[path] = {}
         self._build_netcdf_maps(path, file_handle)
         return {
@@ -235,7 +275,7 @@ class ServerStub:
             "shape": list(getattr(dataset, "shape", ())),
             "dtype": str(getattr(dataset, "dtype", "unknown")),
             "chunks": chunks,
-            "index": self._dataset_index(dataset),
+            "index": self._dataset_index(path, dataset),
             "attrs": attrs,
             "fillvalue": self._serialise(getattr(dataset, "fillvalue", None), file_handle=file_handle),
             "filter_pipeline": self._serialise(getattr(getattr(dataset, "id", None), "filter_pipeline", None), file_handle=file_handle),
@@ -384,6 +424,7 @@ class ServerStub:
 
     def handle_file_close(self, path: str) -> dict[str, Any]:
         file_handle = self._open_files.pop(path, None)
+        self._file_formats.pop(path, None)
         self._datasets.pop(path, None)
         self._dim_id_to_name.pop(path, None)
         self._dim_id_reference_list.pop(path, None)
@@ -417,7 +458,7 @@ class ServerStub:
             return int(itemsize)
         return int(itemsize * math.prod(shape))
 
-    def _dataset_index(self, dataset: Any) -> Any:
+    def _dataset_index(self, path: str, dataset: Any) -> Any:
         dataset_id = getattr(dataset, "id", None)
         if dataset_id is None:
             return None
@@ -438,9 +479,19 @@ class ServerStub:
         if data_offset is None:
             return None
 
+        _UNDEF = None
+        format_name = self._file_formats.get(path)
+        module_name = "pyfive.core" if format_name == "hdf5" else "ppfive.core"
         try:
-            from pyfive.core import UNDEFINED_ADDRESS as _UNDEF
-        except ImportError:
+            module = __import__(module_name, fromlist=["UNDEFINED_ADDRESS"])
+            _UNDEF = int(getattr(module, "UNDEFINED_ADDRESS"))
+        except Exception:
+            try:
+                module = __import__("pyfive.core", fromlist=["UNDEFINED_ADDRESS"])
+                _UNDEF = int(getattr(module, "UNDEFINED_ADDRESS"))
+            except Exception:
+                pass
+        if _UNDEF is None:
             _UNDEF = 0xFFFFFFFFFFFFFFFF
 
         if int(data_offset) == _UNDEF:
@@ -570,10 +621,25 @@ class ServerStub:
         if not shape:
             return None
 
+        format_name = self._file_formats.get(path)
+        prefix = "pyfive" if format_name == "hdf5" else "ppfive"
+        ZarrArrayStub = None
+        OrthogonalIndexer = None
         try:
-            from pyfive.h5d import ZarrArrayStub
-            from pyfive.indexing import OrthogonalIndexer
-        except ImportError:
+            h5d_mod = __import__(f"{prefix}.h5d", fromlist=["ZarrArrayStub"])
+            indexing_mod = __import__(f"{prefix}.indexing", fromlist=["OrthogonalIndexer"])
+            ZarrArrayStub = getattr(h5d_mod, "ZarrArrayStub")
+            OrthogonalIndexer = getattr(indexing_mod, "OrthogonalIndexer")
+        except Exception:
+            try:
+                h5d_mod = __import__("pyfive.h5d", fromlist=["ZarrArrayStub"])
+                indexing_mod = __import__("pyfive.indexing", fromlist=["OrthogonalIndexer"])
+                ZarrArrayStub = getattr(h5d_mod, "ZarrArrayStub")
+                OrthogonalIndexer = getattr(indexing_mod, "OrthogonalIndexer")
+            except Exception:
+                pass
+
+        if ZarrArrayStub is None or OrthogonalIndexer is None:
             return None
 
         try:
