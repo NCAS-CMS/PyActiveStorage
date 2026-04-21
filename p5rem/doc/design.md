@@ -26,7 +26,7 @@ The design was inspired by VSCode Remote, which bootstraps a small server over S
 
 The fundamental insight is that p5rem is a **thin proxy over a remote pyfive instance**. Rather than trying to emulate file handles or smuggle metadata across the wire, the server simply runs a real pyfive instance locally on the HPC — where HDF5 metadata reads are fast and free — and the client proxies the results.
 
-```
+```text
 Client (desktop)                        Server (HPC)
 
 rFile                                   pyfive.File (local, fast Lustre I/O)
@@ -49,7 +49,7 @@ The server does all HDF5 heavy lifting — superblock, object headers, btree tra
 
 The server stub is launched via SSH using QProcess (in the Qt GUI) or subprocess (standalone/test). Communication is over stdin/stdout of the SSH session using CBOR-framed messages.
 
-```
+```text
 Desktop GUI (xconv2)
     │
     └── QProcess
@@ -105,7 +105,7 @@ p5rem has no Qt dependency — the QProcess/subprocess choice is made by the cal
 - Chunk reads are the only thing that travel over the wire as raw bytes
 - Access is lazy — matching pyfive's natural access pattern:
 
-```
+```text
 file_open  → server: pyfive.File(path)    → keys, attrs, mtime
 var_open   → server: f[varname]           → shape, dtype, chunks, btree index,
                                             fragmentation hint
@@ -148,7 +148,8 @@ envs = discover_remote_conda_envs(
 # Step 3: Bootstrap server with selected environment
 session = bootstrap_session(
     host="xfer1",
-    remote_python="conda run -n jas26 python",
+    remote_setup="source /path/to/conda.sh && conda activate jas26",
+    remote_python="python",
     local_script_path="/path/to/server.py",
     login_shell=True,
 )
@@ -258,7 +259,7 @@ LIST_RESULT, STAT_RESULT, FILE_INFO, VAR_INFO, CHUNK_DATA, REDUCTION_RESULT, ERR
 
 ## Package Structure
 
-```
+```text
 p5rem/
     ├── pyproject.toml
     ├── README.md
@@ -330,12 +331,13 @@ def handle_get_chunk(path, varname, byte_offset, size):
     return {'data': ds.id._get_raw_chunk(storeinfo)}
 ```
 
-
 Considerations:
- - For chunks, we want the client to decompress, and cache
- - For contiguous variables, we use the pseudo chunking option, and cache locally accordingly.
- - For all other variable types, simply serialise, return, and do not cache.
- - For metadata, cache
+
+- For chunks, we want the client to decompress, and cache.
+- For contiguous variables, we use the pseudo chunking option, and cache locally accordingly.
+- For all other variable types, simply serialise, return, and do not cache.
+- For metadata, cache.
+
 ### session.py
 
 Manages the persistent SSH subprocess, heartbeat, reconnection:
@@ -499,7 +501,7 @@ source tests/testenv.sh
 pytest -m integration
 ```
 
-`P5REM_SSH_PYTHON` can remain as `conda run -n <env> python`. During bootstrap p5rem automatically inserts `--no-capture-output`, because `conda run` otherwise captures stdio and breaks the binary request/response transport over SSH.
+`P5REM_SSH_PYTHON` can remain as `conda run -n <env> python`. During bootstrap p5rem automatically inserts `--no-capture-output`, because `conda run` otherwise captures stdio and breaks the binary request/response transport over SSH. When you prefer an explicit setup step instead, use `remote_setup="source .../conda.sh && conda activate <env>"` with `remote_python="python"`.
 
 ### Test data
 
@@ -512,7 +514,7 @@ Small synthetic HDF5 files committed to the repo:
 
 ### Summary
 
-```
+```text
 Layer 1: protocol    — pure unit tests, no I/O
 Layer 2: loopback    — subprocess, real HDF5, no SSH
 Layer 3: proxy       — mock session, tests pyfive-like interface

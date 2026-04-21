@@ -5,6 +5,7 @@
 This is the simplest non-GUI usage pattern:
 
 - define the remote host directly in the script
+- define the optional remote setup command directly in the script
 - define the remote Python command directly in the script
 - create a session with a context manager
 - open one remote file with a context manager
@@ -15,11 +16,13 @@ This is the simplest non-GUI usage pattern:
 from p5rem import bootstrap_session
 
 REMOTE_HOST = "xfer1"
-REMOTE_PYTHON = "conda run -n jas26 python"
+REMOTE_SETUP = "source /path/to/conda.sh && conda activate jas26"
+REMOTE_PYTHON = "python"
 REMOTE_FILE = "p5test/test1.nc"
 
 with bootstrap_session(
     host=REMOTE_HOST,
+    remote_setup=REMOTE_SETUP,
     remote_python=REMOTE_PYTHON,
     login_shell=True,
     use_cache=False,
@@ -60,10 +63,11 @@ Adjust the constants at the top of the script for your host, environment, file, 
 ## Notes
 
 - If the remote Python environment is only available in shell startup files, set `login_shell=True`.
-- If your environment requires setup commands first, choose one model per host.
+- If your environment requires setup commands first, put them in `remote_setup` and leave `remote_python` as the Python executable to run after setup.
 - Module model example: `remote_setup="module load python/3.11"`, `remote_python="python"`.
-- Conda/mamba activate model example: `remote_setup="source ~/miniforge3/etc/profile.d/conda.sh && conda activate jas26"`, `remote_python="python"`.
-- If you use `conda run -n <env> python`, p5rem automatically adds `--no-capture-output` during bootstrap so the SSH stdio transport remains usable.
+- Conda/mamba activate model example: `remote_setup="source /path/to/conda.sh && conda activate jas26"`, `remote_python="python"`.
+- If you use `conda run -n <env> python`, keep `remote_setup=None`; p5rem automatically adds `--no-capture-output` during bootstrap so the SSH stdio transport remains usable.
+- The remote runtime must include `cbor2` and the backend matching the file format you plan to open: `pyfive` for HDF5/NetCDF, `ppfive` for PP.
 - The session and remote file both support context-manager usage and should normally be used with `with`.
 
 ### Bootstrap Troubleshooting

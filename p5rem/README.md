@@ -4,15 +4,21 @@ Remote HDF5/NetCDF access over SSH stdio, using a small remote pyfive-based serv
 
 ## Usage
 
-For a minimal non-GUI example that defines the remote host and Python command directly in the script, see:
+For a minimal non-GUI example that defines the remote host, setup command, and Python command directly in the script, see:
 
 - [examples/read_remote_slice.py](examples/read_remote_slice.py)
 - [doc/user-guide.md](doc/user-guide.md)
 
+However, the basic idea is that remote files can be opened
+over an ssh session, and handled locally as if they were
+instances of a `pyfive.File`. There is a slightly different
+approach to laziness, but otherwise `p5rem.File` quacks
+just like a `pyfive.File`.
+
 ### Remote environment bootstrap (mamba)
 
-If you need to create the minimal remote Python environment for the p5rem
-server stub, run:
+(This is the environment on the server where you have ssh access.)
+If you need to create the minimal remote Python environment for the p5rem server stub, run:
 
 ```bash
 ./examples/setup_remote_mamba_env.sh
@@ -37,11 +43,23 @@ If your site uses `micromamba`, set `MAMBA_EXE` (the script also accepts
 MAMBA_EXE=micromamba ./examples/setup_remote_mamba_env.sh my-remote-env
 ```
 
-Then point p5rem at that interpreter, for example:
+Then bootstrap a session against that interpreter, for example:
 
-```bash
-export P5REM_SSH_PYTHON="conda run -n my-remote-env python"
+```python
+from p5rem import bootstrap_session
+
+with bootstrap_session(
+    host="xfer1",
+    remote_python="conda run -n my-remote-env python",
+    login_shell=True,
+) as session:
+    ...
 ```
+
+Treat `remote_setup` and `remote_python` as two separate pieces:
+
+- `remote_setup`: optional shell fragment that prepares the environment on the remote host.
+- `remote_python`: the actual Python command to run after setup has completed.
 
 If your site requires shell setup, pick one activation model and keep it consistent for that host:
 
@@ -54,28 +72,40 @@ Example (module-based):
 from p5rem import bootstrap_session
 
 with bootstrap_session(
-	host="xfer1",
-	remote_setup="module load jaspy",
-	remote_python="python",
-	login_shell=True,
+    host="xfer1",
+    remote_setup="module load jaspy",
+    remote_python="python",
+    login_shell=True,
 ) as session:
-	...
+    ...
 ```
 
-Example (conda/mamba activation):
+Example (conda/mamba activation) with a conda setup
+step to make sure the conda command is available:
 
 ```python
 from p5rem import bootstrap_session
 
-# this example uses conda, but you could replace
-# conda with mamba or even $MAMBA_EXE if appropriate
 with bootstrap_session(
-	host="xfer1",
-	remote_setup="conda activate my-remote-env",
-	remote_python="python",
-	login_shell=True,
+    host="xfer1",
+    remote_setup="source /path/to/conda.sh && conda activate my-remote-env",
+    remote_python="python",
+    login_shell=True,
 ) as session:
-	...
+    ...
+```
+
+Example (conda run, no separate setup step):
+
+```python
+from p5rem import bootstrap_session
+
+with bootstrap_session(
+    host="xfer1",
+    remote_python="conda run -n my-remote-env python",
+    login_shell=True,
+) as session:
+    ...
 ```
 
 ## Testing
@@ -132,6 +162,7 @@ make test-integration
 Notes:
 
 - `P5REM_SSH_PYTHON` may be set to `conda run -n <env> python`; p5rem automatically adds `--no-capture-output` when bootstrapping the remote server so the SSH stdio protocol remains binary-clean.
+- The remote runtime must provide `cbor2` and the required file backend: `pyfive` for HDF5/NetCDF files, `ppfive` for PP files.
 - `P5REM_SSH_LOGIN_SHELL=1` wraps the remote command with `bash -lc`, which is useful on HPC systems where conda is only initialized in login-shell startup files.
 - The remote round-trip test reuses the same file-comparison assertions as the loopback tests.
 
@@ -148,8 +179,8 @@ Tips:
 
 - Do not mix activation models in one command chain; pick module-load or conda/mamba-activate for a given host.
 - For module-based hosts, use `remote_setup="module load ..."` with `remote_python="python"`.
-- For conda/mamba activation hosts, use `remote_setup="... && conda activate <env>"` (or mamba equivalent) with `remote_python="python"`.
-- Use `remote_python="conda run -n <env> python"` as an alternative when your shell already has conda/mamba commands available without activation.
+- For conda/mamba activation hosts, use `remote_setup="source .../conda.sh && conda activate <env>"` (or mamba equivalent) with `remote_python="python"`.
+- Use `remote_python="conda run -n <env> python"` as an alternative when you do not want a separate setup step.
 - Set `P5REM_BOOTSTRAP_VERBOSE_ERRORS=1` to include remote `stderr` details in raised bootstrap errors.
 
 ### Standalone acid test
