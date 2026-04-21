@@ -9,19 +9,22 @@ import logging
 import subprocess
 import threading
 from time import perf_counter
-from typing import Any, Callable
+from typing import Any, Callable, TYPE_CHECKING
 from p5rem.proxy import rFile
+from .protocol import CHUNK_DATA, CHUNKS_DONE, ERROR, FILE_INFO, FILE_CLOSE, FILE_OPEN, GET_CHUNK, GET_CHUNKS, HEARTBEAT, LIST, LIST_RESULT, REDUCE, REDUCTION_RESULT, STAT, STAT_RESULT, VAR_INFO, VAR_OPEN, read_message, write_message
+
+if TYPE_CHECKING:
+	from .cache import P5RemCache
+else:
+	P5RemCache = Any
 
 log = logging.getLogger(__name__)
 
 # Import cache optionally - may not be available on remote servers
 try:
-	from .cache import P5RemCache, get_default_cache
+	from .cache import get_default_cache
 except ImportError:
-	P5RemCache = None  # type: ignore
 	get_default_cache = None  # type: ignore
-
-from .protocol import CHUNK_DATA, ERROR, FILE_INFO, FILE_CLOSE, FILE_OPEN, GET_CHUNK, HEARTBEAT, LIST, LIST_RESULT, REDUCE, REDUCTION_RESULT, STAT, STAT_RESULT, VAR_INFO, VAR_OPEN, read_message, write_message
 
 REQUEST_RESPONSE_TYPES = {
 	LIST: LIST_RESULT,
@@ -88,6 +91,7 @@ class p5remSession:
 		self._lock = threading.RLock()
 		self._cache = cache if cache is not None else (get_default_cache() if (host is not None and get_default_cache is not None) else None)
 		self._path_mtime: dict[str, float] = {}
+		self._server_ready_vars: dict[str, set[str]] = {}
 		self._heartbeat_interval = heartbeat_interval
 		self._heartbeat_max_failures = max(1, int(heartbeat_max_failures))
 		self._heartbeat_failure_callback = heartbeat_failure_callback
@@ -171,6 +175,9 @@ class p5remSession:
 			if mtime is not None:
 				cached = self._cache.get_file_meta(host_key, path, mtime)
 				if cached is not None:
+					# Preserve protocol side effects on the remote server (open-file
+					# state), even when metadata is served from local cache.
+					self.request(FILE_OPEN, path=path)
 					self._path_mtime[path] = mtime
 					log.debug("Cache hit for file metadata: %s", path)
 					return cached
@@ -199,11 +206,14 @@ class p5remSession:
 		if self._cache is not None and mtime is not None:
 			cached = self._cache.get_var_meta(host_key, path, varname, mtime)
 			if cached is not None:
+				# Metadata is available locally, but do not force a round-trip now.
+				# We lazily ensure server-side dataset state when data is first needed.
 				log.debug("Cache hit for variable metadata: %r in %s", varname, path)
 				return cached
 
 		response = self.request(VAR_OPEN, path=path, varname=varname)
 		result = dict(response)
+		self._server_ready_vars.setdefault(path, set()).add(varname)
 		p2 = perf_counter()
 		log.debug("Variable metadata received: %r shape=%s dtype=%s (%.3f s)", varname, result.get("shape"), result.get("dtype"), p2 - p1)
 		if self._cache is not None and mtime is not None:
@@ -223,37 +233,166 @@ class p5remSession:
 					log.debug("Cache hit for chunk offset=%d size=%d", byte_offset, size)
 					return cached
 
-		response = self.request(
-			GET_CHUNK,
-			path=path,
-			varname=varname,
-			byte_offset=byte_offset,
-			size=size,
+		self._ensure_var_server_ready(path, varname)
+
+		request_fields = {
+			"path": path,
+			"varname": varname,
+			"byte_offset": byte_offset,
+			"size": size,
 			**fields,
-		)
+		}
+		try:
+			response = self.request(GET_CHUNK, **request_fields)
+		except ResponseError as err:
+			if not self._is_file_not_open_error(err):
+				raise
+			self._server_ready_vars.pop(path, None)
+			self._ensure_var_server_ready(path, varname)
+			response = self.request(GET_CHUNK, **request_fields)
 		result = dict(response)
 		if self._cache is not None and mtime is not None:
 			with self._cache.transact():
 				self._cache.set_chunk(host_key, path, byte_offset, size, mtime, result)
 		return result
 
-	def reduce(self, path: str, varname: str, byte_offset: int, size: int, operation: str, **fields: Any) -> dict[str, Any]:
-		"""Request a remote reduction result."""
+	def get_chunks(
+		self,
+		path: str,
+		varname: str,
+		chunks: list[dict[str, Any]],
+		thread_count: int = 4,
+	) -> dict[int, dict[str, Any]]:
+		"""Request a batch of chunks; returns mapping of byte_offset -> CHUNK_DATA response."""
 
-		return self.request(
-			REDUCE,
-			path=path,
-			varname=varname,
-			byte_offset=byte_offset,
-			size=size,
-			operation=operation,
+		if not chunks:
+			return {}
+
+		log.debug("Fetching %d chunks in batch for %r in %s", len(chunks), varname, path)
+		host_key = self._host_cache_key
+		mtime = self._path_mtime.get(path)
+
+		results: dict[int, dict[str, Any]] = {}
+		pending_chunks = list(chunks)
+		if self._cache is not None and mtime is not None:
+			pending_chunks = []
+			with self._cache.transact():
+				for chunk_desc in chunks:
+					byte_offset = int(chunk_desc["byte_offset"])
+					size = int(chunk_desc["size"])
+					cached = self._cache.get_chunk(host_key, path, byte_offset, size, mtime)
+					if cached is not None:
+						results[byte_offset] = cached
+					else:
+						pending_chunks.append(chunk_desc)
+
+			if not pending_chunks:
+				log.debug("Cache hit for all %d requested chunks", len(chunks))
+				return results
+
+		self._ensure_var_server_ready(path, varname)
+
+		def _fetch_batch() -> None:
+			with self._lock:
+				write_message(
+					self._stdin,
+					GET_CHUNKS,
+					path=path,
+					varname=varname,
+					chunks=pending_chunks,
+					thread_count=thread_count,
+				)
+				while True:
+					msg = read_message(self._stdout)
+					if msg["type"] == CHUNKS_DONE:
+						break
+					if msg["type"] == ERROR:
+						raise ResponseError(msg.get("message", "remote server returned an error"), response=msg)
+					if msg["type"] == CHUNK_DATA:
+						byte_offset = int(msg["byte_offset"])
+						chunk = dict(msg)
+						results[byte_offset] = chunk
+						if self._cache is not None and mtime is not None:
+							size = int(msg["size"])
+							with self._cache.transact():
+								self._cache.set_chunk(host_key, path, byte_offset, size, mtime, chunk)
+
+		try:
+			_fetch_batch()
+		except ResponseError as err:
+			if not self._is_file_not_open_error(err):
+				raise
+			self._server_ready_vars.pop(path, None)
+			self._ensure_var_server_ready(path, varname)
+			_fetch_batch()
+
+		return results
+
+	def reduce_chunk(
+		self,
+		path: str,
+		varname: str,
+		byte_offset: int,
+		size: int,
+		operation: str,
+		**fields: Any,
+	) -> dict[str, Any]:
+		"""Request a reduction over one raw chunk payload."""
+
+		self._ensure_var_server_ready(path, varname)
+		request_fields = {
+			"path": path,
+			"varname": varname,
+			"mode": "chunk",
+			"byte_offset": int(byte_offset),
+			"size": int(size),
+			"operation": operation,
 			**fields,
-		)
+		}
+		try:
+			return self.request(REDUCE, **request_fields)
+		except ResponseError as err:
+			if not self._is_file_not_open_error(err):
+				raise
+			self._server_ready_vars.pop(path, None)
+			self._ensure_var_server_ready(path, varname)
+			return self.request(REDUCE, **request_fields)
+
+	def reduce_selection(
+		self,
+		path: str,
+		varname: str,
+		operation: str,
+		selection: Any | None = None,
+		thread_count: int = 1,
+		**fields: Any,
+	) -> dict[str, Any]:
+		"""Request a reduction over a selection (or full dataset when selection is None)."""
+
+		self._ensure_var_server_ready(path, varname)
+		request_fields = {
+			"path": path,
+			"varname": varname,
+			"mode": "selection",
+			"operation": operation,
+			"selection": selection,
+			"thread_count": max(1, int(thread_count)),
+			**fields,
+		}
+		try:
+			return self.request(REDUCE, **request_fields)
+		except ResponseError as err:
+			if not self._is_file_not_open_error(err):
+				raise
+			self._server_ready_vars.pop(path, None)
+			self._ensure_var_server_ready(path, varname)
+			return self.request(REDUCE, **request_fields)
 
 	def file_close(self, path: str) -> dict[str, Any]:
 		"""Release a remote file handle."""
-
-		return self.request(FILE_CLOSE, path=path)
+		response = self.request(FILE_CLOSE, path=path)
+		self._server_ready_vars.pop(path, None)
+		return response
 
 	def heartbeat(self) -> dict[str, Any]:
 		"""Round-trip a keepalive message."""
@@ -343,6 +482,29 @@ class p5remSession:
 			return (expected_type,)
 
 		return tuple(expected_type)
+
+	def _is_file_not_open_error(self, error: ResponseError) -> bool:
+		message = str(error).lower()
+		return "file is not open" in message
+
+	def _ensure_var_server_ready(self, path: str, varname: str) -> None:
+		"""Ensure server-side dataset state exists before chunk reads."""
+
+		ready = self._server_ready_vars.setdefault(path, set())
+		if varname in ready:
+			return
+
+		try:
+			self.request(VAR_OPEN, path=path, varname=varname)
+		except ResponseError as err:
+			message = str(err)
+			# If the server no longer has the file open, re-open it first and retry.
+			if "file is not open" not in message:
+				raise
+			self.request(FILE_OPEN, path=path)
+			self.request(VAR_OPEN, path=path, varname=varname)
+
+		ready.add(varname)
 
 	def close(self) -> None:
 		"""Close attached streams and terminate the subprocess if needed."""

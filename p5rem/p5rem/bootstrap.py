@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import builtins
 from contextlib import suppress
+import getpass
 import logging
+import os
 from pathlib import Path
 from pathlib import PurePosixPath
 import shlex
+import sys
 import threading
 from typing import Any, Callable
 import paramiko
@@ -75,6 +79,37 @@ class BootstrappedProcess:
 		except Exception:
 			pass
 
+	def read_stderr_snippet(self, *, max_bytes: int = 4096) -> str:
+		"""Best-effort stderr tail for diagnostics without blocking on live channels."""
+
+		chunks: list[bytes] = []
+		remaining = max(1, int(max_bytes))
+
+		recv_ready = getattr(self.channel, "recv_stderr_ready", None)
+		recv = getattr(self.channel, "recv_stderr", None)
+		if callable(recv_ready) and callable(recv):
+			while remaining > 0 and recv_ready():
+				data = recv(min(remaining, 1024))
+				if not data:
+					break
+				if isinstance(data, str):
+					data = data.encode("utf-8", errors="replace")
+				chunks.append(data)
+				remaining -= len(data)
+
+		if not chunks and self.channel.exit_status_ready():
+			with suppress(Exception):
+				data = self.stderr.read(max_bytes)
+				if isinstance(data, str):
+					data = data.encode("utf-8", errors="replace")
+				if data:
+					chunks.append(data)
+
+		if not chunks:
+			return ""
+
+		return b"".join(chunks).decode("utf-8", errors="replace").strip()
+
 
 def _ensure_remote_dir(sftp: Any, remote_dir: str) -> None:
 	parts = [part for part in PurePosixPath(remote_dir).parts if part and part != "/"]
@@ -102,18 +137,249 @@ def _normalise_remote_python(remote_python: str) -> list[str]:
 	return argv
 
 
+def _is_shell_fragment(command: str) -> bool:
+	"""Return True when command appears to contain shell operators."""
+
+	return any(token in command for token in ("&&", "||", ";", "|"))
+
+
 def _build_command(
 	remote_python: str,
 	remote_path: str,
 	args: tuple[str, ...],
 	*,
+	remote_setup: str | None,
 	login_shell: bool,
 ) -> str:
-	argv = [*_normalise_remote_python(remote_python), "-u", remote_path, *args]
-	command = shlex.join(argv)
+	if _is_shell_fragment(remote_python):
+		arg_part = " ".join(shlex.quote(str(arg)) for arg in args)
+		command = f"{remote_python} -u {shlex.quote(remote_path)}"
+		if arg_part:
+			command = f"{command} {arg_part}"
+	else:
+		argv = [*_normalise_remote_python(remote_python), "-u", remote_path, *args]
+		command = shlex.join(argv)
+	if remote_setup is not None and str(remote_setup).strip():
+		command = f"{remote_setup} && {command}"
 	if login_shell:
 		return f"bash -lc {shlex.quote(command)}"
 	return command
+
+
+def _build_python_probe_command(
+	remote_python: str,
+	*,
+	remote_setup: str | None,
+	login_shell: bool,
+) -> str:
+	"""Build a lightweight remote-python probe command."""
+
+	probe_snippet = "import sys; print(sys.executable)"
+	return _build_python_snippet_command(
+		remote_python,
+		probe_snippet,
+		remote_setup=remote_setup,
+		login_shell=login_shell,
+	)
+
+
+def _build_full_preflight_command(
+	remote_python: str,
+	*,
+	remote_setup: str | None,
+	login_shell: bool,
+) -> str:
+	"""Build a single preflight command with staged setup/python/dependency checks."""
+
+	python_probe = _build_python_snippet_command(
+		remote_python,
+		"import sys; print(sys.executable)",
+		remote_setup=None,
+		login_shell=False,
+	)
+	dependency_probe = _build_python_snippet_command(
+		remote_python,
+		"import cbor2; import importlib.util as _iu; "
+		"_have_backend = (_iu.find_spec('pyfive') is not None) or (_iu.find_spec('ppfive') is not None); "
+		"assert _have_backend, 'missing pyfive/ppfive'",
+		remote_setup=None,
+		login_shell=False,
+	)
+
+	parts: list[str] = []
+	if remote_setup is not None and str(remote_setup).strip():
+		parts.append(str(remote_setup))
+		parts.append(
+			"setup_rc=$?; "
+			"if [ $setup_rc -ne 0 ]; then "
+			"echo '__P5REM_PREFLIGHT_STAGE__:setup' 1>&2; "
+			"exit 41; "
+			"fi"
+		)
+
+	parts.append(python_probe)
+	parts.append(
+		"python_rc=$?; "
+		"if [ $python_rc -ne 0 ]; then "
+		"echo '__P5REM_PREFLIGHT_STAGE__:python' 1>&2; "
+		"exit 42; "
+		"fi"
+	)
+
+	parts.append(dependency_probe)
+	parts.append(
+		"dependency_rc=$?; "
+		"if [ $dependency_rc -ne 0 ]; then "
+		"echo '__P5REM_PREFLIGHT_STAGE__:dependencies' 1>&2; "
+		"exit 43; "
+		"fi"
+	)
+
+	command = "; ".join(parts)
+	if login_shell:
+		return f"bash -lc {shlex.quote(command)}"
+	return command
+
+
+def _build_python_snippet_command(
+	remote_python: str,
+	python_snippet: str,
+	*,
+	remote_setup: str | None,
+	login_shell: bool,
+) -> str:
+	"""Build a remote command that runs a Python snippet."""
+
+	if _is_shell_fragment(remote_python):
+		command = f"{remote_python} -c {shlex.quote(python_snippet)}"
+	else:
+		argv = [*_normalise_remote_python(remote_python), "-c", python_snippet]
+		command = shlex.join(argv)
+	if remote_setup is not None and str(remote_setup).strip():
+		command = f"{remote_setup} && {command}"
+	if login_shell:
+		return f"bash -lc {shlex.quote(command)}"
+	return command
+def _run_probe_command(client: Any, command: str, *, timeout: float, stage: str) -> tuple[int, str]:
+	"""Execute a preflight command over SSH and return exit code and stderr text."""
+
+	transport = client.get_transport()
+	if transport is None:
+		raise BootstrapError(f"ssh transport not available for {stage}")
+
+	channel = transport.open_session()
+	channel.exec_command(command)
+	stdout = channel.makefile("rb")
+	stderr = channel.makefile_stderr("rb")
+	try:
+		if timeout > 0:
+			channel.settimeout(timeout)
+		exit_code = int(channel.recv_exit_status())
+		stderr_text = stderr.read(4096)
+		if isinstance(stderr_text, bytes):
+			stderr_text = stderr_text.decode("utf-8", errors="replace")
+		return exit_code, (stderr_text or "").strip()
+	finally:
+		with suppress(Exception):
+			stdout.close()
+		with suppress(Exception):
+			stderr.close()
+		with suppress(Exception):
+			channel.close()
+def _probe_remote_python(
+	client: Any,
+	remote_python: str,
+	*,
+	remote_setup: str | None,
+	login_shell: bool,
+	timeout: float,
+) -> None:
+	"""Validate setup, runtime, and dependencies in one remote preflight command."""
+
+	probe_command = _build_full_preflight_command(
+		remote_python,
+		remote_setup=remote_setup,
+		login_shell=login_shell,
+	)
+	exit_code, stderr_text = _run_probe_command(
+		client,
+		probe_command,
+		timeout=timeout,
+		stage="remote python probe",
+	)
+	if exit_code == 0:
+		return
+
+	detail = _classify_startup_stderr(stderr_text, remote_python)
+	stage_text = (stderr_text or "").lower()
+	if exit_code == 41 or "__p5rem_preflight_stage__:setup" in stage_text:
+		message = (
+			"remote setup preflight failed; verify remote_setup succeeds on the "
+			f"remote host (remote_setup={remote_setup!r})"
+		)
+	elif exit_code == 43 or "__p5rem_preflight_stage__:dependencies" in stage_text:
+		if detail:
+			message = f"remote dependency preflight failed: {detail}"
+		else:
+			message = (
+				"remote dependency preflight failed; verify remote_python environment has "
+				"cbor2 and the required backend installed (pyfive for HDF5, ppfive for PP)"
+			)
+	else:
+		if detail:
+			message = f"remote python preflight failed: {detail}"
+		else:
+			message = (
+				"remote python preflight failed; verify remote_python launches python on the "
+				f"remote host (remote_python={remote_python!r})"
+			)
+	if _verbose_bootstrap_errors_enabled() and stderr_text:
+		message = f"{message}; stderr={stderr_text}"
+	raise BootstrapError(message)
+
+
+def _classify_startup_stderr(stderr_snippet: str, remote_python: str) -> str | None:
+	"""Return an actionable startup hint derived from remote stderr."""
+
+	text = (stderr_snippet or "").lower()
+	if not text:
+		return None
+
+	missing_cmd_markers = (
+		"command not found",
+		"not found",
+		"no such file or directory",
+		"is not recognized as an internal or external command",
+	)
+	if any(marker in text for marker in missing_cmd_markers):
+		return (
+			f"remote_python command appears unavailable: {remote_python!r}; "
+			"install/provide the runtime command on the remote host "
+			"(for example python3/conda/mamba) or update remote_python accordingly"
+		)
+
+	if "environmentlocationnotfound" in text or "condaenvironmenterror" in text:
+		return (
+			f"remote conda environment appears unavailable for remote_python={remote_python!r}; "
+			"create the environment on the remote host or update remote_python to a valid env"
+		)
+
+	if "module not found" in text and ("pyfive" in text or "ppfive" in text or "cbor2" in text):
+		return (
+			"remote server dependencies are missing; ensure the remote environment "
+			"has cbor2 and the required backend installed (pyfive for HDF5, ppfive for PP)"
+		)
+
+	return None
+
+
+def _verbose_bootstrap_errors_enabled() -> bool:
+	"""Return True when detailed bootstrap diagnostics should be surfaced."""
+
+	value = os.environ.get("P5REM_BOOTSTRAP_VERBOSE_ERRORS", "").strip().lower()
+	if value in {"1", "true", "yes", "on"}:
+		return True
+	return False
 
 
 def _resolve_ssh_connect_params(
@@ -164,6 +430,7 @@ def bootstrap_server(
 	remote_dir: str = ".p5rem",
 	remote_filename: str = "p5rem_server.py",
 	remote_python: str = "python3",
+	remote_setup: str | None = None,
 	port: int | None = None,
 	timeout: float = 10.0,
 	password: str | None = None,
@@ -179,8 +446,13 @@ def bootstrap_server(
 		local_script_path = _DEFAULT_REMOTE_SERVER
 
 	client_factory = ssh_client_factory or paramiko.SSHClient
-	client = client_factory()
-	client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+	def _new_client() -> Any:
+		cli = client_factory()
+		cli.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+		return cli
+
+	client = _new_client()
 	connect_params = _resolve_ssh_connect_params(
 		host=host,
 		username=username,
@@ -206,15 +478,88 @@ def bootstrap_server(
 		connect_params["port"],
 		connect_params["username"],
 	)
-	client.connect(**connect_kwargs)
+	stdin = getattr(sys, "stdin", None)
+	is_interactive = bool(stdin is not None and getattr(stdin, "isatty", lambda: False)())
+	if password is None and is_interactive:
+		username_for_prompt = connect_params.get("username") or "user"
+		password = getpass.getpass(
+			f"Password for {username_for_prompt}@{connect_params['hostname']}: "
+		)
+		if password == "":
+			raise paramiko.AuthenticationException("no password provided")
+		connect_kwargs["password"] = password
+		# Avoid Paramiko's auth_interactive_dumb prompt path once we have a
+		# concrete password to use.
+		connect_kwargs["allow_agent"] = False
+		connect_kwargs["look_for_keys"] = False
+	old_input: Callable[..., Any] | None = None
+	interactive_answers: list[str] = []
+	if password is None and is_interactive:
+		old_input = builtins.input
+
+		# Paramiko's auth_interactive_dumb uses input(), which echoes typed
+		# characters. Replace it temporarily with getpass to keep secrets hidden.
+		def _hidden_input(prompt: str = "") -> str:
+			del prompt
+			answer = getpass.getpass("")
+			interactive_answers.append(answer)
+			return answer
+
+		builtins.input = _hidden_input
+	try:
+		client.connect(**connect_kwargs)
+	except paramiko.AuthenticationException:
+		# Password auth failed; the server may require keyboard-interactive
+		# (challenge-response / OTP).  The transport is still open — retry
+		# using auth_interactive, responding to every prompt with the password.
+		if password is None:
+			if not is_interactive:
+				raise
+			# Reuse any value already entered via Paramiko's keyboard-interactive
+			# fallback to avoid duplicate prompts.
+			password = next((value for value in interactive_answers if value), None)
+			if password is None:
+				username_for_prompt = connect_params.get("username") or "user"
+				password = getpass.getpass(
+					f"Password for {username_for_prompt}@{connect_params['hostname']}: "
+				)
+			if password == "":
+				raise
+		# Authentication failures can leave the transport in an indeterminate
+		# state. Reconnect cleanly using the captured/provided password.
+		with suppress(Exception):
+			client.close()
+		client = _new_client()
+		connect_kwargs_retry = dict(connect_kwargs)
+		connect_kwargs_retry["password"] = password
+		connect_kwargs_retry["allow_agent"] = False
+		connect_kwargs_retry["look_for_keys"] = False
+		log.info("Authentication failed; reconnecting with prompted password")
+		client.connect(**connect_kwargs_retry)
+	finally:
+		if old_input is not None:
+			builtins.input = old_input
+
 	t2 = perf_counter()
 	log.info("SSH connection established (%.2f seconds)", t2 - t1)
+
+	_probe_remote_python(
+		client,
+		remote_python,
+		remote_setup=remote_setup,
+		login_shell=login_shell,
+		timeout=timeout,
+	)
 
 	try:
 		sftp = client.open_sftp()
 		try:
 			_ensure_remote_dir(sftp, remote_dir)
-			remote_path = str(PurePosixPath(remote_dir) / remote_filename)
+			if hasattr(sftp, "normalize") and callable(getattr(sftp, "normalize")):
+				remote_dir_path = str(sftp.normalize(remote_dir))
+			else:
+				remote_dir_path = remote_dir
+			remote_path = str(PurePosixPath(remote_dir_path) / remote_filename)
 			sftp.put(local_script_path, remote_path)
 			log.info("Uploaded server script to %s (%.2f seconds)", remote_path, perf_counter() - t2)
 			try:
@@ -229,7 +574,13 @@ def bootstrap_server(
 		if transport is None:
 			raise BootstrapError("ssh transport not available")
 		channel = transport.open_session()
-		command = _build_command(remote_python, remote_path, args, login_shell=login_shell)
+		command = _build_command(
+			remote_python,
+			remote_path,
+			args,
+			remote_setup=remote_setup,
+			login_shell=login_shell,
+		)
 		log.info("Starting remote server: %s", command)
 		channel.exec_command(command)
 
@@ -258,6 +609,7 @@ def bootstrap_session(
 	remote_dir: str = ".p5rem",
 	remote_filename: str = "p5rem_server.py",
 	remote_python: str = "python3",
+	remote_setup: str | None = None,
 	port: int | None = None,
 	timeout: float = 10.0,
 	password: str | None = None,
@@ -279,6 +631,7 @@ def bootstrap_session(
 		remote_dir=remote_dir,
 		remote_filename=remote_filename,
 		remote_python=remote_python,
+		remote_setup=remote_setup,
 		port=port,
 		timeout=timeout,
 		password=password,
@@ -296,6 +649,40 @@ def bootstrap_session(
 		stdout=proc.stdout,
 		cache=None,
 	)
+
+	# Fail fast with actionable diagnostics if the remote server did not start.
+	if hasattr(session, "heartbeat"):
+		try:
+			session.heartbeat()
+		except Exception as exc:
+			exit_code = None
+			stderr_snippet = ""
+			if hasattr(proc, "poll") and callable(proc.poll):
+				with suppress(Exception):
+					exit_code = proc.poll()
+			if hasattr(proc, "read_stderr_snippet") and callable(proc.read_stderr_snippet):
+				with suppress(Exception):
+					stderr_snippet = proc.read_stderr_snippet()
+			with suppress(Exception):
+				session.close()
+			startup_hint = _classify_startup_stderr(stderr_snippet, remote_python)
+			if startup_hint:
+				message = f"remote p5rem server failed startup: {startup_hint}"
+			else:
+				message = (
+					"remote p5rem server failed startup; verify remote_python points to a working "
+					"environment with cbor2 and the required backend (pyfive for HDF5, ppfive for PP)"
+				)
+			if _verbose_bootstrap_errors_enabled():
+				extra: list[str] = []
+				if exit_code is not None:
+					extra.append(f"exit_code={exit_code}")
+				if stderr_snippet:
+					extra.append(f"stderr={stderr_snippet}")
+				if extra:
+					message = f"{message}; {'; '.join(extra)}"
+			raise BootstrapError(message) from exc
+
 	p2 = perf_counter()
 	log.info("Session bootstrapped (host=%s, cache=%s, time=%.2f seconds)", host, "enabled" if use_cache else "disabled", p2 - p1)
 	return session
@@ -388,8 +775,35 @@ class ReconnectingBootstrappedSession:
 	def get_chunk(self, path: str, varname: str, byte_offset: int, size: int, **fields: Any) -> dict[str, Any]:
 		return self._call("get_chunk", path, varname, byte_offset, size, **fields)
 
-	def reduce(self, path: str, varname: str, byte_offset: int, size: int, operation: str, **fields: Any) -> dict[str, Any]:
-		return self._call("reduce", path, varname, byte_offset, size, operation, **fields)
+	def reduce_chunk(
+		self,
+		path: str,
+		varname: str,
+		byte_offset: int,
+		size: int,
+		operation: str,
+		**fields: Any,
+	) -> dict[str, Any]:
+		return self._call("reduce_chunk", path, varname, byte_offset, size, operation, **fields)
+
+	def reduce_selection(
+		self,
+		path: str,
+		varname: str,
+		operation: str,
+		selection: Any | None = None,
+		thread_count: int = 1,
+		**fields: Any,
+	) -> dict[str, Any]:
+		return self._call(
+			"reduce_selection",
+			path,
+			varname,
+			operation,
+			selection=selection,
+			thread_count=thread_count,
+			**fields,
+		)
 
 	def file_close(self, path: str) -> dict[str, Any]:
 		return self._call("file_close", path)
@@ -442,14 +856,13 @@ def discover_remote_conda_envs(
 			conda is initialized in the login shell context.
 
 	Returns:
-		Dict mapping environment name to its path. Examples:
-		```python
-		{
-			"base": "/path/to/miniforge3",
-			"work26": "/path/to/miniforge3/envs/work26",
-			"jas26": "/path/to/miniforge3/envs/jas26",
-		}
-		```
+		Dict mapping environment name to its path. Example::
+
+			{
+				"base": "/path/to/miniforge3",
+				"work26": "/path/to/miniforge3/envs/work26",
+				"jas26": "/path/to/miniforge3/envs/jas26",
+			}
 
 	Raises:
 		BootstrapError: If SSH connection or command execution fails.

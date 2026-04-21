@@ -26,6 +26,11 @@ dev = [
     "pytest",
     "pytest-cov",
 ]
+docs = [
+    "sphinx>=7",
+    "furo",
+    "myst-parser",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -13,6 +13,9 @@ dist/
 .eggs/
 pip-wheel-metadata/
 
+# Sphinx documentation build output
+docs/_build/
+
 # Test and coverage outputs
 .pytest_cache/
 .coverage
