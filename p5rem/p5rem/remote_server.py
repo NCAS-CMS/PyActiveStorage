@@ -437,12 +437,14 @@ class ServerStub:
         return {"type": HEARTBEAT}
 
     def _get_dataset(self, path: str, varname: str) -> Any:
+        if path not in self._open_files:
+            # Drop any stale per-file dataset cache if server-side open state is gone.
+            self._datasets.pop(path, None)
+            raise FileNotFoundError(f"file is not open: {path}")
+
         cached = self._datasets.get(path, {}).get(varname)
         if cached is not None:
             return cached
-
-        if path not in self._open_files:
-            raise FileNotFoundError(f"file is not open: {path}")
 
         dataset = self._open_files[path][varname]
         self._datasets.setdefault(path, {})[varname] = dataset

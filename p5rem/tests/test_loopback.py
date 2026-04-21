@@ -23,6 +23,63 @@ class WrongHeartbeatServer(ServerStub):
 		return {"type": "LIST_RESULT", "path": "/", "entries": []}
 
 
+class DropFileStateBeforeGetChunkServer(ServerStub):
+	def __init__(self, *args: Any, **kwargs: Any) -> None:
+		super().__init__(*args, **kwargs)
+		self._dropped = False
+
+	def _drop_state_once(self) -> None:
+		if self._dropped:
+			return
+		self._dropped = True
+		self._open_files.clear()
+		self._datasets.clear()
+		self._dim_id_to_name.clear()
+		self._dim_id_reference_list.clear()
+
+	def handle_get_chunk(self, path: str, varname: str, byte_offset: int, size: int, **fields: Any) -> dict[str, Any]:
+		self._drop_state_once()
+		return super().handle_get_chunk(path, varname, byte_offset, size, **fields)
+
+
+class DropFileStateBeforeGetChunksServer(ServerStub):
+	def __init__(self, *args: Any, **kwargs: Any) -> None:
+		super().__init__(*args, **kwargs)
+		self._dropped = False
+
+	def _drop_state_once(self) -> None:
+		if self._dropped:
+			return
+		self._dropped = True
+		self._open_files.clear()
+		self._datasets.clear()
+		self._dim_id_to_name.clear()
+		self._dim_id_reference_list.clear()
+
+	def handle_get_chunks(self, path: str, varname: str, chunks: list[dict[str, Any]], thread_count: int = 4) -> None:
+		self._drop_state_once()
+		return super().handle_get_chunks(path, varname, chunks, thread_count)
+
+
+class DropFileStateBeforeReduceServer(ServerStub):
+	def __init__(self, *args: Any, **kwargs: Any) -> None:
+		super().__init__(*args, **kwargs)
+		self._dropped = False
+
+	def _drop_state_once(self) -> None:
+		if self._dropped:
+			return
+		self._dropped = True
+		self._open_files.clear()
+		self._datasets.clear()
+		self._dim_id_to_name.clear()
+		self._dim_id_reference_list.clear()
+
+	def handle_reduce(self, path: str, varname: str, operation: str, **fields: Any) -> dict[str, Any]:
+		self._drop_state_once()
+		return super().handle_reduce(path, varname, operation, **fields)
+
+
 def _start_loopback_server(server_cls: type[ServerStub]) -> tuple[p5remSession, threading.Thread, socket.socket, socket.socket, Any, Any, Any, Any]:
 	client_sock, server_sock = socket.socketpair()
 	client_reader = client_sock.makefile("rb")
@@ -164,6 +221,50 @@ def test_loopback_proxy_round_trip() -> None:
 			assert np.isclose(reduce_response["value"], expected_mean)
 
 		assert proxy.closed is True
+	finally:
+		_stop_loopback_server(*connection)
+
+
+def test_loopback_get_chunk_recovers_when_server_loses_file_state() -> None:
+	connection = _start_loopback_server(DropFileStateBeforeGetChunkServer)
+	session = connection[0]
+	data_path = str(Path(__file__).parent / "data" / "contiguous_eg.nc")
+	try:
+		with session.open(data_path) as proxy:
+			q = proxy["q"]
+			data = q[0, :]
+			assert data.size > 0
+	finally:
+		_stop_loopback_server(*connection)
+
+
+def test_loopback_get_chunks_recovers_when_server_loses_file_state() -> None:
+	connection = _start_loopback_server(DropFileStateBeforeGetChunksServer)
+	session = connection[0]
+	data_path = str(Path(__file__).parent / "data" / "test1.nc")
+	try:
+		with session.open(data_path) as proxy:
+			tas = proxy["tas"]
+			data = tas[0, :, :]
+			assert data.shape == (64, 128)
+	finally:
+		_stop_loopback_server(*connection)
+
+
+def test_loopback_reduce_recovers_when_server_loses_file_state() -> None:
+	connection = _start_loopback_server(DropFileStateBeforeReduceServer)
+	session = connection[0]
+	data_path = str(Path(__file__).parent / "data" / "test1.nc")
+	try:
+		session.file_open(data_path)
+		response = session.reduce_selection(
+			data_path,
+			"tas",
+			"mean",
+			selection=[{"type": "index", "value": 0}, None, None],
+		)
+		assert response["type"] == "REDUCTION_RESULT"
+		assert response["mode"] == "selection"
 	finally:
 		_stop_loopback_server(*connection)
 
@@ -347,6 +448,18 @@ def test_handle_file_open_resets_cached_datasets_for_reopen(monkeypatch: pytest.
 	assert second_dataset is second_file._dataset
 	assert second_dataset is not first_dataset
 	assert server._dim_id_to_name[path] == {2: "new_var"}
+
+
+def test_get_dataset_rejects_stale_cache_when_file_not_open() -> None:
+	server = ServerStub(io.BytesIO(), io.BytesIO())
+	path = "/tmp/not-open.nc"
+	stale_dataset = object()
+	server._datasets[path] = {"tas": stale_dataset}
+
+	with pytest.raises(FileNotFoundError, match="file is not open"):
+		server._get_dataset(path, "tas")
+
+	assert path not in server._datasets
 
 
 def test_real_server_get_chunk_for_chunked_and_contiguous() -> None:

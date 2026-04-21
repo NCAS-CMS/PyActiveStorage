@@ -14,11 +14,15 @@ which handles server upload, launch, and teardown automatically:
 
    with bootstrap_session(
        host="hpc",
-       remote_python="conda run -n myenv python",
+          remote_setup="module load jaspy",
+          remote_python="python",
        login_shell=True,
        use_cache=False,
    ) as session:
        ...   # use session inside the block
+
+    # Conda activation is equally valid when you need it:
+    # remote_setup="source /path/to/conda.sh && conda activate myenv"
 
 The session is closed (and the remote server process exited) when the ``with``
 block exits.
@@ -28,15 +32,24 @@ block exits.
 ``host``
    SSH host alias or hostname.  Resolved via ``~/.ssh/config``.
 
+``remote_setup``
+   Optional shell fragment run before launching remote Python.  Use this for
+   module loads or explicit environment activation.  Typical values:
+
+   * ``"module load python/3.11"``
+   * ``"source /path/to/conda.sh && conda activate myenv"``
+
 ``remote_python``
-   Command string used to launch Python on the remote host.  Typical values:
+   Command string used to launch Python on the remote host after any
+   ``remote_setup`` has completed.  Typical values:
 
    * ``"python"`` — plain Python on ``$PATH``
    * ``"conda run -n myenv python"`` — activate a conda environment
    * ``"/home/user/venv/bin/python"`` — absolute path to a virtualenv
 
    That remote Python environment must include the server-stub runtime
-   dependencies: ``pyfive``, ``numpy``, and ``cbor2``.
+   dependencies: ``numpy``, ``cbor2``, and the required backend for the file
+   format you plan to open (``pyfive`` for HDF5/NetCDF or ``ppfive`` for PP).
 
 ``login_shell``
    Set ``True`` if the remote Python command is only available after shell
@@ -127,7 +140,7 @@ usage for a session, disable it explicitly:
 .. code-block:: python
 
    # Disable caching entirely
-   with bootstrap_session(host="hpc", remote_python="…", use_cache=False) as session:
+      with bootstrap_session(host="hpc", remote_setup="module load jaspy", remote_python="python", use_cache=False) as session:
        ...
 
 Server-side reductions
@@ -197,7 +210,8 @@ automatically re-bootstraps if the SSH connection drops:
 
    session = bootstrap_reconnecting_session(
        host="hpc",
-       remote_python="conda run -n myenv python",
+          remote_setup="module load jaspy",
+          remote_python="python",
        login_shell=True,
    )
    # session transparently reconnects on the next operation after a failure

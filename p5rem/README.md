@@ -1,6 +1,9 @@
 # p5rem
 
-Remote HDF5/NetCDF access over SSH stdio, using a small remote pyfive-based server and a local proxy API.
+Remote HDF5/NetCDF4/pp access over SSH stdio, using a small remote pyfive-based server and a local proxy API.
+
+The motivation here is to make use of the fact that server side we have intelligence and can make more use of that than just remote access via (e.g. fsspec's support for ssh file systems). That way we can move less data and do (hopefully) cleverer things. However,
+that intelligence comes with the contraint that we can only do clever things with files that are in HDF5, NetCDF4, or pp/fields files.
 
 ## Usage
 
@@ -12,8 +15,10 @@ For a minimal non-GUI example that defines the remote host, setup command, and P
 However, the basic idea is that remote files can be opened
 over an ssh session, and handled locally as if they were
 instances of a `pyfive.File`. There is a slightly different
-approach to laziness, but otherwise `p5rem.File` quacks
-just like a `pyfive.File`.
+approach to laziness, but otherwise `p5rem.rFile` quacks
+just like a `pyfive.File`, producing children instances of `p5rem.rDataset` that quack like `pyfive.Dataset`.
+
+(For pp/fields file support, `p5rem` can also make use of remote support for the `ppfive` package, which server-side also quacks like `pyfive`.)
 
 ### Remote environment bootstrap (mamba)
 

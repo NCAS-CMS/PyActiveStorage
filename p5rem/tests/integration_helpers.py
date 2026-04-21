@@ -91,7 +91,7 @@ def bootstrap_integration_session(config: SSHIntegrationConfig):
 def list_remote_netcdf_files(session, remote_dir: str) -> list[str]:
 	entries = session.list(remote_dir)
 	paths = [
-		entry.get("name")
+		os.path.basename(entry["name"])
 		for entry in entries
 		if isinstance(entry, dict)
 		and entry.get("type") == "file"

@@ -14,17 +14,18 @@ Or in development mode::
 
 The client-side dependencies (``paramiko``, ``pyfive``, ``cbor2``,
 ``diskcache``, ``numpy``) are pulled in automatically.  The remote server stub
-(``p5rem/remote_server.py``) requires ``pyfive``, ``numpy``, and ``cbor2``,
-which keeps the per-environment HPC footprint small while still providing the
-CBOR message framing used over SSH stdio.
+(``p5rem/remote_server.py``) requires ``numpy``, ``cbor2``, and the backend
+matching the file format you plan to open: ``pyfive`` for HDF5/NetCDF or
+``ppfive`` for PP.
 
 Requirements
 ~~~~~~~~~~~~
 
 * Python ≥ 3.10 (client and server)
 * SSH access to the remote host (standard user login, no special privileges)
-* A Python environment on the remote host that contains ``pyfive >= 0.5.0``,
-  ``numpy``, and ``cbor2``
+* A Python environment on the remote host that contains ``numpy``, ``cbor2``,
+  and the required file backend: ``pyfive >= 0.5.0`` for HDF5/NetCDF or
+  ``ppfive`` for PP
 
 Minimal remote env setup script
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -56,8 +57,18 @@ If your server uses micromamba, override the executable:
 
 The script also accepts ``MAMBA_BIN`` for compatibility.
 
-Then set your remote Python command accordingly, for example
-``conda run -n my-remote-env python``.
+Then either:
+
+* set ``remote_setup`` to activate the environment and keep
+   ``remote_python="python"``, or
+* set ``remote_python`` directly to ``conda run -n my-remote-env python``.
+
+Example setup fragments:
+
+* module-based host: ``remote_setup="module load jaspy"`` with
+   ``remote_python="python"``
+* conda activation host: ``remote_setup="source /path/to/conda.sh && conda activate myenv"``
+   with ``remote_python="python"``
 
 Quick start
 -----------
@@ -75,11 +86,13 @@ The minimal usage pattern is:
    from p5rem import bootstrap_session
 
    REMOTE_HOST   = "xfer1"            # SSH host alias from ~/.ssh/config
-   REMOTE_PYTHON = "conda run -n myenv python"
+   REMOTE_SETUP  = "module load jaspy"
+   REMOTE_PYTHON = "python"
    REMOTE_FILE   = "project/data/temperature.nc"
 
    with bootstrap_session(
        host=REMOTE_HOST,
+       remote_setup=REMOTE_SETUP,
        remote_python=REMOTE_PYTHON,
        login_shell=True,      # needed if conda is only in .bashrc / .bash_profile
        use_cache=False,
@@ -110,6 +123,13 @@ If your remote Python environment is only activated in shell startup files
 (``~/.bashrc`` etc.) you must pass ``login_shell=True``; p5rem will then
 invoke the remote command via ``bash --login -c "…"`` so the startup scripts
 run first.
+
+Use ``remote_setup`` for environment preparation and ``remote_python`` for the
+Python executable itself.  For example, use ``remote_setup="module load ..."``
+with ``remote_python="python"`` on module-based systems, or use
+``remote_setup="source /path/to/conda.sh && conda activate myenv"`` with
+``remote_python="python"`` for explicit conda activation.  As an alternative,
+you can skip ``remote_setup`` and set ``remote_python="conda run -n myenv python"``.
 
 Example script
 --------------

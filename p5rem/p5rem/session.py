@@ -235,14 +235,21 @@ class p5remSession:
 
 		self._ensure_var_server_ready(path, varname)
 
-		response = self.request(
-			GET_CHUNK,
-			path=path,
-			varname=varname,
-			byte_offset=byte_offset,
-			size=size,
+		request_fields = {
+			"path": path,
+			"varname": varname,
+			"byte_offset": byte_offset,
+			"size": size,
 			**fields,
-		)
+		}
+		try:
+			response = self.request(GET_CHUNK, **request_fields)
+		except ResponseError as err:
+			if not self._is_file_not_open_error(err):
+				raise
+			self._server_ready_vars.pop(path, None)
+			self._ensure_var_server_ready(path, varname)
+			response = self.request(GET_CHUNK, **request_fields)
 		result = dict(response)
 		if self._cache is not None and mtime is not None:
 			with self._cache.transact():
@@ -285,29 +292,39 @@ class p5remSession:
 
 		self._ensure_var_server_ready(path, varname)
 
-		with self._lock:
-			write_message(
-				self._stdin,
-				GET_CHUNKS,
-				path=path,
-				varname=varname,
-				chunks=pending_chunks,
-				thread_count=thread_count,
-			)
-			while True:
-				msg = read_message(self._stdout)
-				if msg["type"] == CHUNKS_DONE:
-					break
-				if msg["type"] == ERROR:
-					raise ResponseError(msg.get("message", "remote server returned an error"), response=msg)
-				if msg["type"] == CHUNK_DATA:
-					byte_offset = int(msg["byte_offset"])
-					chunk = dict(msg)
-					results[byte_offset] = chunk
-					if self._cache is not None and mtime is not None:
-						size = int(msg["size"])
-						with self._cache.transact():
-							self._cache.set_chunk(host_key, path, byte_offset, size, mtime, chunk)
+		def _fetch_batch() -> None:
+			with self._lock:
+				write_message(
+					self._stdin,
+					GET_CHUNKS,
+					path=path,
+					varname=varname,
+					chunks=pending_chunks,
+					thread_count=thread_count,
+				)
+				while True:
+					msg = read_message(self._stdout)
+					if msg["type"] == CHUNKS_DONE:
+						break
+					if msg["type"] == ERROR:
+						raise ResponseError(msg.get("message", "remote server returned an error"), response=msg)
+					if msg["type"] == CHUNK_DATA:
+						byte_offset = int(msg["byte_offset"])
+						chunk = dict(msg)
+						results[byte_offset] = chunk
+						if self._cache is not None and mtime is not None:
+							size = int(msg["size"])
+							with self._cache.transact():
+								self._cache.set_chunk(host_key, path, byte_offset, size, mtime, chunk)
+
+		try:
+			_fetch_batch()
+		except ResponseError as err:
+			if not self._is_file_not_open_error(err):
+				raise
+			self._server_ready_vars.pop(path, None)
+			self._ensure_var_server_ready(path, varname)
+			_fetch_batch()
 
 		return results
 
@@ -323,16 +340,23 @@ class p5remSession:
 		"""Request a reduction over one raw chunk payload."""
 
 		self._ensure_var_server_ready(path, varname)
-		return self.request(
-			REDUCE,
-			path=path,
-			varname=varname,
-			mode="chunk",
-			byte_offset=int(byte_offset),
-			size=int(size),
-			operation=operation,
+		request_fields = {
+			"path": path,
+			"varname": varname,
+			"mode": "chunk",
+			"byte_offset": int(byte_offset),
+			"size": int(size),
+			"operation": operation,
 			**fields,
-		)
+		}
+		try:
+			return self.request(REDUCE, **request_fields)
+		except ResponseError as err:
+			if not self._is_file_not_open_error(err):
+				raise
+			self._server_ready_vars.pop(path, None)
+			self._ensure_var_server_ready(path, varname)
+			return self.request(REDUCE, **request_fields)
 
 	def reduce_selection(
 		self,
@@ -346,16 +370,23 @@ class p5remSession:
 		"""Request a reduction over a selection (or full dataset when selection is None)."""
 
 		self._ensure_var_server_ready(path, varname)
-		return self.request(
-			REDUCE,
-			path=path,
-			varname=varname,
-			mode="selection",
-			operation=operation,
-			selection=selection,
-			thread_count=max(1, int(thread_count)),
+		request_fields = {
+			"path": path,
+			"varname": varname,
+			"mode": "selection",
+			"operation": operation,
+			"selection": selection,
+			"thread_count": max(1, int(thread_count)),
 			**fields,
-		)
+		}
+		try:
+			return self.request(REDUCE, **request_fields)
+		except ResponseError as err:
+			if not self._is_file_not_open_error(err):
+				raise
+			self._server_ready_vars.pop(path, None)
+			self._ensure_var_server_ready(path, varname)
+			return self.request(REDUCE, **request_fields)
 
 	def file_close(self, path: str) -> dict[str, Any]:
 		"""Release a remote file handle."""
@@ -451,6 +482,10 @@ class p5remSession:
 			return (expected_type,)
 
 		return tuple(expected_type)
+
+	def _is_file_not_open_error(self, error: ResponseError) -> bool:
+		message = str(error).lower()
+		return "file is not open" in message
 
 	def _ensure_var_server_ready(self, path: str, varname: str) -> None:
 		"""Ensure server-side dataset state exists before chunk reads."""
