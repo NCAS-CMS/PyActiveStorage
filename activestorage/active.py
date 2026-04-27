@@ -143,7 +143,8 @@ def get_missing_attributes(ds):
     missing_value = ds.attrs.get('missing_value')
     # see https://github.com/NCAS-CMS/PyActiveStorage/pull/303
     if isinstance(missing_value, np.ndarray):
-        missing_value = missing_value[0]
+        if missing_value.size == 1:
+            missing_value = missing_value[0]
     valid_min = hfix(ds.attrs.get('valid_min'))
     valid_max = hfix(ds.attrs.get('valid_max'))
     valid_range = hfix(ds.attrs.get('valid_range'))
@@ -519,21 +520,22 @@ class Active:
         # Create a shared session object.
         if self.interface_type == "s3" and self._version == 2:
             if self.storage_options is not None:
-                key, secret = None, None
                 if self.storage_options.get("anon", None) is True:
                     print("Reductionist session for Anon S3 bucket.")
                     session = reductionist.get_session(
                         None, None, S3_ACTIVE_STORAGE_CACERT)
-                if "key" in self.storage_options:
-                    key = self.storage_options["key"]
-                if "secret" in self.storage_options:
-                    secret = self.storage_options["secret"]
-                if key and secret:
-                    session = reductionist.get_session(
-                        key, secret, S3_ACTIVE_STORAGE_CACERT)
                 else:
-                    session = reductionist.get_session(
-                        S3_ACCESS_KEY, S3_SECRET_KEY, S3_ACTIVE_STORAGE_CACERT)
+                    key, secret = None, None
+                    if "key" in self.storage_options:
+                        key = self.storage_options["key"]
+                    if "secret" in self.storage_options:
+                        secret = self.storage_options["secret"]
+                    if key and secret:
+                        session = reductionist.get_session(
+                            key, secret, S3_ACTIVE_STORAGE_CACERT)
+                    else:
+                        session = reductionist.get_session(
+                            S3_ACCESS_KEY, S3_SECRET_KEY, S3_ACTIVE_STORAGE_CACERT)
             else:
                 session = reductionist.get_session(S3_ACCESS_KEY,
                                                    S3_SECRET_KEY,

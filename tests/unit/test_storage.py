@@ -6,6 +6,67 @@ import pytest
 import activestorage.storage as st
 
 
+def test_mask_missing():
+    """Test mask missing."""
+    missing_1 = ([-900.], np.array([-900.]), None, None)
+    missing_2 = ([-900., 33.], np.array([-900., 33.]), None, None)
+    data_1 = np.ma.array(
+        [[[-900., 33.], [33., -900], [33., 44.]]],
+        mask=False,
+        fill_value=-900.0,
+        dtype=float
+    )
+    data_2 = np.ma.array(
+        [[[-900., 33.], [33., -900], [33., 44.]]],
+        mask=False,
+        fill_value=[-900.0, 33.],
+        dtype=float
+    )
+    res_1 = st.mask_missing(data_1, missing_1)
+    expected_1 = np.ma.array(
+        data_1,
+        mask=[[[True, False], [False, True], [False, False]]]
+    )
+    np.testing.assert_array_equal(res_1, expected_1)
+    res_2 = st.mask_missing(data_2, missing_2)
+    expected_2 = np.ma.array(
+        data_2,
+        mask=[[[True, True], [False, False], [False, False]]]
+    )
+    np.testing.assert_array_equal(res_2, expected_2)
+
+
+def test_mask_missing_missing_broadcastable():
+    """Test mask missing when fill_value cant be broadcast to data."""
+    data = np.ma.array(
+        [[[-900., 33.], [33., -900], [33., 44.]]],
+        mask=False,
+        fill_value=np.array([-900.0]),
+        dtype=float
+    )
+    missing = (-900, np.array([-900., 33.]), None, None)
+    res = st.mask_missing(data, missing)
+    expected = np.ma.array(
+        data,
+        mask=[[[True, True], [False, False], [False, False]]]
+    )
+    np.testing.assert_array_equal(res, expected)
+
+
+def test_mask_missing_missing_not_broadcastable():
+    """Test mask missing when fill_value cant be broadcast to data."""
+    data = np.ma.array(
+        [[[-900., 33.], [33., -900], [33., 44.]]],
+        mask=False,
+        fill_value=np.array([-900.0]),
+        dtype=float
+    )
+    missing = (-900, np.array([-900., -900., 33.]), None, None)
+    msg = "Data and missing_value arrays are not brodcastable!" 
+    with pytest.raises(ValueError, match=msg):
+        st.mask_missing(data, missing)
+
+
 def test_reduce_chunk():
     """Test reduce chunk entirely."""
     rfile = "tests/test_data/cesm2_native.nc"
