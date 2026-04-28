@@ -1,0 +1,214 @@
+@startuml reduction_registry_patch
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam packageStyle rectangle
+
+' ------------------------------------------------------------------
+' Patch diagram: Reduction dataclass and registry.
+' Shows only the classes that change or are new.
+' Existing unchanged classes shown in grey for context.
+' ------------------------------------------------------------------
+
+package "activestorage.core" {
+
+    ' ------------------------------------------------------------------
+    ' NEW: Reduction — carries everything needed to describe an operation
+    ' ------------------------------------------------------------------
+
+    class Reduction <<dataclass>> {
+        + name : str
+        ' ── local execution ──────────────────
+        + local_fn : Callable
+        ' np.ma operation applied per chunk
+        + combine_fn : Callable | None
+        ' combines partial chunk results;
+        ' None means local_fn is also the combiner
+        ' ── decomposability ──────────────────
+        + decomposable : bool = True
+        ' False → WholeArrayStrategy only
+        ' (e.g. median, percentile)
+        ' ── counting ─────────────────────────
+        + needs_count : bool = False
+        ' True → count non-missing elements
+        ' (required for mean, weighted_mean)
+        ' ── wire protocol ────────────────────
+        + wire_name : str | None = None
+        ' name sent in REDUCE / Reductionist
+        ' request; defaults to name if None
+    }
+
+    ' ------------------------------------------------------------------
+    ' NEW: ReductionRegistry — replaces _methods dict on Active
+    ' ------------------------------------------------------------------
+
+    class ReductionRegistry {
+        - _reductions : dict[str, Reduction]
+        - _locked : set[str]
+        ' names that cannot be overridden
+        --
+        + register(reduction: Reduction)
+        + register_simple(name, local_fn,\n  combine_fn, needs_count, wire_name)
+        ' convenience wrapper that builds
+        ' a Reduction and calls register()
+        + get(name: str) : Reduction
+        + names() : set[str]
+        + is_standard(name: str) : bool
+        --
+        ' Raises ValueError if name in _locked
+        ' and caller tries to override it.
+    }
+
+    ' ------------------------------------------------------------------
+    ' NEW: STANDARD_REDUCTIONS — module-level constant
+    ' ------------------------------------------------------------------
+
+    class "STANDARD_REDUCTIONS : dict[str, Reduction]" as StandardReductions <<constant>> {
+        "min"  → Reduction(local_fn=np.ma.min,\n  combine_fn=np.ma.min,\n  needs_count=False)
+        "max"  → Reduction(local_fn=np.ma.max,\n  combine_fn=np.ma.max,\n  needs_count=False)
+        "sum"  → Reduction(local_fn=np.ma.sum,\n  combine_fn=np.ma.sum,\n  needs_count=False)
+        "mean" → Reduction(local_fn=np.ma.sum,\n  combine_fn=np.ma.sum,\n  needs_count=True)
+    }
+
+    ' ------------------------------------------------------------------
+    ' CHANGED: Active — _methods replaced by _registry
+    ' ------------------------------------------------------------------
+
+    class Active {
+        - _registry : ReductionRegistry
+        ' replaces _methods dict
+        - _reduction : Reduction | None
+        ' replaces _method str
+        - _axis : tuple
+        - _components : bool
+        - _backend : StorageBackend
+        - _format : StorageFormat
+        --
+        ' __new__ now seeds _registry from
+        ' STANDARD_REDUCTIONS and locks them
+        --
+        + register_method(name,\n  local_fn,\n  combine_fn=None,\n  needs_count=False,\n  wire_name=None)
+        ' wraps args into Reduction,
+        ' delegates to _registry.register()
+        ' or accepts Reduction directly
+        + method : property → Reduction | None
+        + components : property
+        + min(axis) : self
+        + max(axis) : self
+        + mean(axis) : self
+        + sum(axis) : self
+        --
+        + __getitem__(index)
+        - _get_vanilla(index)
+        - _from_storage(...)
+        - _mask_data(data)
+    }
+
+    ' ------------------------------------------------------------------
+    ' CHANGED: StorageBackend — supported_methods now refs Reduction names
+    ' ------------------------------------------------------------------
+
+    abstract class StorageBackend {
+        + supported_methods : set[str]
+        ' set of Reduction.name strings
+        ' backend inspects Reduction.wire_name
+        ' to know what to send on the wire,
+        ' Reduction.needs_count to know what
+        ' to expect back
+        + execution_strategy : ExecutionStrategy
+        --
+        + get_session()
+        + close_session(session)
+        + {abstract} reduce_chunk(request: ChunkRequest) : ChunkResult
+        + reduce_selection(request: SelectionRequest) : SelectionResult
+        --
+        + supports(reduction: Reduction) : bool
+        ' checks reduction.name in supported_methods
+        ' AND reduction.decomposable if strategy
+        ' requires it
+    }
+
+    ' ------------------------------------------------------------------
+    ' CHANGED: SelectionRequest — carries Reduction not just method str
+    ' ------------------------------------------------------------------
+
+    class SelectionRequest <<dataclass>> {
+        + uri : str
+        + variable : str
+        + selection : tuple
+        + reduction : Reduction
+        ' was: method : str
+        ' now carries full Reduction so backend
+        ' can inspect wire_name, needs_count etc.
+        + axis : tuple
+        + missing : MissingAttributes
+        + compressor : object
+        + filters : list
+    }
+
+    ' ------------------------------------------------------------------
+    ' CHANGED: ChunkRequest — same substitution
+    ' ------------------------------------------------------------------
+
+    class ChunkRequest <<dataclass>> {
+        + uri : str
+        + offset : int
+        + size : int
+        + dtype : str
+        + chunks : tuple
+        + order : str
+        + compressor : object
+        + filters : list
+        + chunk_selection : tuple
+        + missing : MissingAttributes
+        + reduction : Reduction
+        ' was: method : str
+        + axis : tuple
+    }
+
+    ' ------------------------------------------------------------------
+    ' Relationships
+    ' ------------------------------------------------------------------
+
+    Active *-- ReductionRegistry        : _registry
+    ReductionRegistry o-- Reduction     : holds many
+    ReductionRegistry ..> StandardReductions : seeded from\nin __new__
+
+    Active ..> Reduction                : _reduction\n(current operation)
+    Active ..> StorageBackend           : checks supports()\nbefore executing
+
+    StorageBackend ..> Reduction        : inspects wire_name\nand needs_count
+    SelectionRequest *-- Reduction      : carries
+    ChunkRequest *-- Reduction          : carries
+
+    note right of Reduction
+      decomposable=False means only
+      WholeArrayStrategy is valid.
+      Active raises early if the
+      selected backend's strategy
+      is ChunkedLocal or ChunkedRemote.
+      Forces whole-array backends
+      (p5rem, future Reductionist)
+      for non-decomposable operations.
+    end note
+
+    note right of ReductionRegistry
+      Standard reductions are locked
+      at construction time — they can
+      never be overridden, only extended.
+      Plugin reductions sit alongside,
+      never replace, the core set.
+    end note
+
+    note bottom of StandardReductions
+      "mean" maps local_fn=np.ma.sum
+      because partial chunks produce sums;
+      the final divide-by-n is handled
+      by the strategy using needs_count,
+      not by local_fn itself.
+      This is now explicit rather than
+      a hidden special case in Active.
+    end note
+}
+
+@enduml

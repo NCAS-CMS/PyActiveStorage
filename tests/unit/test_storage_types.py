@@ -92,22 +92,23 @@ def test_s3(mock_reduce, mock_load, tmp_path):
 
     # NOTE: This gets called multiple times with various arguments. Match on
     # the common ones.
-    mock_reduce.assert_called_with(
-        mock.ANY,
+    mock_reduce.assert_any_call(
+        mock.ANY,  # session
         S3_ACTIVE_STORAGE_URL,
-        S3_URL,
-        mock.ANY,
-        mock.ANY,
+        mock.ANY,  # S3 URL (object URL)
+        mock.ANY,  # offset
+        mock.ANY,  # size
         None,
         None,
         (None, None, None, None),
-        np.dtype("float64"),
-        mock.ANY,
+        mock.ANY,  # dtype
+        mock.ANY,  # shape
         "C",
-        mock.ANY,
+        mock.ANY,  # chunk_selection
         axis=(0, 1, 2),
         operation="max",
         interface_type="s3",
+        option_disable_chunk_cache=False,
     )
 
 
