@@ -7,8 +7,8 @@ from pathlib import Path
 
 from activestorage.active import Active, load_from_s3
 from activestorage.config import USE_S3, S3_ACCESS_KEY, S3_SECRET_KEY, S3_URL, S3_ACTIVE_STORAGE_URL
-from . import dummy_data
-from .dummy_data import make_compressed_ncdata
+from tests import dummy_data
+from tests.dummy_data import make_compressed_ncdata
 
 from . import utils
 import h5py, pyfive
