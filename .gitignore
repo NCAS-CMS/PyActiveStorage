@@ -8,6 +8,9 @@ ActiveStorage.egg-info
 activestorage.egg-info
 PyActiveStorage.egg-info
 
+# macOS metadata
+.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -17,6 +20,7 @@ __pycache__/
 doc/__pycache__
 doc/_sidebar.rst.inc
 _sidebar.rst.inc
+doc/build/
 
 # test output
 tests/test_data/cesm2_native_TREFHT.json
