@@ -50,7 +50,7 @@ test = [
 ]
 
 [tool.setuptools]
-packages = ["activestorage"]
+packages = ["activestorage", "activestorage.p5rem"]
 include-package-data = true
 
 [tool.setuptools_scm]
@@ -66,7 +66,7 @@ addopts = """
     --cov-report=html:test-reports/coverage_html
     --html=test-reports/report.html
 """
-pythonpath = ["p5rem"]
+pythonpath = ["."]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests requiring external services (SSH, remote servers)",

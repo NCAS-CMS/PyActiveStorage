@@ -8,10 +8,10 @@ from contextlib import suppress
 from io import BytesIO
 from pathlib import Path
 
-from p5rem.cache import P5RemCache
-from p5rem.protocol import CHUNK_DATA, FILE_INFO, FILE_OPEN, GET_CHUNK, STAT, STAT_RESULT, VAR_INFO, VAR_OPEN
-from p5rem.remote_server import ServerStub
-from p5rem.session import p5remSession
+from activestorage.p5rem.cache import P5RemCache
+from activestorage.p5rem.protocol import CHUNK_DATA, FILE_INFO, FILE_OPEN, GET_CHUNK, STAT, STAT_RESULT, VAR_INFO, VAR_OPEN
+from activestorage.p5rem.remote_server import ServerStub
+from activestorage.p5rem.session import p5remSession
 
 
 def test_cache_clear_scoped_by_host(tmp_path: Path) -> None:

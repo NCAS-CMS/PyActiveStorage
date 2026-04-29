@@ -25,7 +25,7 @@ from pathlib import Path
 
 import pytest
 
-from p5rem.bootstrap import bootstrap_server
+from activestorage.p5rem.bootstrap import bootstrap_server
 from tests.integration_helpers import require_ssh_integration_config
 
 

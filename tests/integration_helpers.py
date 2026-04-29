@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from p5rem import bootstrap_session, discover_remote_conda_envs
+from activestorage.p5rem import bootstrap_session, discover_remote_conda_envs
 
 
 @dataclass(frozen=True)

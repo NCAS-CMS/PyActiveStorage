@@ -1,8 +1,8 @@
 """Tests for cfdm interoperability with local and p5rem-remote files."""
 
 from __future__ import annotations
-from p5rem.remote_server import ServerStub
-from p5rem.session import p5remSession
+from activestorage.p5rem.remote_server import ServerStub
+from activestorage.p5rem.session import p5remSession
 import socket
 import threading
 from contextlib import suppress

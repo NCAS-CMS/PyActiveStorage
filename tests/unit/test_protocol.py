@@ -8,7 +8,7 @@ import struct
 import cbor2
 import pytest
 
-from p5rem.protocol import CHUNK_DATA, FILE_OPEN, LIST_RESULT, MessageFormatError, MessageFramingError, MessageTypeError, VAR_OPEN, decode, decode_payload, encode, make_message, read_message, write_message
+from activestorage.p5rem.protocol import CHUNK_DATA, FILE_OPEN, LIST_RESULT, MessageFormatError, MessageFramingError, MessageTypeError, VAR_OPEN, decode, decode_payload, encode, make_message, read_message, write_message
 
 
 def test_round_trip_var_open_message() -> None:
