@@ -34,7 +34,7 @@ jobs:
           done
       - name: Run Reductionist container
         run: docker run -it --detach --rm --net=host --name reductionist ghcr.io/stackhpc/reductionist-rs:latest
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: conda-incubator/setup-miniconda@v4
         with:
           activate-environment: activestorage-minio
           environment-file: environment.yml
