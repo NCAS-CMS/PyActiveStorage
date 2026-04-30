@@ -67,4 +67,14 @@ def generate_sidebar(conf, conf_api):
     # _write("pyactivestorage", "Changelog", "changelog")
     _endl()
 
+    _header("pyactivestorage", "Developer")
+    _write("pyactivestorage", "Overview", "developer/overview")
+    _write("pyactivestorage", "Wire Protocols", "developer/wire_protocols")
+    _write("pyactivestorage", "Server Requirements", "developer/server_requirements")
+    _endl()
+
+    _header("pyactivestorage", "p5rem")
+    _write("pyactivestorage", "Overview", "p5rem/index")
+    _endl()
+
     _write_if_changed("_sidebar.rst.inc", "\n".join(lines))
