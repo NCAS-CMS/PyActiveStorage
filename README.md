@@ -14,6 +14,11 @@
 - [GHA Tests](https://github.com/NCAS-CMS/PyActiveStorage/actions)
 - [conda-forge feedstock](https://github.com/conda-forge/pyactivestorage-feedstock)
 
+### JASMIN Wacasoft
+
+Reductionist is deployed on JASMIN's Wacasoft1 and 2 servers. There is a dedicated `reduct` user that runs the `reductionist` process. You can login as
+`reduct` with e.g. `ssh reduct@wacasoft1` from a sci-VM node, and restart the process with `podman start reductionist`.
+
 ### Create virtual environment
 
 Use a Miniconda3 package maintainer tool, [download for Linux](https://docs.conda.io/en/latest/miniconda.html#linux-installers).
