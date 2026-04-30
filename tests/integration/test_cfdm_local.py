@@ -63,7 +63,7 @@ def _stop_loopback_server(
 def test_cfdm_read_local_file_handle_repeatedly() -> None:
     """cfdm.read should work with a local file-handle repeatedly."""
 
-    data_path = Path(__file__).parent / "data" / "test1.nc"
+    data_path = Path(__file__).parents[1] / "test_data" / "test1.nc"
     local_fs = fsspec.filesystem("local")
     with local_fs.open(str(data_path), "rb") as handle:
         handle.seek(0)
@@ -79,7 +79,7 @@ def test_cfdm_read_local_file_handle_repeatedly() -> None:
 def test_cfdm_read_open_pyfive_file() -> None:
     """cfdm.read should work when given an actual open pyfive.File object."""
 
-    data_path = Path(__file__).parent / "data" / "test1.nc"
+    data_path = Path(__file__).parents[1] / "test_data" / "test1.nc"
     with pyfive.File(str(data_path)) as file_obj:
         print(f"\n[DEBUG] pyfive.File test")
         print(f"  type: {type(file_obj)}")
@@ -94,7 +94,7 @@ def test_cfdm_read_remote_rfile_over_loopback() -> None:
 
     connection = _start_loopback_server(ServerStub)
     session = connection[0]
-    data_path = str(Path(__file__).parent / "data" / "test1.nc")
+    data_path = str(Path(__file__).parents[1] / "test_data" / "test1.nc")
     try:
         with session.open(data_path) as remote_file:
             fields = cfdm.read(remote_file)
@@ -108,7 +108,7 @@ def test_remote_dataset_read_after_rfile_close_matches_pyfive() -> None:
 
     connection = _start_loopback_server(ServerStub)
     session = connection[0]
-    data_path = str(Path(__file__).parent / "data" / "test1.nc")
+    data_path = str(Path(__file__).parents[1] / "test_data" / "test1.nc")
     try:
         remote_file = session.open(data_path)
         dataset = remote_file["tas"]

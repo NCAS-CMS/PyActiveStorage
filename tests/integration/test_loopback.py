@@ -183,7 +183,7 @@ def test_server_detect_file_format_from_magic(tmp_path: Path) -> None:
 def test_loopback_proxy_round_trip() -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
-	data_path = str(Path(__file__).parent / "data" / "test1.nc")
+	data_path = str(Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "test1.nc")
 	try:
 		with session.open(data_path) as proxy:
 			assert "tas" in proxy.keys()
@@ -228,7 +228,7 @@ def test_loopback_proxy_round_trip() -> None:
 def test_loopback_get_chunk_recovers_when_server_loses_file_state() -> None:
 	connection = _start_loopback_server(DropFileStateBeforeGetChunkServer)
 	session = connection[0]
-	data_path = str(Path(__file__).parent / "data" / "contiguous_eg.nc")
+	data_path = str(Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "contiguous_eg.nc")
 	try:
 		with session.open(data_path) as proxy:
 			q = proxy["q"]
@@ -241,7 +241,7 @@ def test_loopback_get_chunk_recovers_when_server_loses_file_state() -> None:
 def test_loopback_get_chunks_recovers_when_server_loses_file_state() -> None:
 	connection = _start_loopback_server(DropFileStateBeforeGetChunksServer)
 	session = connection[0]
-	data_path = str(Path(__file__).parent / "data" / "test1.nc")
+	data_path = str(Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "test1.nc")
 	try:
 		with session.open(data_path) as proxy:
 			tas = proxy["tas"]
@@ -254,7 +254,7 @@ def test_loopback_get_chunks_recovers_when_server_loses_file_state() -> None:
 def test_loopback_reduce_recovers_when_server_loses_file_state() -> None:
 	connection = _start_loopback_server(DropFileStateBeforeReduceServer)
 	session = connection[0]
-	data_path = str(Path(__file__).parent / "data" / "test1.nc")
+	data_path = str(Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "test1.nc")
 	try:
 		session.file_open(data_path)
 		response = session.reduce_selection(
@@ -272,7 +272,7 @@ def test_loopback_reduce_recovers_when_server_loses_file_state() -> None:
 def test_contiguous_file_data_and_coordinates_round_trip() -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
-	data_path = str(Path(__file__).parent / "data" / "contiguous_eg.nc")
+	data_path = str(Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "contiguous_eg.nc")
 	try:
 		with session.open(data_path) as proxy:
 			ref_file = pyfive.File(data_path)
@@ -310,7 +310,7 @@ def test_contiguous_file_data_and_coordinates_round_trip() -> None:
 def test_enum_file_round_trip() -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
-	data_path = str(Path(__file__).parent / "data" / "enum_variable.nc")
+	data_path = str(Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "enum_variable.nc")
 	try:
 		with session.open(data_path) as proxy:
 			ref_file = pyfive.File(data_path)
@@ -341,7 +341,7 @@ def test_enum_file_round_trip() -> None:
 def test_loopback_shared_roundtrip_assertions(filename: str) -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
-	data_path = Path(__file__).parent / "data" / filename
+	data_path = Path(__file__).parents[2] / "p5rem" / "tests" / "data" / filename
 	try:
 		assert_roundtrip_file_matches(session, data_path, str(data_path))
 	finally:
@@ -371,7 +371,7 @@ def test_unexpected_response_type_raises() -> None:
 def test_real_server_var_open_includes_rich_metadata() -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
-	data_path = Path(__file__).parent / "data" / "test1.nc"
+	data_path = Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "test1.nc"
 	try:
 		file_info = session.file_open(str(data_path))
 		assert "tas" in file_info["keys"]
@@ -421,7 +421,7 @@ def test_handle_file_open_resets_cached_datasets_for_reopen(monkeypatch: pytest.
 		def close(self) -> None:
 			self.closed = True
 
-	data_path = Path(__file__).parent / "data" / "test1.nc"
+	data_path = Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "test1.nc"
 	first_file = FakeFile("old_var", FakeDataset("old_var", 1))
 	second_file = FakeFile("new_var", FakeDataset("new_var", 2))
 	opened_files = iter([first_file, second_file])
@@ -465,7 +465,7 @@ def test_get_dataset_rejects_stale_cache_when_file_not_open() -> None:
 def test_real_server_get_chunk_for_chunked_and_contiguous() -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
-	data_path = Path(__file__).parent / "data" / "test1.nc"
+	data_path = Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "test1.nc"
 	try:
 		session.file_open(str(data_path))
 
@@ -504,7 +504,7 @@ def test_real_server_get_chunk_for_chunked_and_contiguous() -> None:
 def test_real_server_reduce_supports_selection_and_chunk_modes() -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
-	data_path = Path(__file__).parent / "data" / "contiguous_eg.nc"
+	data_path = Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "contiguous_eg.nc"
 	try:
 		session.file_open(str(data_path))
 
@@ -543,7 +543,7 @@ def test_real_server_reduce_supports_selection_and_chunk_modes() -> None:
 def test_real_server_reduce_selection_parallel_full_dataset() -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
-	data_path = Path(__file__).parent / "data" / "test1.nc"
+	data_path = Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "test1.nc"
 	try:
 		session.file_open(str(data_path))
 		response = session.reduce_selection(
@@ -568,7 +568,7 @@ def test_real_server_reduce_selection_parallel_full_dataset() -> None:
 def test_real_server_reduce_selection_parallel_partial_selection() -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
-	data_path = Path(__file__).parent / "data" / "test1.nc"
+	data_path = Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "test1.nc"
 	try:
 		session.file_open(str(data_path))
 		response = session.reduce_selection(
@@ -597,7 +597,7 @@ def test_real_server_reduce_selection_parallel_partial_selection() -> None:
 def test_real_server_reduce_selection_chunk_planned_with_single_thread() -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
-	data_path = Path(__file__).parent / "data" / "test1.nc"
+	data_path = Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "test1.nc"
 	try:
 		session.file_open(str(data_path))
 		response = session.reduce_selection(
@@ -639,7 +639,7 @@ def test_real_server_reduce_selection_chunk_planned_with_single_thread() -> None
 def test_reduce_selection_chunked_all_operations_full_dataset(operation, ref_fn) -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
-	data_path = Path(__file__).parent / "data" / "test1.nc"
+	data_path = Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "test1.nc"
 	try:
 		session.file_open(str(data_path))
 		response = session.reduce_selection(str(data_path), "tas", operation, selection=None, thread_count=4)
@@ -670,7 +670,7 @@ def test_reduce_selection_chunked_all_operations_full_dataset(operation, ref_fn)
 def test_reduce_selection_chunked_all_operations_partial_selection(operation, ref_fn) -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
-	data_path = Path(__file__).parent / "data" / "test1.nc"
+	data_path = Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "test1.nc"
 	sel = [
 		{"type": "slice", "start": 2, "stop": 10, "step": 1},
 		{"type": "slice", "start": 10, "stop": 50, "step": 1},
@@ -707,7 +707,7 @@ def test_reduce_selection_chunked_all_operations_partial_selection(operation, re
 def test_reduce_selection_contiguous_all_operations_full_dataset(operation, ref_fn) -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
-	data_path = Path(__file__).parent / "data" / "contiguous_eg.nc"
+	data_path = Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "contiguous_eg.nc"
 	try:
 		session.file_open(str(data_path))
 		response = session.reduce_selection(str(data_path), "q", operation, selection=None)
@@ -730,7 +730,7 @@ def test_reduce_selection_contiguous_all_operations_full_dataset(operation, ref_
 def test_reduce_chunk_on_chunked_variable() -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
-	data_path = Path(__file__).parent / "data" / "test1.nc"
+	data_path = Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "test1.nc"
 	try:
 		session.file_open(str(data_path))
 		meta = session.var_open(str(data_path), "tas")
@@ -754,7 +754,7 @@ def test_reduce_chunk_on_chunked_variable() -> None:
 def test_reduce_chunk_on_contiguous_variable() -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
-	data_path = Path(__file__).parent / "data" / "contiguous_eg.nc"
+	data_path = Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "contiguous_eg.nc"
 	try:
 		session.file_open(str(data_path))
 		meta = session.var_open(str(data_path), "q")
@@ -791,7 +791,7 @@ def test_reduce_chunk_on_contiguous_variable() -> None:
 def test_reduce_selection_unknown_operation_chunked_raises() -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
-	data_path = Path(__file__).parent / "data" / "test1.nc"
+	data_path = Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "test1.nc"
 	try:
 		session.file_open(str(data_path))
 		with pytest.raises(ResponseError, match="unsupported reduction operation"):
@@ -807,7 +807,7 @@ def test_reduce_selection_unknown_operation_chunked_raises() -> None:
 def test_reduce_selection_thread_count_exceeds_chunk_count() -> None:
 	connection = _start_loopback_server(ServerStub)
 	session = connection[0]
-	data_path = Path(__file__).parent / "data" / "test1.nc"
+	data_path = Path(__file__).parents[2] / "p5rem" / "tests" / "data" / "test1.nc"
 	try:
 		session.file_open(str(data_path))
 		# A 1-timestep selection hits at most a handful of chunks; use 1000 workers.

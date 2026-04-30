@@ -3,6 +3,8 @@ import pytest
 
 from activestorage.active import Active, load_from_https
 
+pytestmark = [pytest.mark.external_service]
+
 
 @pytest.mark.skip(
     reason="save time: test_https_implicit_storage is more general.")

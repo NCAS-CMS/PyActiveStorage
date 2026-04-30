@@ -195,7 +195,7 @@ def test_session_get_chunks_uses_cache_on_repeat(tmp_path: Path) -> None:
 	thread.start()
 	session = p5remSession(host="cache-host", stdin=client_writer, stdout=client_reader, cache=cache)
 
-	data_path = str(Path(__file__).parent / "data" / "test1.nc")
+	data_path = str(Path(__file__).parents[1] / "test_data" / "test1.nc")
 	try:
 		session.file_open(data_path)
 		var_meta = session.var_open(data_path, "tas")

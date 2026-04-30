@@ -17,7 +17,7 @@ from . import utils
 @pytest.fixture
 def test_data_path():
     """Path to test data for CMOR fixes."""
-    return Path(__file__).resolve().parent / 'test_data'
+    return Path(__file__).resolve().parents[1] / 'test_data'
 
 
 def create_hyb_pres_file_without_ap(dataset, short_name):

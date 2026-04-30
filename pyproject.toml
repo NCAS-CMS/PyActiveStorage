@@ -74,7 +74,8 @@ addopts = """
 pythonpath = ["."]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests requiring external services (SSH, remote servers)",
+    "integration: marks tests that exercise multiple internal components together (local/loopback integration)",
+    "external_service: marks tests that depend on externally hosted network services",
 ]
 
 [tool.coverage.run]

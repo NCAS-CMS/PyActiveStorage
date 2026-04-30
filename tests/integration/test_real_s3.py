@@ -6,6 +6,8 @@ import pytest
 from activestorage.active import Active, load_from_s3
 from activestorage.reductionist import ReductionistError
 
+pytestmark = [pytest.mark.external_service]
+
 
 S3_BUCKET = "bnl"
 

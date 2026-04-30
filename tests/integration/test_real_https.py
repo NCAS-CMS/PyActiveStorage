@@ -4,6 +4,8 @@ import pytest
 from requests.exceptions import MissingSchema
 from activestorage.active import Active, load_from_https
 
+pytestmark = [pytest.mark.external_service]
+
 
 def test_https():
     """

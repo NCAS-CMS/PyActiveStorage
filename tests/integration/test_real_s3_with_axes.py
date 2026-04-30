@@ -5,6 +5,8 @@ import pytest
 
 from activestorage.active import Active
 
+pytestmark = [pytest.mark.external_service]
+
 
 S3_BUCKET = "bnl"
 

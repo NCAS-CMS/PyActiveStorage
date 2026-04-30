@@ -47,7 +47,7 @@ def test_compression_and_filters_cmip6_data(storage_options, active_storage_url)
     S3 anon=True Bucket and File: bnl CMIP6-test.nc
     Reductionist request data dictionary: {'source': 'https://uor-aces-o.s3-ext.jc.rl.ac.uk', 'bucket': 'bnl', 'object': 'CMIP6-test.nc', 'dtype': 'float32', 'byte_order': 'little', 'offset': 29385, 'size': 942518, 'order': 'C', 'shape': (15, 143, 144), 'selection': [[0, 2, 1], [4, 6, 1], [7, 9, 1]], 'compression': {'id': 'zlib'}}
     """
-    test_file = str(Path(__file__).resolve().parent / 'test_data' / 'CMIP6-test.nc')
+    test_file = str(Path(__file__).resolve().parents[1] / 'test_data' / 'CMIP6-test.nc')
     with Dataset(test_file) as nc_data:
         nc_min = np.min(nc_data["tas"][0:2,4:6,7:9])
     print(f"Numpy min from compressed file {nc_min}")
@@ -93,7 +93,7 @@ def test_compression_and_filters_cmip6_forced_s3_from_local(storage_options, act
 
     This is for a special anon=True bucket ONLY.
     """
-    test_file = str(Path(__file__).resolve().parent / 'test_data' / 'CMIP6-test.nc')
+    test_file = str(Path(__file__).resolve().parents[1] / 'test_data' / 'CMIP6-test.nc')
     with Dataset(test_file) as nc_data:
         nc_min = np.min(nc_data["tas"][0:2,4:6,7:9])
     print(f"Numpy min from compressed file {nc_min}")
@@ -128,7 +128,7 @@ def test_compression_and_filters_cmip6_forced_s3_from_local_2():
         'client_kwargs': {'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"}
     }
     active_storage_url = "https://192.171.169.248:8080"
-    test_file = str(Path(__file__).resolve().parent / 'test_data' / 'CMIP6-test.nc')
+    test_file = str(Path(__file__).resolve().parents[1] / 'test_data' / 'CMIP6-test.nc')
     with Dataset(test_file) as nc_data:
         nc_min = np.min(nc_data["tas"][0:2,4:6,7:9])
     print(f"Numpy min from compressed file {nc_min}")
@@ -170,7 +170,7 @@ def test_compression_and_filters_cmip6_forced_s3_using_local_Reductionist():
         'client_kwargs': {'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"}
     }
 
-    test_file = str(Path(__file__).resolve().parent / 'test_data' / 'CMIP6-test.nc')
+    test_file = str(Path(__file__).resolve().parents[1] / 'test_data' / 'CMIP6-test.nc')
     with Dataset(test_file) as nc_data:
         nc_min = np.min(nc_data["tas"][0:2,4:6,7:9])
     print(f"Numpy min from compressed file {nc_min}")
