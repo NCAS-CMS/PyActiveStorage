@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from io import BytesIO
 
-from activestorage.p5rem.session import p5remSession
+from activestorage.session import p5remSession
 
 
 class _HeartbeatFailingSession(p5remSession):

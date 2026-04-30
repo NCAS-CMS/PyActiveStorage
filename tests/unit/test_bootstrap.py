@@ -9,9 +9,9 @@ from typing import Any
 
 import pytest
 
-import activestorage.p5rem.bootstrap as bootstrap_module
-from activestorage.p5rem.bootstrap import bootstrap_reconnecting_session, bootstrap_server
-from activestorage.p5rem.session import SessionError
+import activestorage.bootstrap as bootstrap_module
+from activestorage.bootstrap import bootstrap_reconnecting_session, bootstrap_server
+from activestorage.session import SessionError
 
 
 class _FakeSFTP:

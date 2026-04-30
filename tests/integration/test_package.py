@@ -1,6 +1,7 @@
 import activestorage
 
 from activestorage import Active as act
+from activestorage import rDataset, rFile
 
 
 # test version
@@ -13,7 +14,8 @@ def test_version():
 def test_activestorage_class_attrs():
     assert hasattr(activestorage, "Active")
     assert hasattr(activestorage, "active")
-    assert hasattr(activestorage, "storage")
+    assert hasattr(activestorage, "rDataset")
+    assert hasattr(activestorage, "rFile")
 
 # check Active class
 def test_active_class_attrs():
@@ -27,3 +29,10 @@ def test_active_class_attrs():
     assert hasattr(act, "components")
     assert hasattr(act, "method")
     assert hasattr(act, "ncvar")
+
+
+def test_remote_proxy_class_attrs():
+    assert hasattr(rDataset, "__getitem__")
+    assert hasattr(rFile, "__getitem__")
+    assert hasattr(rFile, "__enter__")
+    assert hasattr(rFile, "__exit__")

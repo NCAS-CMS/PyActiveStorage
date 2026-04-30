@@ -6,7 +6,8 @@ import numpy as np
 import pyfive
 import pytest
 
-from activestorage.p5rem import Session, rDataset, rFile
+from activestorage.remote import rDataset, rFile
+from activestorage.session import Session
 
 
 class MockSession:

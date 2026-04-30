@@ -13,7 +13,7 @@ import pyfive
 import pytest
 import numpy as np
 
-from activestorage.p5rem.session import ResponseError, UnexpectedResponseError, p5remSession
+from activestorage.session import ResponseError, UnexpectedResponseError, p5remSession
 from activestorage.p5rem.remote_server import ServerStub
 from tests.roundtrip_assertions import assert_roundtrip_file_matches
 

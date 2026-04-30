@@ -54,11 +54,16 @@ packages = ["activestorage", "activestorage.p5rem"]
 include-package-data = true
 
 [tool.setuptools_scm]
+fallback_version = "0.0.2"
+
+[tool.setuptools_scm.scm.git]
+describe_command = "git describe --dirty --tags --long --match 'v*'"
 
 [tool.pytest.ini_options]
 addopts = """
     -m 'not slow'
     --ignore=old_code/
+    --ignore=p5rem/examples
     --ignore=tests/s3_exploratory
     --ignore=bnl
     --cov=activestorage
