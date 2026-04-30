@@ -1,0 +1,36 @@
+@startuml uml_core_structures_v1
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam packageStyle rectangle
+
+package "activestorage.core" {
+    class Active {
+        +min(axis)
+        +max(axis)
+        +mean(axis)
+        +sum(axis)
+        +__getitem__(index)
+        -_get_selection(selection)
+        -_from_storage(...)
+        -_axis
+        -_max_threads
+        ...
+    }
+    class ChunkRequest
+    class SelectionRequest
+    class ChunkResult
+    class SelectionResult
+    class ChunkMetadata
+    class MissingAttributes
+
+    Active --> ChunkRequest : creates via strategy
+    Active --> SelectionRequest : (whole-array path)
+    ChunkRequest --> ChunkResult
+    SelectionRequest --> SelectionResult
+    ChunkRequest --> ChunkMetadata
+    ChunkRequest --> MissingAttributes
+    SelectionRequest --> MissingAttributes
+}
+
+@enduml

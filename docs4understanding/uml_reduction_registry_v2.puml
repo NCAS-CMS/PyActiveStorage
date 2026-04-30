@@ -1,0 +1,27 @@
+@startuml uml_reduction_registry_v1
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam packageStyle rectangle
+
+package "activestorage.core" {
+    class Reduction {
+        +name
+        +local_fn
+        +combine_fn
+        +decomposable
+        +needs_count
+        +wire_name
+    }
+    class ReductionRegistry {
+        -_reductions
+        -_locked
+        +register(reduction)
+        +get(name)
+        +names()
+        +is_standard(name)
+    }
+    ReductionRegistry --> Reduction
+}
+
+@enduml

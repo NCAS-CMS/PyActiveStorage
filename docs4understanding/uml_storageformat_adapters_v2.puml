@@ -1,0 +1,30 @@
+@startuml uml_storageformat_adapters_v1
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam packageStyle rectangle
+
+package "activestorage.core" {
+    abstract class StorageFormat {
+        +open(uri, storage_options)
+        +get_variable(ncvar)
+        +get_missing_attributes()
+        +get_indexer(selection)
+        +get_chunk_metadata()
+        +close()
+    }
+}
+
+package "activestorage.formats" {
+    class PyfiveFormat
+    class ZarrFormat
+    class P5RemFormat
+    class KerchunkFormat
+
+    StorageFormat <|-- PyfiveFormat
+    StorageFormat <|-- ZarrFormat
+    StorageFormat <|-- P5RemFormat
+    StorageFormat <|-- KerchunkFormat
+}
+
+@enduml

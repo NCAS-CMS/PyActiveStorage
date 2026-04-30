@@ -1,0 +1,30 @@
+@startuml uml_backend_strategy_v1
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam packageStyle rectangle
+
+package "activestorage.core" {
+    abstract class StorageBackend {
+        +reduce_chunk(request)
+        +reduce_selection(request)
+    }
+    class LocalBackend
+    class S3Backend
+    class HttpsBackend
+    class P5RemBackend
+    class ChunkedLocalStrategy
+    class ChunkedRemoteStrategy
+    class WholeArrayStrategy
+
+    StorageBackend <|-- LocalBackend
+    StorageBackend <|-- S3Backend
+    StorageBackend <|-- HttpsBackend
+    StorageBackend <|-- P5RemBackend
+    LocalBackend --> ChunkedLocalStrategy : uses
+    S3Backend --> ChunkedRemoteStrategy : uses
+    HttpsBackend --> ChunkedRemoteStrategy : uses
+    P5RemBackend --> WholeArrayStrategy : uses
+}
+
+@enduml
