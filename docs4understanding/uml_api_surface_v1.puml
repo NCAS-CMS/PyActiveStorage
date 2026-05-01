@@ -1,0 +1,215 @@
+@startuml uml_api_surface_v1
+
+title "PyActiveStorage / p5rem — API Surface Overview"
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam packageStyle rectangle
+skinparam ArrowColor #444444
+skinparam classBackgroundColor #FAFAFA
+
+hide methods
+hide attributes
+
+' ─────────────────────────────────────────────
+' Active Storage API  (activestorage.core)
+' ─────────────────────────────────────────────
+
+package "activestorage.core" {
+
+    class Active {
+        +uri
+        +ncvar : str
+        +storage_type : str
+        +storage_options : dict
+        +active_storage_url : str
+        +axis : tuple
+        +max_threads : int
+        +method : str
+        +components : bool
+        +_version : int
+        --
+        +min(axis=None) : Lazy
+        +max(axis=None) : Lazy
+        +mean(axis=None) : Lazy
+        +sum(axis=None) : Lazy
+        +__getitem__(index) : ndarray | dict
+    }
+
+    note right of Active
+      Entry point: user creates Active(uri, ncvar, ...)
+      then optionally sets .method / ._version / .components,
+      and slices with  active.mean(axis=0)[...]
+    end note
+
+    abstract class StorageBackend {
+        +reduce_chunk(request: ChunkRequest) : ChunkResult
+        +reduce_selection(request: SelectionRequest) : SelectionResult
+    }
+
+    abstract class StorageFormat {
+        +open(uri, storage_options)
+        +get_variable(ncvar)
+        +get_missing_attributes() : MissingAttributes
+        +get_indexer(selection)
+        +get_chunk_metadata() : ChunkMetadata
+        +close()
+    }
+
+    abstract class ExecutionStrategy {
+        +execute(...)
+    }
+
+    Active --> StorageBackend  : delegates to
+    Active --> StorageFormat   : reads via
+    Active --> ExecutionStrategy : dispatches via
+}
+
+' ─────────────────────────────────────────────
+' p5rem proxy objects  (activestorage.remote)
+' ─────────────────────────────────────────────
+
+package "activestorage.remote" {
+
+    class rFile {
+        +filename : str
+        +attrs : dict
+        +mtime : float
+        +name : str = "/"
+        +closed : bool
+        --
+        +__getitem__(varname) : rDataset
+        +__contains__(key) : bool
+        +__iter__() : Iterator[str]
+        +keys() : KeysView
+        +items() : list[(str, rDataset)]
+        +values() : list[rDataset]
+        +get(key, default) : rDataset | None
+        +visit(func)
+        +visititems(func)
+        +__enter__() : rFile
+        +__exit__(...)
+        +close()
+    }
+
+    class rDataset {
+        +name : str
+        +path : str
+        +shape : tuple
+        +dtype
+        +chunks : tuple | None
+        +maxshape : tuple
+        +ndim : int
+        +size : int
+        +attrs : dict
+        +fillvalue
+        +dims : tuple[str]
+        +fragmented : bool
+        +file : rFile
+        --
+        +__getitem__(args) : ndarray
+        +astype(dtype) : rDataset
+        +index
+        +id : _RemoteDatasetID
+    }
+
+    note right of rFile
+      pyfive.File-compatible proxy.
+      Opened via  session.open(path)
+      or directly:  rFile(session, path)
+    end note
+
+    note right of rDataset
+      pyfive.Dataset-compatible proxy.
+      Returned by rFile[varname].
+      Supports same slicing as pyfive
+      but fetches chunks from remote.
+    end note
+
+    rFile "1" *-- "many" rDataset : contains
+}
+
+' ─────────────────────────────────────────────
+' p5rem session  (activestorage.session)
+' ─────────────────────────────────────────────
+
+package "activestorage.session" {
+
+    class p5remSession {
+        +host : str
+        +username : str
+        --
+        +file_open(path) : dict
+        +var_open(path, varname) : dict
+        +get_chunk(path, varname, byte_offset, size, **fields) : dict
+        +get_chunks(path, varname, chunk_descs) : dict
+        +reduce_chunk(path, varname, ..., operation) : dict
+        +close()
+    }
+
+    note left of p5remSession
+      Manages the stdin/stdout SSH
+      transport to the remote server.
+      Serialises requests as CBOR.
+      Thread-safe (RLock).
+    end note
+}
+
+' ─────────────────────────────────────────────
+' Bootstrap  (activestorage.bootstrap)
+' ─────────────────────────────────────────────
+
+package "activestorage.bootstrap" {
+
+    class bootstrap_session << (F,orchid) context manager >> {
+        host : str
+        remote_setup : str
+        remote_python : str
+        login_shell : bool
+        use_cache : bool
+        --
+        yields : p5remSession
+    }
+
+    note bottom of bootstrap_session
+      Uploads stub, launches remote Python,
+      yields a ready p5remSession, then tears down.
+      Usage:
+        with bootstrap_session(host=...) as session:
+            with session.open(path) as f:
+                ...
+    end note
+}
+
+' ─────────────────────────────────────────────
+' Concrete backends (activestorage.backends)
+' ─────────────────────────────────────────────
+
+package "activestorage.backends" {
+    class LocalBackend
+    class S3Backend
+    class HttpsBackend
+    class P5RemBackend
+
+    StorageBackend <|-- LocalBackend
+    StorageBackend <|-- S3Backend
+    StorageBackend <|-- HttpsBackend
+    StorageBackend <|-- P5RemBackend
+}
+
+' ─────────────────────────────────────────────
+' Cross-package relationships
+' ─────────────────────────────────────────────
+
+bootstrap_session ..> p5remSession : "creates / yields"
+
+p5remSession "1" --o "0..*" rFile     : opens
+rFile "1" --> "1" p5remSession         : uses for\nI/O calls
+rDataset "1" --> "1" p5remSession      : fetches chunks via
+
+P5RemBackend --> p5remSession          : holds session\nfor reductions
+
+Active ..> rFile    : accepts as\n''uri'' arg\n(p5rem path)
+Active ..> rDataset : accepts as\n''uri'' arg\n(pyfive-compat)
+
+@enduml

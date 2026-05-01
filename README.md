@@ -9,177 +9,151 @@
 
 ## PyActiveStorage
 
-- [Latest documentation on ReadTheDocs (RTD)](https://pyactivestorage.readthedocs.io/en/latest/)
-- [RTD latest builds](https://app.readthedocs.org/projects/pyactivestorage/)
-- [GHA Tests](https://github.com/NCAS-CMS/PyActiveStorage/actions)
+- [Latest documentation on ReadTheDocs](https://pyactivestorage.readthedocs.io/en/latest/)
+- [Project CI (GitHub Actions)](https://github.com/NCAS-CMS/PyActiveStorage/actions)
 - [conda-forge feedstock](https://github.com/conda-forge/pyactivestorage-feedstock)
+- Testing and CI details: [README_testing.md](README_testing.md)
 
-### Create virtual environment
+PyActiveStorage lets you run reductions (``min``, ``max``, ``sum``, ``mean``)
+against chunked NetCDF/HDF5 data without always pulling full arrays over the
+network.
 
-Use a Miniconda3 package maintainer tool, [download for Linux](https://docs.conda.io/en/latest/miniconda.html#linux-installers).
+The package is primarily used in two deployment models:
+
+1. **Object storage + adjacent Reductionist**
+   - Your data lives on S3-compatible object storage (or HTTPS object-serving).
+   - A Reductionist service is deployed near that storage.
+   - Your client sends reduction requests to Reductionist.
+2. **SSH-accessible remote storage (p5rem)**
+   - You can SSH to a remote machine where the files exist.
+   - PyActiveStorage bootstraps a lightweight remote server over SSH stdio.
+   - Reductions run using remote file access via ``rFile`` / ``rDataset``.
+
+## Install
+
+### Conda environment
 
 ```bash
-(base) conda install -c conda-forge mamba
-(base) mamba env create -n activestorage -f environment.yml
+conda install -c conda-forge mamba
+mamba env create -n activestorage -f environment.yml
 conda activate activestorage
 ```
 
-### Install with `pip`
+### Install package
 
 ```bash
 pip install -e .
 ```
 
-### Run tests
+Python versions supported: 3.10, 3.11, 3.12, 3.13.
 
-```bash
-pytest -n 2
-```
+## User-facing API
 
-### Main dependencies
-
-- Python versions supported: 3.10, 3.11, 3.12, 3.13. Fully compatible with `numpy >=2.0.0`.
-- [Pyfive](https://anaconda.org/conda-forge/pyfive) needs to be pinned `>=0.5.0` (first fully upgraded Pyfive version).
-
-## Active Storage Data Interface
-
-This package provides 
-
-1. the class `Active`, which is a shimmy to NetCDF4 (and HDF5) via a [`Pyfive.File`](https://github.com/NCAS-CMS/pyfive) file object
-2. The actual reads are done in the methods of `storage.py` or `reductionist.py`, which are called from within an `Active.__getitem__`.
-
-Example usage is in the test files, depending on the case:
-
-- [`tests/test_harness.py`](https://github.com/NCAS-CMS/PyActiveStorage/blob/main/tests/test_harness.py)
-- [`test_real_s3.py`](https://github.com/NCAS-CMS/PyActiveStorage/blob/main/tests/test_real_s3.py)
-- [`test_real_https.py`](https://github.com/NCAS-CMS/PyActiveStorage/blob/main/tests/test_real_https.py)
-
-but it's basically this simple:
+The main API entry point is ``Active``:
 
 ```python
-active = Active(file.Path | Pyfive.Dataset, ncvar="some_var")
-active._version = 2
-result = active.mean[0:2, 4:6, 7:9]
+from activestorage.active import Active
+
+active = Active(dataset_or_uri, ncvar="tas")
+result = active.mean(axis=(0, 1))[:]
 ```
 
-where `result` will be the mean of the appropriate slice of the hyperslab in `some_var` variable data.
+## Workflow A: S3/HTTPS + Reductionist
 
-There are some (relatively obsolete) documents from our exploration of zarr internals in the docs4understanding, but they are not germane to the usage of the Active class.
+Use this when you have object storage that is paired with a Reductionist
+endpoint.
 
-## Storage types
+### A1. S3 example
 
-PyActiveStorage is designed to interact with various storage backends.
-The storage backend is automatically detected, but can still be specified using the `interface_type` argument to the `Active` constructor.
-There are two main integration points for a storage backend:
+```python
+from activestorage.active import Active
 
-#. Load netCDF metadata
-#. Perform a reduction on a storage chunk (the `reduce_chunk` function)
+test_file_uri = "my-bucket/path/to/file.nc"
 
-### Local file
+active = Active(
+	test_file_uri,
+	ncvar="tas",
+	interface_type="s3",
+	storage_options={
+		"key": "<s3-access-key>",
+		"secret": "<s3-secret-key>",
+		"client_kwargs": {
+			"endpoint_url": "https://my-s3-endpoint.example"
+		},
+	},
+	active_storage_url="https://my-reductionist.example/",
+	option_disable_chunk_cache=True,
+)
 
-The default storage backend is a local file.
-To use a local file, use a `interface_type` of `None`, which is its default value.
-netCDF metadata is loaded using the [netCDF4](https://pypi.org/project/netCDF4/) library.
-The chunk reductions are implemented in `activestorage.storage` using NumPy.
+result = active.min(axis=(0, 1))[:]
+print(result.shape)
+```
 
-### S3-compatible object store
+### A2. HTTPS example
 
-We now have support for Active runs with netCDF4 files on S3, from [PR 89](https://github.com/NCAS-CMS/PyActiveStorage/pull/89).
-To achieve this we integrate with [Reductionist](https://github.com/stackhpc/reductionist-rs), an S3 Active Storage Server.
-Reductionist is typically deployed "near" to an S3-compatible object store and provides an API to perform numerical reductions on object data.
-To use Reductionist, use a `interface_type` of `s3`.
+```python
+from activestorage.active import Active
 
-To load metadata, netCDF files are opened using `s3fs`, with `h5netcdf` used to put the open file (which is nothing more than a memory view of the netCDF file) into an hdf5/netCDF-like object format.
-Chunk reductions are implemented in `activestorage.reductionist`, with each operation resulting in an API request to the Reductionist server.
-From there on, `Active` works as per normal.
+uri = "https://data.example.org/path/to/file.nc"
 
-### HTTPS-compatible on an NGINX server
+active = Active(
+	uri,
+	ncvar="ta",
+	interface_type="https",
+	active_storage_url="https://my-reductionist.example/",
+)
 
-The same infrastructure as for S3, but the file is passed in as an `https` URI.
+result = active.mean(axis=(0, 1))[:]
+print(result)
+```
 
-## Testing overview
+## Workflow B: SSH remote storage via p5rem
 
-We have written unit and integration tests, and employ a coverage measurement tool - Codecov, see PyActiveStorage [test coverage](https://app.codecov.io/gh/NCAS-CMS/PyActiveStorage) with current coverage of 87%; our Continuous Integration (CI) testing is deployed on [Github Actions](https://github.com/NCAS-CMS/PyActiveStorage/actions), and we have nightly tests that run the entire testing suite, to be able to detect any issues introduced by updated versions of our dependencies. Github Actions (GA) tests also test the integration of various storage types we currently support; as such, we have dedicated tests that test Active Storage with S3 storage (by creating and running a MinIO client from within the test, and deploying and testing PyActiveStorage with data shipped to the S3 client).
+Use this when you can SSH to the host that has the file, and that remote Python
+environment has ``cbor2`` plus the file backend (``pyfive`` for HDF5/NetCDF,
+or ``ppfive`` for PP).
 
-Of particular interest are performance tests, and we have started using tests that measure system run time and resident memory (RES); we use ``pytest-monitor`` for this purpose, inside the GA CI testing environemnt. So far, performance testing showed us that HDF5 chunking is paramount for performance `ie` a large number of small HDF5 chunks leads to very long system run times, and high memory consumption; however, larger HDF5 chunks significantly increase performance – as an example, running PyActiveStorage on an uncompressed netCDF4 file of size 1GB on disk (500x500x500 data elements, float64 each), with optimal HDF5 chunking (eg 75 data elements per chunk, on each dimesnional axis) takes order 0.1s for a local POSIX storage and 0.3s for the case when the file is on an S3 server; the same run needs only order approx. 100MB of RES memory for each of the two storage options see [test result](https://github.com/NCAS-CMS/PyActiveStorage/actions/runs/6313871715/job/17142905423?pr=146); the same types of runs with much smaller HDF5 chunks (eg 20x smaller) will need order a factor of 300 more time to complete, and order a few GB of RES memory.
+```python
+from activestorage.active import Active
+from activestorage.bootstrap import bootstrap_session
 
-## Testing HDF5 chunking
+with bootstrap_session(
+	host="hpc-login",
+	remote_setup="module load jaspy",
+	remote_python="python",
+	login_shell=True,
+) as session:
+	with session.open("/remote/path/data.nc") as f:
+		ds = f["tas"]
+		active = Active(ds, interface_type="p5rem")
+		result = active.max(axis=(0, 1))[:]
+		print(result)
+```
 
-### Test No. 1 specs
+## Choosing storage type
 
-- netCDF4 1.1GB file (on disk, local)
-- no compression, no filters
-- data shape = (500, 500, 500)
-- chunks = (75, 75, 75)
+Storage type can be inferred from URI in many cases, but for remote/object
+workflows it is clearer to set it explicitly via ``interface_type``:
 
-### Ran a null test
-
-(only test module for imports and fixtures)
-
-Ran 30 instances = 101-102M max RES
-
-### Run kerchunk's translator to JSON
-
-Ran 30 instances = 103M max RES
-
-### Ran an Active v1 test
-
-30 tests = 107-108M max RES
-
-So kerchunking only takes 1-2M of RES memory; Active in total ~7M RES memory!
-
-
-### Test No. 2 specs
-
-- netCDF4 1.1GB file (on disk, local)
-- no compression, no filters
-- data shape = (500, 500, 500)
-- chunks = (25, 25, 25)
-
-### Run kerchunk's translator to JSON
-
-Ran 30 instances = 111M max RES
-
-### Ran an Active v1 test
-
-30 tests = 114-115M max RES
-
-Kerchunking needs 9MB and Active v1 in total 13-14M of max RES memory
-
-
-### Test No. 3 specs
-
-- netCDF4 1.1GB file (on disk, local)
-- no compression, no filters
-- data shape = (500, 500, 500)
-- chunks = (8, 8, 8)
-
-### Run kerchunk's translator to JSON
-
-Ran 30 instances = 306M max RES
-
-### Ran an Active v1 test
-
-30 tests = 307M max RES
-
-Kerchunking needs ~200MB same as Active in total - kerchunking is memory-dominant in the case of tiny HDF5 chunks.
-
-
-### Some conclusions
-
-- HDF5 chunking is make or break
-- Memory appears to grow expentially of form ``F(M) = M0 + C x M ^ b`` where ``M0`` is the startup memory (module imports, test fixtures etc - here, about 100MB RES), ``C`` is a constant (probably close to 1), and ``b`` is the factor at which chunks decrease in size (along one axis, eg 3 here)
+- ``"s3"`` for S3 + Reductionist
+- ``"https"`` for HTTPS + Reductionist
+- ``"p5rem"`` for SSH-backed remote proxy datasets
 
 ## Documentation
 
-See available Sphinx [documentation](https://pyactivestorage.readthedocs.io/en/latest/). To build locally the documentation run:
+Project documentation is hosted on ReadTheDocs:
 
+- https://pyactivestorage.readthedocs.io/en/latest/
+
+To build locally:
+
+```bash
+sphinx-build -Ea -b html doc doc/build/html
 ```
-sphinx-build -Ea doc doc/build
-```
 
-Docs are webhooked to build on Pull Requests, and pushes.
+Then open ``doc/build/html/index.html``.
 
-## Code coverage (test coverage)
+## Testing, CI, and coverage
 
-We monitor test coverage via the [Codecov app](https://app.codecov.io/gh/NCAS-CMS/PyActiveStorage) and employ a bot that displays coverage changes introduced in every PR; the bot posts a comment directly to the PR, in which coverage variations introduced by the proposed code changes are displayed.
+Testing commands, CI notes, and performance-testing details are now in
+[README_testing.md](README_testing.md).

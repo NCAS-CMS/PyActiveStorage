@@ -37,8 +37,7 @@ Here is a basic example of of obtaining a minumum on a slice ``[0:3, 4:6, 7:9]``
         active = Active(test_file_uri, ncvar='UM_m01s16i202_vn1106',
                         storage_options=storage_options,
                         active_storage_url=active_storage_url)
-        active._version = 2
-        result = active.min[0:3, 4:6, 7:9]
+        result = active.min()[0:3, 4:6, 7:9]
 
         return result  # 5098.625
 
@@ -57,7 +56,6 @@ Same as above, only the file is stored on an HTTPS-facing server (NGINX-enabled)
         test_file_uri = "https://esgf.ceda.ac.uk/thredds/fileServer/esg_cmip6/CMIP6/AerChemMIP/MOHC/UKESM1-0-LL/ssp370SST-lowNTCF/r1i1p1f2/Amon/cl/gn/latest/cl_Amon_UKESM1-0-LL_ssp370SST-lowNTCF_r1i1p1f2_gn_205001-209912.nc"
 
         active = Active(test_file_uri, ncvar="cl")
-        active._version = 1
-        result = active.min[0:3, 4:6, 7:9]
+        result = active.min()[0:3, 4:6, 7:9]
 
         return result  # numpy.array([0.6909787], dtype="float32")

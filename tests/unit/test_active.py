@@ -43,7 +43,7 @@ def test_getitem():
     uri = "tests/test_data/cesm2_native.nc"
     ncvar = "TREFHT"
     active = Active(uri, ncvar=ncvar)
-    assert active._version == 1
+    assert active._version == 2
     item = active.__getitem__(index)[0, 0]
     expected = np.array(277.11945, dtype="float32")
     np.testing.assert_array_equal(item, expected)

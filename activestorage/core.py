@@ -236,7 +236,7 @@ class Active:
             raise ValueError("Must set a netCDF variable name to slice")
 
         self._ncvar = ncvar
-        self._version = 1
+        self._version = 2
         self._components = False
         self._method = None
         self._axis = (axis,) if isinstance(axis, int) else axis
