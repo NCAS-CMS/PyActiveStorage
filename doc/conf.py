@@ -57,6 +57,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
     'autodocsumm',
+    'sphinxcontrib.plantuml',
 ]
 
 autodoc_default_options = {

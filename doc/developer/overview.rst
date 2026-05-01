@@ -1,6 +1,14 @@
 Overview
 ========
 
-.. todo::
+The key concepts and API surface of PyActiveStorage is described in the following diagram:
 
-   Developer overview content to be added here.
+.. uml::
+   :align: center
+   :caption: UML diagram of PyActiveStorage API surface
+
+   @startuml
+   !include ../uml/uml_api_surface_v1_headline.puml
+   @enduml
+
+

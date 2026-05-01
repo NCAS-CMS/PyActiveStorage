@@ -40,6 +40,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+doc = [
+    "autodocsumm",
+    "sphinx",
+    "sphinxcontrib-plantuml",
+    "sphinx_rtd_theme",
+]
+
 test = [
     "moto",
     "pytest",
