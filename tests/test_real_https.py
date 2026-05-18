@@ -52,9 +52,17 @@ def test_https():
     print("Result is", result)
     assert result == np.array([220.3180694580078], dtype="float32")
 
+
+def test_https_axis_1():
+    """Test https with axis 1."""
+    # FIXME fails frequently on CEDA NGINX: Reductionist: 400 Bad Request
+
     # set these as fixed floats
     f_1 = 176.882080078125
     f_2 = 190.227783203125
+
+    test_file_uri = "https://esgf.ceda.ac.uk/thredds/fileServer/esg_cmip6/CMIP6/CMIP/MOHC/UKESM1-1-LL/piControl/r1i1p1f2/Amon/ta/gn/latest/ta_Amon_UKESM1-1-LL_piControl_r1i1p1f2_gn_274301-274912.nc"
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft new Reductionist
 
     # v2: inferred storage type, pop axis
     active = Active(test_file_uri, "ta",
@@ -81,6 +89,17 @@ def test_https():
     assert r_min[0, 0] == f_1
     assert r_min[143, 191] == f_2
 
+
+def test_https_axis_2():
+    """Test https with axis 2."""
+    # FIXME fails frequently on CEDA NGINX: Reductionist: 400 Bad Request
+
+    # set these as fixed floats
+    f_1 = 176.882080078125
+    f_2 = 190.227783203125
+
+    test_file_uri = "https://esgf.ceda.ac.uk/thredds/fileServer/esg_cmip6/CMIP6/CMIP/MOHC/UKESM1-1-LL/piControl/r1i1p1f2/Amon/ta/gn/latest/ta_Amon_UKESM1-1-LL_piControl_r1i1p1f2_gn_274301-274912.nc"
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft new Reductionist
     # basic auth on; username and password
     # should work with both Active and Reductionist but we
     # don't have such an NGINX-auth-ed file yet
