@@ -52,9 +52,17 @@ def test_https():
     print("Result is", result)
     assert result == np.array([220.3180694580078], dtype="float32")
 
+
+def test_https_axis_1():
+    """Test https with axis 1."""
+    # FIXME fails frequently on CEDA NGINX: Reductionist: 400 Bad Request
+
     # set these as fixed floats
     f_1 = 176.882080078125
     f_2 = 190.227783203125
+
+    test_file_uri = "https://esgf.ceda.ac.uk/thredds/fileServer/esg_cmip6/CMIP6/CMIP/MOHC/UKESM1-1-LL/piControl/r1i1p1f2/Amon/ta/gn/latest/ta_Amon_UKESM1-1-LL_piControl_r1i1p1f2_gn_274301-274912.nc"
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft new Reductionist
 
     # v2: inferred storage type, pop axis
     active = Active(test_file_uri, "ta",
@@ -81,6 +89,17 @@ def test_https():
     assert r_min[0, 0] == f_1
     assert r_min[143, 191] == f_2
 
+
+def test_https_axis_2():
+    """Test https with axis 2."""
+    # FIXME fails frequently on CEDA NGINX: Reductionist: 400 Bad Request
+
+    # set these as fixed floats
+    f_1 = 176.882080078125
+    f_2 = 190.227783203125
+
+    test_file_uri = "https://esgf.ceda.ac.uk/thredds/fileServer/esg_cmip6/CMIP6/CMIP/MOHC/UKESM1-1-LL/piControl/r1i1p1f2/Amon/ta/gn/latest/ta_Amon_UKESM1-1-LL_piControl_r1i1p1f2_gn_274301-274912.nc"
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft new Reductionist
     # basic auth on; username and password
     # should work with both Active and Reductionist but we
     # don't have such an NGINX-auth-ed file yet
@@ -110,7 +129,64 @@ def test_https():
     assert result.shape == (1, 1, 144, 192)
     assert result[0, 0, 0, 0] == f_1
     assert result[0, 0, 143, 191] == f_2
-    
+
+
+def test_https_axis_2_dkrz():
+    """Test https with axis 2."""
+    # set these as fixed floats
+    f_1 = -5.860719821899198e-24
+    f_2 = -1.3990660160462923e-25
+
+    test_file_uri = "http://esgf3.dkrz.de/thredds/fileServer/cmip6/RFMIP/MPI-M/MPI-ESM1-2-LR/piClim-spAer-anthro/r1i1p1f2/Amon/clw/gn/v20190710/clw_Amon_MPI-ESM1-2-LR_piClim-spAer-anthro_r1i1p1f2_gn_184901-187912.nc"
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft new Reductionist
+    # basic auth on; username and password
+    # should work with both Active and Reductionist but we
+    # don't have such an NGINX-auth-ed file yet
+    active = Active(test_file_uri, "clw",
+                    interface_type="https",
+                    storage_options={"username": None, "password": None},
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
+    active._version = 2
+    result = active.min(axis=(0, 1))[:]
+    print("Result is", result)
+    print("Result shape is", result.shape)
+    assert result.shape == (1, 1, 96, 192)
+    assert result[0, 0, 0, 0] == f_1
+    assert result[0, 0, 95, 191] == f_2    
+
+
+def test_https_axis_22_dkrz():
+    """
+    Test https with axis 2.
+
+    This is a copy of axis_2_dkrx test case; we have it here just to test
+    the load on the DKRZ NGINX server, as we do with CEDA above. 
+    """
+    # NOTE a copy of test_https_axis_2_dkrz
+
+    # set these as fixed floats
+    f_1 = -5.860719821899198e-24
+    f_2 = -1.3990660160462923e-25
+
+    test_file_uri = "http://esgf3.dkrz.de/thredds/fileServer/cmip6/RFMIP/MPI-M/MPI-ESM1-2-LR/piClim-spAer-anthro/r1i1p1f2/Amon/clw/gn/v20190710/clw_Amon_MPI-ESM1-2-LR_piClim-spAer-anthro_r1i1p1f2_gn_184901-187912.nc"
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft new Reductionist
+    # basic auth on; username and password
+    # should work with both Active and Reductionist but we
+    # don't have such an NGINX-auth-ed file yet
+    active = Active(test_file_uri, "clw",
+                    interface_type="https",
+                    storage_options={"username": None, "password": None},
+                    active_storage_url=active_storage_url,
+                    option_disable_chunk_cache=True)
+    active._version = 2
+    result = active.min(axis=(0, 1))[:]
+    print("Result is", result)
+    print("Result shape is", result.shape)
+    assert result.shape == (1, 1, 96, 192)
+    assert result[0, 0, 0, 0] == f_1
+    assert result[0, 0, 95, 191] == f_2
+
 
 @pytest.mark.skip(
     reason="save time: test_https_implicit_storage is more general.")
