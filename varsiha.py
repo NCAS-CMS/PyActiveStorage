@@ -58,7 +58,7 @@ ds = file_obj[config['var']]
 with concurrent.futures.ThreadPoolExecutor(
   max_workers=100) as executor:
   futures = []
-  for i in range(100):
+  for i in range(50):
     print("Thread ", i, " submitted")
     future = executor.submit(_iterate_range, i)
     futures.append(future)
