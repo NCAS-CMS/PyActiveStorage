@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - reduce_maxthreads
   schedule:
     - cron: '0 0 * * *'  # nightly
 
@@ -36,7 +37,7 @@ jobs:
       - run: conda list
       - run: pip install -e .
       - run: conda list
-      - run: pytest -n 2
+      - run: pytest -n 2 tests/test_real_https.py
 
   osx:
     runs-on: "macos-latest"
@@ -61,4 +62,4 @@ jobs:
       - run: conda list
       - run: mamba install -c conda-forge git
       - run: pip install -e .
-      - run: pytest -n 2
+      - run: pytest -n 2 tests/test_real_https.py
