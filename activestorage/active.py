@@ -189,7 +189,7 @@ class Active:
                  ncvar: str = None,
                  axis: tuple = None,
                  interface_type: str = None,
-                 max_threads: int = 20,
+                 max_threads: int = 40,
                  storage_options: dict = None,
                  active_storage_url: str = None,
                  option_disable_chunk_cache: bool = False) -> None:
