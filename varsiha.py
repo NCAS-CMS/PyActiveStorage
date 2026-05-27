@@ -56,7 +56,7 @@ file_obj = load_from_https(config['uri'])
 ds = file_obj[config['var']]
 
 with concurrent.futures.ThreadPoolExecutor(
-  max_workers=10) as executor:
+  max_workers=100) as executor:
   futures = []
   for i in range(10):
     print("Thread ", i, " submitted")
