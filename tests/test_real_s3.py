@@ -110,9 +110,7 @@ def test_s3_small_file():
 def test_s3_small_dataset():
     """Run an S3 test on a small file."""
     storage_options = {
-        'key': "f2d55c6dcfc7618b2c34e00b58df3cef",
-        'secret':
-        "$/'#M{0{/4rVhp%n^(XeX$q@y#&(NM3W1->~N.Q6VP.5[@bLpi='nt]AfH)>78pT",
+        "anon": True,
         'client_kwargs': {
             'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"
         },
