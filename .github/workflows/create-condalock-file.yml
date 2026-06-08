@@ -4,9 +4,10 @@ on:
   # Trigger on push on main or other branch for testing
   # NOTE that push: main will create the file very often
   # and hence lots of automated PRs
-  # push:
-  #   branches:
-  #     - main
+  push:
+    branches:
+      - main
+      - temporary_limit_miniforge
   schedule:
     - cron: '0 4 */10 * *'
 
@@ -28,7 +29,8 @@ jobs:
           auto-update-conda: true
           activate-environment: activestorage-fromlock
           python-version: "3.14"
-          miniforge-version: "latest"
+          # miniforge-version: "latest"
+          miniforge-version: 26.1.0-0 # need to use mamba<2.6.0 - see conda/conda-lock#906
           use-mamba: true
       - name: Show conda config
         run: |
