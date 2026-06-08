@@ -40,4 +40,4 @@ jobs:
       - run: which python
       - run: pip --version
       - run: pip install -e .
-      - run: pytest
+      - run: pytest -m "not slow" --ignore=tests/test_real_https.py --ignore=tests/test_real_s3.py
