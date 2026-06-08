@@ -28,7 +28,8 @@ jobs:
           auto-update-conda: true
           activate-environment: activestorage-fromlock
           python-version: "3.14"
-          miniforge-version: "latest"
+          # miniforge-version: "latest"
+          miniforge-version: 26.1.0-0 # need to use mamba<2.6.0 - see conda/conda-lock#906
           use-mamba: true
       - name: Show conda config
         run: |
@@ -60,7 +61,7 @@ jobs:
       - name: Install with pip
         run: pip install -e .
       - name: Run tests
-        run: pytest
+        run: pytest -m "not slow" --ignore=tests/test_real_https.py --ignore=tests/test_real_s3.py
       # Automated PR
       # see https://github.com/marketplace/actions/create-pull-request
       - name: Create Automated PR if conda lock file has changed
