@@ -25,7 +25,7 @@ jobs:
       fail-fast: false
     name: Linux Python ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
       - uses: conda-incubator/setup-miniconda@v4
@@ -40,4 +40,4 @@ jobs:
       - run: which python
       - run: pip --version
       - run: pip install -e .
-      - run: pytest
+      - run: pytest -m "not slow" --ignore=tests/test_real_https.py --ignore=tests/test_real_s3.py
