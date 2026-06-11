@@ -11,8 +11,7 @@ S3_BUCKET = "bnl"
 def build_active_test1_file():
     """Run an integration test with real data off S3 but with a small file."""
     storage_options = {
-        'key': "f2d55c6dcfc7618b2c34e00b58df3cef",
-        'secret': "$/'#M{0{/4rVhp%n^(XeX$q@y#&(NM3W1->~N.Q6VP.5[@bLpi='nt]AfH)>78pT",
+        "anon": True,
         'client_kwargs': {'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"},  # final proxy
     }
     active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft new Reductionist
@@ -36,8 +35,7 @@ def build_active_test1_file():
 def build_active_small_file():
     """Run an integration test with real data off S3 but with a small file."""
     storage_options = {
-        'key': "f2d55c6dcfc7618b2c34e00b58df3cef",
-        'secret': "$/'#M{0{/4rVhp%n^(XeX$q@y#&(NM3W1->~N.Q6VP.5[@bLpi='nt]AfH)>78pT",
+        "anon": True,
         'client_kwargs': {'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"},  # final proxy
     }
     active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft new Reductionist
@@ -92,8 +90,7 @@ def test_small_file_axis_0_1_compare_with_numpy():
 def build_active():
     """Run an integration test with real data off S3."""
     storage_options = {
-        'key': "f2d55c6dcfc7618b2c34e00b58df3cef",
-        'secret': "$/'#M{0{/4rVhp%n^(XeX$q@y#&(NM3W1->~N.Q6VP.5[@bLpi='nt]AfH)>78pT",
+        "anon": True,
         'client_kwargs': {'endpoint_url': "https://uor-aces-o.s3-ext.jc.rl.ac.uk"},  # final proxy
     }
     active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft new Reductionist
