@@ -9,7 +9,6 @@ version: 2
 build:
   os: ubuntu-lts-latest
   tools:
-    # DO NOT use mambaforge-*; that is currently sunsetted
     python: "miniconda-latest"
   jobs:
     post_create_environment:
