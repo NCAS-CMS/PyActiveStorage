@@ -69,9 +69,7 @@ def test_https_globus():
     result = active.min()[0:3, 4:6, 7:9]
     print("Result is", result)
     # the returned element is a fully contained masked array
-    assert result == np.array(data=[[[215.90142822265625]]],
-                              mask=[[[False]]],
-                              fill_value=np.float64(1e+20),
+    assert result == np.array([[[215.90142822265625]]],
                               dtype="float32")
 
 
