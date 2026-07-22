@@ -53,6 +53,25 @@ def test_https():
     assert result == np.array([220.3180694580078], dtype="float32")
 
 
+def test_https_globus():
+    """Test with a globus file instead."""
+    test_file_uri = "https://g-52ba3.fd635.8443.data.globus.org/css03_data/CMIP6/CMIP/CCCma/CanESM5/historical/r1i1p1f1/Amon/tas/gn/v20190429/tas_Amon_CanESM5_historical_r1i1p1f1_gn_185001-201412.nc"
+    # perform a basic remote load test first
+    fh = load_from_https(test_file_uri)
+    ds = fh["tas"]
+    print("Dataset loaded from Globus:", ds)
+
+    # now let's active storage it
+    active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft new Reductionist
+
+    # v1: all local
+    active = Active(test_file_uri, "ta")
+    active._version = 1
+    result = active.min()[0:3, 4:6, 7:9]
+    print("Result is", result)
+    assert result == np.array([220.3180694580078], dtype="float32")
+
+
 def test_https_axis_1():
     """Test https with axis 1."""
     # FIXME fails frequently on CEDA NGINX: Reductionist: 400 Bad Request
