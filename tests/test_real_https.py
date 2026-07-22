@@ -58,7 +58,9 @@ def test_https_globus():
     Test with a globus file instead.
 
     The example below is Apache HTTP Server (httpd),
-    not NGINX, for a standard Globus Connect Server (GCS) HTTPS collection
+    not NGINX, for a standard Globus Connect Server (GCS) HTTPS collection.
+    The example is g-52ba3.fd635.8443.data.globus.org. 60 IN A	140.221.68.105
+    which is a node hosted at Argonne National Lab, Chicago.
     """
     test_file_uri = "https://g-52ba3.fd635.8443.data.globus.org/css03_data/CMIP6/CMIP/CCCma/CanESM5/historical/r1i1p1f1/Amon/tas/gn/v20190429/tas_Amon_CanESM5_historical_r1i1p1f1_gn_185001-201412.nc"
     # perform a basic remote load test first
