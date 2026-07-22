@@ -63,10 +63,9 @@ def test_https_globus():
 
     # now let's active storage it
     active_storage_url = "https://reductionist.jasmin.ac.uk/"  # Wacasoft new Reductionist
-
-    # v1: all local
-    active = Active(test_file_uri, "ta")
-    active._version = 1
+    active = Active(test_file_uri, "tas",
+                    active_storage_url=active_storage_url)
+    active._version = 2
     result = active.min()[0:3, 4:6, 7:9]
     print("Result is", result)
     assert result == np.array([220.3180694580078], dtype="float32")
