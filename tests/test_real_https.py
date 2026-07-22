@@ -54,7 +54,12 @@ def test_https():
 
 
 def test_https_globus():
-    """Test with a globus file instead."""
+    """
+    Test with a globus file instead.
+
+    The example below is Apache HTTP Server (httpd),
+    not NGINX, for a standard Globus Connect Server (GCS) HTTPS collection
+    """
     test_file_uri = "https://g-52ba3.fd635.8443.data.globus.org/css03_data/CMIP6/CMIP/CCCma/CanESM5/historical/r1i1p1f1/Amon/tas/gn/v20190429/tas_Amon_CanESM5_historical_r1i1p1f1_gn_185001-201412.nc"
     # perform a basic remote load test first
     fh = load_from_https(test_file_uri)
