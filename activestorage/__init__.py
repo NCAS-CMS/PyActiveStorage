@@ -1,5 +1,16 @@
 from .active import Active
 
+from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError
 
-# this is used only by Readthedocs
-__version__ = "0.4.0"
+
+try:
+    __version__ = version("PyActiveStorage")
+except PackageNotFoundError as exc:
+    msg = (
+        "PyActiveStorage package not found, please run `pip install -e .` before "
+        "importing the package."
+    )
+    raise PackageNotFoundError(
+        msg,
+    ) from exc
