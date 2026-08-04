@@ -17,7 +17,12 @@
 ### JASMIN Wacasoft
 
 Reductionist is deployed on JASMIN's Wacasoft1 and 2 servers. There is a dedicated `reduct` user that runs the `reductionist` process. You can login as
-`reduct` with e.g. `ssh reduct@wacasoft1` from a sci-VM node, and restart the process with `podman start reductionist`.
+`reduct` with e.g. `ssh reduct@wacasoft1` from a sci-VM node, and restart the process with `podman start reductionist`. You can check the running with:
+```
+$ podman ps --all
+CONTAINER ID  IMAGE                                    COMMAND       CREATED       STATUS             PORTS       NAMES
+c6ec8d9fd530  ghcr.io/stackhpc/reductionist-rs:latest  reductionist  4 months ago  Up About a minute              reductionist
+```
 
 ### Create virtual environment
 
