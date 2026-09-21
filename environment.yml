@@ -5,8 +5,8 @@ channels:
   - nodefaults
 
 dependencies:
-  - python >=3.10
-  - pyfive >=1.1.1
+  - python >=3.11
+  - pyfive >=1.2.0
   - cbor2
   - fsspec
   - h5netcdf
