@@ -41,10 +41,10 @@ Supported Python versions
 
 We adhere to `SPEC0 <https://scientific-python.org/specs/spec-0000/>`_ and support the following Python versions:
 
-* 3.10
 * 3.11
 * 3.12
 * 3.13
+* 3.14
 
 .. note::
 

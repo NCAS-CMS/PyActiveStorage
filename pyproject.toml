@@ -20,7 +20,6 @@ classifiers = [
     "Natural Language :: English",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -40,7 +39,7 @@ dependencies = [
     "netcdf4",
     "numcodecs>=0.12",  # github/issues/162
     "numpy>=2",
-    "pyfive>=1.1.1",
+    "pyfive>=1.2.0",
     "requests",
     "s3fs>=2024.2.0",  # see environment.yml for pin reason
     "ujson",
@@ -48,7 +47,7 @@ dependencies = [
 description = "A Python client for Active Storage"
 license = {text = "MIT"}
 name = "PyActiveStorage"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 [project.optional-dependencies]
 test = [
