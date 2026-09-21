@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - install_pytest_mock
   schedule:
     - cron: '0 0 * * *'  # nightly
 
@@ -42,6 +43,7 @@ jobs:
           conda install pytest-cov
           conda install pytest-html
           conda install pytest-metadata
+          conda install pytest-mock
           conda install pytest-xdist
       - run: conda list
       - run: pytest -n 2 -m "not slow" --ignore=tests/test_real_https.py --ignore=tests/test_real_s3.py
@@ -76,5 +78,6 @@ jobs:
           conda install pytest-cov 
           conda install pytest-html 
           conda install pytest-metadata
+          conda install pytest-mock
           conda install pytest-xdist
       - run: pytest -n 2 -m "not slow" --ignore=tests/test_real_https.py --ignore=tests/test_real_s3.py
