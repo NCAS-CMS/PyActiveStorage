@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - install_pytest_mock
   schedule:
     - cron: '0 0 * * *'  # nightly
 
