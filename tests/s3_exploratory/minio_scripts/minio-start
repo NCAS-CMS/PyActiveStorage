@@ -4,7 +4,7 @@
 exec docker run --detach --rm \
   -p 9000:8333 \
   --name seaweedfs \
-  -e AWS_ACCESS_KEY_ID=admin \
-  -e AWS_SECRET_ACCESS_KEY=secret \
-  -e S3_BUCKET=test \
+  -e AWS_ACCESS_KEY_ID=minioadmin \
+  -e AWS_SECRET_ACCESS_KEY=minioadmin \
+  -e S3_BUCKET=pyactivestorage \
   chrislusf/seaweedfs
