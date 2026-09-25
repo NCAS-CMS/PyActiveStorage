@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
 # Use timestamped storage volume so that test data is removed when container is stopped
-exec docker run --detach --rm -p 9000:9000 -p 9001:9001 -v minio_$(date +%s) --name minio quay.io/minio/minio:RELEASE.2025-10-15T17-29-55Z server data --console-address ":9001"
+exec docker run --detach --rm -p 9000:9000 -p 9001:9001 -v minio_$(date +%s):/data --name minio quay.io/minio/minio:RELEASE.2025-10-15T17-29-55Z server data --console-address ":9001"
