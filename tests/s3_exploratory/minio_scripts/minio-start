@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
 
 # Use timestamped storage volume so that test data is removed when container is stopped
-exec docker run --detach --rm -p 9000:9000 -p 9001:9001 -v minio_$(date +%s):/data --name minio quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server data --console-address ":9001"
+exec docker run --detach --rm \
+  -p 9000:8333 \
+  --name seaweedfs \
+  -e AWS_ACCESS_KEY_ID=admin \
+  -e AWS_SECRET_ACCESS_KEY=secret \
+  -e S3_BUCKET=test \
+  chrislusf/seaweedfs
