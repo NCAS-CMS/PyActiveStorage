@@ -62,7 +62,7 @@ jobs:
         run: pip install pytest-monitor
       - name: Run S3 performance tests
         run: |
-          pytest tests/s3_exploratory/test_s3_arrange_files.py
+          pytest tests/s3_exploratory/test_s3_arrange_files.py --db ../.pymon
           pytest tests/s3_exploratory/test_s3_performance.py --db ../.pymon
       - name: Analyze S3 and local test performance
         run: python tests/s3_exploratory/parse_pymon.py
