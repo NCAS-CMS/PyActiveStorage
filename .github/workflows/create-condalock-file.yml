@@ -27,7 +27,7 @@ jobs:
         with:
           auto-update-conda: true
           activate-environment: activestorage-fromlock
-          python-version: "3.14"
+          python-version: "3.15"
           # miniforge-version: "latest"
           miniforge-version: 26.1.0-0 # need to use mamba<2.6.0 - see conda/conda-lock#906
           use-mamba: true
