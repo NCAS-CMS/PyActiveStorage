@@ -10,7 +10,6 @@ dependencies:
   - cbor2
   - fsspec
   - h5netcdf
-  - h5py  # needed by h5netcdf >=1.8.3 for S3 files
   - netcdf4
   - numcodecs >=0.12  # github.com/valeriupredoi/PyActiveStorage/issues/162
   - numpy >=2
