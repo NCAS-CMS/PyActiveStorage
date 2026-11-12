@@ -249,7 +249,10 @@ def make_ncdata(filename,
             raise ValueError('Dummy data needs a non-zero valid min')
         vm1indices = [2, nm1 / 2, n / 2, nm1]
         for ind in vm1indices:
-            dvar[ind] = valid_min - abs(0.1 * valid_min)
+            # starting with netcdf4=1.7.5 fractional indices are rejected
+            # see https://github.com/Unidata/netcdf4-python/blob/master/Changelog
+            # issue 1350
+            dvar[int(ind)] = valid_min - abs(0.1 * valid_min)
         setattr(dvar, "valid_min", valid_min)
 
     if valid_max:
